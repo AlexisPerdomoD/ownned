@@ -39,7 +39,7 @@ func ErrBadRequest(detail map[string]string) *AppError {
 	return &AppError{Kind: ErrBadRequestInstance, Detail: detail}
 }
 
-func ErrConflic(detail map[string]string) *AppError {
+func ErrConflict(detail map[string]string) *AppError {
 	return &AppError{Kind: ErrConflictInstance, Detail: detail}
 }
 

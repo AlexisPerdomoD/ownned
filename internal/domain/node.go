@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -14,14 +15,33 @@ const (
 	NodePathUsrRoot    NodePath = "usrs"
 	NodePathSharedRoot NodePath = "shared"
 )
+const NodePathSeparator = "."
 
-func (p NodePath) NewChildPath(nodeID uuid.UUID) NodePath {
-	return NodePath(string(p) + "." + strings.ReplaceAll(nodeID.String(), "-", "_"))
+var ErrNodePathInvalid = errors.New("invalid node path")
+
+func (p NodePath) NewChildPath(nodeID uuid.UUID) (NodePath, error) {
+	if nodeID == uuid.Nil {
+		return NodePath(""), ErrNodePathInvalid
+	}
+
+	return NodePath(string(p) + NodePathSeparator + strings.ReplaceAll(nodeID.String(), "-", "_")), nil
 }
 
 func (p NodePath) String() string {
 	s := strings.ReplaceAll(string(p), "_", "-")
-	return "/" + strings.ReplaceAll(s, ".", "/")
+	return "/" + strings.ReplaceAll(s, NodePathSeparator, "/")
+}
+
+func (p NodePath) IsRoot() bool {
+	return p == NodePath("usrs") || p == NodePath("shared")
+}
+
+func (p NodePath) IsParentOf(child NodePath) bool {
+	return strings.HasPrefix(child.String(), p.String()+"/")
+}
+
+func (p NodePath) IsChildOf(parent NodePath) bool {
+	return parent.IsParentOf(p)
 }
 
 type NodeType string

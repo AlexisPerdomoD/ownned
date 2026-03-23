@@ -35,7 +35,7 @@ type CreateFolderDTO struct {
 }
 
 func (dto *CreateFolderDTO) Validate() error {
-	return validate.Struct(dto)
+	return Validator.Struct(dto)
 }
 
 type CreateNodeCommentDTO struct {
@@ -43,7 +43,7 @@ type CreateNodeCommentDTO struct {
 }
 
 func (dto *CreateNodeCommentDTO) Validate() error {
-	return validate.Struct(dto)
+	return Validator.Struct(dto)
 }
 
 type UpdateNodeCommentDTO = CreateNodeCommentDTO

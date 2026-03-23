@@ -73,11 +73,19 @@ func (r UsrRole) CanDeleteGroup() bool {
 	return r == SuperUsrRole || r == NormalUsrRole
 }
 
-func (r UsrRole) CanAssignGroup() bool {
+func (r UsrRole) CanAssignGroupNode() bool {
 	return r == SuperUsrRole || r == NormalUsrRole
 }
 
-func (r UsrRole) CanUnAssignGroup() bool {
+func (r UsrRole) CanUnAssignGroupNode() bool {
+	return r == SuperUsrRole || r == NormalUsrRole
+}
+
+func (r UsrRole) CanAssignGroupUsr() bool {
+	return r == SuperUsrRole || r == NormalUsrRole
+}
+
+func (r UsrRole) CanUnAssignGroupUsr() bool {
 	return r == SuperUsrRole || r == NormalUsrRole
 }
 

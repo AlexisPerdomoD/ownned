@@ -80,6 +80,11 @@ func (uc *CreateDocUseCase) Execute(ctx context.Context, arg *dto.CreateDocInput
 		return nil, err
 	}
 
+	path, err := folder.Path.NewChildPath(nodeID)
+	if err != nil {
+		return nil, err
+	}
+
 	uploadCommand := storage.StorageUploadCommand{
 		Key:          docID.String(),
 		MaxSizeBytes: arg.ExpectedSize,
@@ -90,6 +95,7 @@ func (uc *CreateDocUseCase) Execute(ctx context.Context, arg *dto.CreateDocInput
 		return nil, err
 	}
 	title := titleFromFilename(arg.Filename)
+
 	response := &CreateDocUseCaseResponse{
 		Node: &domain.Node{
 			ID:          nodeID,
@@ -97,7 +103,7 @@ func (uc *CreateDocUseCase) Execute(ctx context.Context, arg *dto.CreateDocInput
 			Type:        domain.FileNodeType,
 			Description: arg.Description,
 			Name:        title,
-			Path:        folder.Path.NewChildPath(nodeID),
+			Path:        path,
 		},
 		Doc: &domain.Doc{
 			ID:          docID,

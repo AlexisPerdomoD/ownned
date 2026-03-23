@@ -44,7 +44,7 @@ func getUsrIdentity(ctx context.Context) (i usrIdentity, err error) {
 
 // accessChecker is an abstraction to access business logic related
 type accessChecker struct {
-	gur domain.GroupUsrRepository
+	groupUsrRepository domain.GroupUsrRepository
 }
 
 // hasNodeAccessTo checks if a user has access to a node based on the user's role and the access of the node to the user
@@ -58,7 +58,7 @@ func (ac *accessChecker) hasNodeAccessTo(
 		return true, nil
 	}
 
-	if err := ac.gur.HasAccess(ctx, u.ID, pth, accs); err != nil {
+	if err := ac.groupUsrRepository.HasAccess(ctx, u.ID, pth, accs); err != nil {
 		if errors.Is(err, domain.ErrNoAccess) {
 			return false, nil
 		}
@@ -80,7 +80,7 @@ func (ac *accessChecker) hasGroupAccessTo(
 		return true, nil
 	}
 
-	accs, err := ac.gur.GetGroupAccess(ctx, u.ID, groupID)
+	accs, err := ac.groupUsrRepository.GetGroupAccess(ctx, u.ID, groupID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNoAccess) {
 			return false, nil

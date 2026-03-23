@@ -66,13 +66,18 @@ func (uc *CreateFolderUseCase) Execute(ctx context.Context, args *dto.CreateFold
 		return nil, err
 	}
 
+	path, err := parent.Path.NewChildPath(folderID)
+	if err != nil {
+		return nil, err
+	}
+
 	folder := &domain.Node{
 		ID:          folderID,
 		UsrID:       usr.ID,
 		Name:        args.Name,
 		Description: args.Description,
 		Type:        domain.FolderNodeType,
-		Path:        parent.Path.NewChildPath(folderID),
+		Path:        path,
 	}
 
 	if err := uc.nodeRepository.Create(ctx, folder); err != nil {

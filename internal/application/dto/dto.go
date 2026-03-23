@@ -7,7 +7,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-var validate = validator.New()
+var Validator = validator.New()
 
 func isValidPwd(s string) bool {
 	var hasLetter, hasDigit, hasSymbol bool

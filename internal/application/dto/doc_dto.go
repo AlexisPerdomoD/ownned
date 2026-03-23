@@ -16,5 +16,5 @@ type CreateDocInputDTO struct {
 }
 
 func (dto *CreateDocInputDTO) Validate() error {
-	return validate.Struct(dto)
+	return Validator.Struct(dto)
 }

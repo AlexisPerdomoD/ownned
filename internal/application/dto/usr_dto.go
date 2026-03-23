@@ -9,7 +9,7 @@ import (
 
 type CreateAccessDTO struct {
 	GroupID domain.GroupID        `json:"group_id" validate:"required,uuid"`
-	Access  domain.GroupUsrAccess `json:"access" validate:"required,oneof=read_only_access write_access"`
+	Access  domain.GroupUsrAccess `json:"access" validate:"required,oneof=read_only_access write_access owner_access"`
 }
 
 type CreateUsrDTO struct {
@@ -26,7 +26,7 @@ func (dto *CreateUsrDTO) Validate() error {
 	dto.Firstname = strings.TrimSpace(strings.ToLower(dto.Firstname))
 	dto.Lastname = strings.TrimSpace(strings.ToLower(dto.Lastname))
 
-	if err := validate.Struct(dto); err != nil {
+	if err := Validator.Struct(dto); err != nil {
 		return err
 	}
 
@@ -46,5 +46,5 @@ type LoginUsrDTO struct {
 
 func (dto *LoginUsrDTO) Validate() error {
 	dto.Username = strings.TrimSpace(strings.ToLower(dto.Username))
-	return validate.Struct(dto)
+	return Validator.Struct(dto)
 }

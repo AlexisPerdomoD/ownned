@@ -40,7 +40,7 @@ func (uc *CreateUsrUseCase) Execute(
 	if newUsr != nil {
 		detail := make(map[string]string)
 		detail["reason"] = fmt.Sprintf("username '%s' already in use for another user", args.Username)
-		return nil, apperror.ErrConflic(detail)
+		return nil, apperror.ErrConflict(detail)
 	}
 
 	pwdHash, err := uc.pwdHasher.Hash([]byte(args.Pwd))
@@ -64,6 +64,11 @@ func (uc *CreateUsrUseCase) Execute(
 		return nil, err
 	}
 
+	usrNodeRootPath, err := domain.NodePathUsrRoot.NewChildPath(usrNodeRootID)
+	if err != nil {
+		return nil, err
+	}
+
 	newUsr = &domain.Usr{
 		ID:        usrID,
 		Username:  args.Username,
@@ -78,7 +83,7 @@ func (uc *CreateUsrUseCase) Execute(
 		UsrID:       newUsr.ID,
 		Description: "Auto generated root node for particular user.",
 		Type:        domain.FolderNodeType,
-		Path:        domain.NodePathUsrRoot.NewChildPath(newUsr.ID),
+		Path:        usrNodeRootPath,
 	}
 
 	usrRootGroup := &domain.Group{

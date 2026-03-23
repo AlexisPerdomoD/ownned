@@ -18,6 +18,7 @@ import (
 	"ownned/internal/infrastructure/transport/http/middleware"
 )
 
+// TODO: move to other place shit
 func logRoutes(r chi.Router) {
 	methodColors := map[string]string{
 		"GET":    "\033[32m", // verde
@@ -39,14 +40,18 @@ func logRoutes(r chi.Router) {
 	grouped := make(map[string]*routeEntry)
 	order := []string{}
 
-	_ = chi.Walk(r, func(method, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
-		if _, exists := grouped[route]; !exists {
-			grouped[route] = &routeEntry{path: route}
-			order = append(order, route)
-		}
-		grouped[route].methods = append(grouped[route].methods, method)
-		return nil
-	})
+	if err := chi.Walk(r,
+		func(method, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
+			if _, exists := grouped[route]; !exists {
+				grouped[route] = &routeEntry{path: route}
+				order = append(order, route)
+			}
+			grouped[route].methods = append(grouped[route].methods, method)
+			return nil
+		}); err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	fmt.Println(bold + "registered routes:" + reset)
 	for idx, path := range order {
@@ -67,53 +72,86 @@ func logRoutes(r chi.Router) {
 	}
 }
 
-// start point baby
+// START POINT BABY
 func main() {
+	// =========================================================================
+	// CONFIG
+	// =========================================================================
+
 	cfg := config.LoadEnvConfig()
+	// =========================================================================
 	// DB
-	db, err := pg.NewDB(
-		cfg.PgDB,
-		cfg.PgHost,
-		cfg.PgPort,
-		cfg.PgUser,
-		cfg.PgPassword,
-		cfg.PgSsl,
-	)
+	// =========================================================================
+
+	db, err := pg.
+		NewDB(
+			cfg.PgDB,
+			cfg.PgHost,
+			cfg.PgPort,
+			cfg.PgUser,
+			cfg.PgPassword,
+			cfg.PgSsl)
 	if err != nil {
 		panic(err)
 	}
 	if err := pg.MigrateUp(db.DB); err != nil {
 		panic(err)
 	}
-
+	// =========================================================================
 	// SERVICES
+	// =========================================================================
+
 	lg := slog.New(slog.
 		NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	jwtManager := serv.NewJWTManagerST(
-		[]byte(cfg.SessionSecret),
-		time.Hour,
-		"ownned")
-	pwdHasher := serv.NewPwdHasherArgon2(
-		cfg.PwdTime,
-		cfg.PwdMemKiB,
-		cfg.PwdThreads,
-		cfg.PwdHashLen,
-		cfg.PwdSaltLen)
-	storage := serv.NewStorageManagerFS(cfg.LocalStorageDir)
+	jwtManager := serv.
+		NewJWTManagerST(
+			[]byte(cfg.SessionSecret),
+			time.Hour,
+			"ownned")
+	pwdHasher := serv.
+		NewPwdHasherArgon2(
+			cfg.PwdTime,
+			cfg.PwdMemKiB,
+			cfg.PwdThreads,
+			cfg.PwdHashLen,
+			cfg.PwdSaltLen)
+	storage := serv.
+		NewStorageManagerFS(cfg.LocalStorageDir)
 
+	// =========================================================================
+	// REPOSITORIES
+	// =========================================================================
+
+	usrRepository := pg.
+		NewUsrRepository(db)
+	usrPwdRepository := pg.
+		NewUsrPwdRepository(db)
+	nodeRepository := pg.
+		NewNodeRepository(db)
+	nodeCommentRepository := pg.
+		NewNodeCommentRepository(db)
+	groupRepository := pg.
+		NewGroupRepository(db)
+	groupNodeRepository := pg.
+		NewGroupNodeRepository(db)
+	groupUsrRepository := pg.
+		NewGroupUsrRepository(db)
+	docRepository := pg.
+		NewDocRepository(db)
+	unitOfWorkFactory := pg.
+		NewUnitOfWorkFactory(db, lg, time.Second*30)
+
+	// =========================================================================
 	// MIDLEWARES
-	authM := middleware.NewAuthMiddleware(jwtManager)
+	// =========================================================================
 
-	usrRepository := pg.NewUsrRepository(db)
-	usrPwdRepository := pg.NewUsrPwdRepository(db)
-	nodeRepository := pg.NewNodeRepository(db)
-	nodeCommentRepository := pg.NewNodeCommentRepository(db)
-	groupRepository := pg.NewGroupRepository(db)
-	groupUsrRepository := pg.NewGroupUsrRepository(db)
-	docRepository := pg.NewDocRepository(db)
-	unitOfWorkFactory := pg.NewUnitOfWorkFactory(db, lg, time.Second*30)
+	authM := middleware.
+		NewAuthMiddleware(jwtManager)
 
-	// GROUPS
+	// =========================================================================
+	// GROUPS ROUTES
+	// =========================================================================
+
 	getGroup := usecase.
 		NewGetGroupUseCase(
 			usrRepository,
@@ -122,35 +160,87 @@ func main() {
 			groupUsrRepository)
 	paginateGroup := usecase.
 		NewPaginateGroupUseCase(groupRepository)
+	updateGroup := usecase.
+		NewUpdateGroupUseCase(groupRepository)
 	createGroup := usecase.
 		NewCreateGroupUseCase(unitOfWorkFactory)
 	deleteGroup := usecase.
 		NewDeleteGroupUseCase(
 			groupRepository,
 			groupUsrRepository)
+	createGroupNode := usecase.
+		NewCreateGroupNodeUseCase(
+			groupRepository,
+			groupNodeRepository,
+			groupUsrRepository,
+			nodeRepository)
+	deleteGroupNode := usecase.
+		NewDeleteGroupNodeUseCase(
+			groupRepository,
+			groupNodeRepository,
+			groupUsrRepository)
+	upsertGroupUsr := usecase.
+		NewUpsertGroupUsrUseCase(
+			usrRepository,
+			groupUsrRepository)
+	deleteGroupUsr := usecase.
+		NewDeleteGroupUsrUseCase(
+			groupUsrRepository)
 
-	// GROUPS ROUTES
+	// ROUTES
 	groupH := handler.
 		NewGroupHandler(
 			getGroup,
 			paginateGroup,
 			createGroup,
-			deleteGroup)
+			updateGroup,
+			deleteGroup,
+			createGroupNode,
+			deleteGroupNode,
+			upsertGroupUsr,
+			deleteGroupUsr)
 	groupR := chi.NewRouter()
 
 	groupR.Post("/", authM.
+		// TODO: Add swagger doc here
 		IsAuthenticated(groupH.CreateGroupHandler))
 
 	groupR.Get("/{groupID}", authM.
+		// TODO: Add swagger doc here
 		IsAuthenticated(groupH.GetGroupHandler))
 
+	groupR.Patch("/{groupID}", authM.
+		// TODO: Add swagger doc here
+		IsAuthenticated(groupH.UpdateGroupHandler))
+
 	groupR.Get("/paginate", authM.
+		// TODO: Add swagger doc here
 		IsAuthenticated(groupH.PaginateGroupHandler))
 
 	groupR.Delete("/{groupID}", authM.
+		// TODO: Add swagger doc here
 		IsAuthenticated(groupH.DeleteGroupHandler))
 
-	// USERS
+	groupR.Post("/{groupID}/nodes", authM.
+		// TODO: Add swagger doc here
+		IsAuthenticated(groupH.CreateGroupNodeHandler))
+
+	groupR.Delete("/{groupID}/nodes/{nodeID}", authM.
+		// TODO: Add swagger doc here
+		IsAuthenticated(groupH.DeleteGroupNodeHandler))
+
+	groupR.Post("/{groupID}/users", authM.
+		// TODO: Add swagger doc here
+		IsAuthenticated(groupH.UpsertGroupUsrHandler))
+
+	groupR.Delete("/{groupID}/users/{usrID}", authM.
+		// TODO: Add swagger doc here
+		IsAuthenticated(groupH.DeleteGroupUsrHandler))
+
+	// =========================================================================
+	// USERS ROUTES
+	// =========================================================================
+
 	createUsr := usecase.
 		NewCreateUsrUseCase(
 			usrRepository,
@@ -167,7 +257,8 @@ func main() {
 			usrPwdRepository,
 			pwdHasher,
 			jwtManager)
-	// USR ROUTES
+
+	// ROUTES
 	usrH := handler.
 		NewUsrHandler(
 			loginUsr,
@@ -188,7 +279,10 @@ func main() {
 	usrR.Post("/login", usrH.LoginUsrHandler)
 	usrR.Delete("/logout", usrH.LogoutUsrHandler)
 
-	// NODES
+	// =========================================================================
+	// NODES ROUTES
+	// =========================================================================
+
 	getRoot := usecase.
 		NewGetRootNodesUseCase(
 			nodeRepository,
@@ -204,7 +298,8 @@ func main() {
 			docRepository,
 			groupUsrRepository,
 			lg)
-	// NODES ROUTES
+
+	// NODES
 	nodeH := handler.
 		NewNodeHandler(
 			getRoot,
@@ -212,13 +307,19 @@ func main() {
 			getNode)
 	nodeR := chi.NewRouter()
 	nodeR.Get("/", authM.
+		// TODO: Add swagger doc here
 		IsAuthenticated(nodeH.GetRootHandler))
 	nodeR.Post("/", authM.
+		// TODO: Add swagger doc here
 		IsAuthenticated(nodeH.CreateFolderHandler))
 	nodeR.Get("/{nodeID}", authM.
+		// TODO: Add swagger doc here
 		IsAuthenticated(nodeH.GetNodeHandler))
 
+	// =========================================================================
 	// NODE COMMENTS
+	// =========================================================================
+
 	getNodeComments := usecase.
 		NewGetNodeCommentsUseCase(
 			nodeRepository,
@@ -238,7 +339,7 @@ func main() {
 			nodeRepository,
 			nodeCommentRepository,
 			groupUsrRepository)
-	// NODE COMMENTS ROUTES
+	// ROUTES
 	nodeCommentH := handler.
 		NewNodeCommentHandler(
 			getNodeComments,
@@ -247,15 +348,22 @@ func main() {
 			deleteNodeComment)
 	nodeCommentR := chi.NewRouter()
 	nodeR.Get("/{nodeID}/comments", authM.
+		// TODO: Add swagger doc here
 		IsAuthenticated(nodeCommentH.GetNodeCommentsHandler))
 	nodeR.Post("/{nodeID}/comments", authM.
+		// TODO: Add swagger doc here
 		IsAuthenticated(nodeCommentH.CreateNodeCommentHandler))
 	nodeCommentR.Patch("/{nodeCommentID}", authM.
+		// TODO: Add swagger doc here
 		IsAuthenticated(nodeCommentH.UpdateNodeCommentHandler))
 	nodeCommentR.Delete("/{nodeCommentID}", authM.
+		// TODO: Add swagger doc here
 		IsAuthenticated(nodeCommentH.DeleteNodeCommentHandler))
 
-	// DOCS
+	// =========================================================================
+	// DOCS ROUTES
+	// =========================================================================
+
 	createDoc := usecase.
 		NewCreateDocUseCase(
 			docRepository,
@@ -272,23 +380,33 @@ func main() {
 			groupUsrRepository,
 			lg)
 
-	// DOCS ROUTES
+	// ROUTES
 	docH := handler.
 		NewDocHandler(
 			createDoc,
 			deleteDoc)
 	docR := chi.NewRouter()
 	docR.Post("/", authM.
+		// TODO: Add swagger doc here
 		IsAuthenticated(docH.CreateDocHandler))
 	docR.Delete("/{docID}", authM.
+		// TODO: Add swagger doc here
 		IsAuthenticated(docH.DeleteDocHandler))
 
-	// SERVER ROUTES
+	// =========================================================================
+	// SERVER START POINT
+	// =========================================================================
+
 	r := chi.NewRouter()
+	// TODO: Add swagger doc here
 	r.Mount("/api/v1/groups", groupR)
+	// TODO: Add swagger doc here
 	r.Mount("/api/v1/usrs", usrR)
+	// TODO: Add swagger doc here
 	r.Mount("/api/v1/nodes", nodeR)
+	// TODO: Add swagger doc here
 	r.Mount("/api/v1/comments", nodeCommentR)
+	// TODO: Add swagger doc here
 	r.Mount("/api/v1/docs", docR)
 
 	logRoutes(r)

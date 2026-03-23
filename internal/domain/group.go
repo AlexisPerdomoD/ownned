@@ -31,7 +31,7 @@ const (
 	GroupOwnerAccess    GroupUsrAccess = "owner_access"
 )
 
-var groupAccessRank = map[GroupUsrAccess]int{
+var GroupAccessRank = map[GroupUsrAccess]int{
 	GroupReadOnlyAccess: 1,
 	GroupWriteAccess:    2,
 	GroupOwnerAccess:    3,
@@ -51,7 +51,28 @@ func (a GroupUsrAccess) String() string {
 }
 
 func (a GroupUsrAccess) IsEquivalent(b GroupUsrAccess) bool {
-	return groupAccessRank[a] >= groupAccessRank[b]
+	return GroupAccessRank[a] >= GroupAccessRank[b]
+}
+
+func (a GroupUsrAccess) IsValidAccessToRole(r UsrRole) (can bool, reason string) {
+	switch r {
+	case SuperUsrRole:
+		return false, "Super users can not be assigned to groups."
+	case NormalUsrRole:
+		return true, ""
+	case LimitedUsrRole:
+		if a == GroupReadOnlyAccess {
+			return true, ""
+		}
+
+		return false, "Limited users can only be assigned to read only access."
+	default:
+		return false, "No role identified."
+	}
+}
+
+func (a GroupUsrAccess) IsValid() bool {
+	return a == GroupReadOnlyAccess || a == GroupWriteAccess || a == GroupOwnerAccess
 }
 
 var ErrNoAccess = errors.New("no access")
