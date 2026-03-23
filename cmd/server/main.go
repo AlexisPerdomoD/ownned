@@ -82,7 +82,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 	if err := pg.MigrateUp(db.DB); err != nil {
 		panic(err)
 	}
@@ -90,21 +89,16 @@ func main() {
 	// SERVICES
 	lg := slog.New(slog.
 		NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-
 	jwtManager := serv.NewJWTManagerST(
 		[]byte(cfg.SessionSecret),
 		time.Hour,
-		"ownned",
-	)
-
+		"ownned")
 	pwdHasher := serv.NewPwdHasherArgon2(
 		cfg.PwdTime,
 		cfg.PwdMemKiB,
 		cfg.PwdThreads,
 		cfg.PwdHashLen,
-		cfg.PwdSaltLen,
-	)
-
+		cfg.PwdSaltLen)
 	storage := serv.NewStorageManagerFS(cfg.LocalStorageDir)
 
 	// MIDLEWARES
