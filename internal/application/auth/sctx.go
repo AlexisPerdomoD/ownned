@@ -1,10 +1,8 @@
-// Package sctx provides the implementation of the authentication layer to centralize session information handling from contexts.
-package sctx
+package auth
 
 import (
 	"context"
 
-	"ownned/internal/application/auth"
 	"ownned/pkg/apperror"
 
 	"github.com/google/uuid"
@@ -17,8 +15,8 @@ type usrSessionKeyType struct{}
 var usrSessionKey = usrSessionKeyType{}
 
 // GetSession returns the session from the context
-func GetSession(ctx context.Context) (*auth.JWTAccessPayload, error) {
-	session, ok := ctx.Value(usrSessionKey).(*auth.JWTAccessPayload)
+func GetSession(ctx context.Context) (*JWTAccessPayload, error) {
+	session, ok := ctx.Value(usrSessionKey).(*JWTAccessPayload)
 	if !ok {
 		detail := make(map[string]string)
 		detail["reason"] = "invalid casting of expected type *Session"
@@ -46,6 +44,6 @@ func GetUsrID(ctx context.Context) (uuid.UUID, error) {
 }
 
 // SetSession sets the session in the context
-func SetSession(ctx context.Context, session *auth.JWTAccessPayload) context.Context {
+func SetSession(ctx context.Context, session *JWTAccessPayload) context.Context {
 	return context.WithValue(ctx, usrSessionKey, session)
 }

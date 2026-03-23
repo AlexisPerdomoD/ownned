@@ -4,19 +4,16 @@ import (
 	"context"
 
 	"ownned/internal/domain"
-	"ownned/pkg/apperror"
 	"ownned/pkg/helper"
 	"ownned/pkg/pagination"
 )
 
 type PaginateGroupUseCase struct {
-	usrRepository   domain.UsrRepository
 	groupRepository domain.GroupRepository
 }
 
 func (uc *PaginateGroupUseCase) Execute(
 	ctx context.Context,
-	usrID domain.UsrID,
 	page uint,
 	limit uint,
 	search string,
@@ -31,13 +28,9 @@ func (uc *PaginateGroupUseCase) Execute(
 		},
 	}
 
-	usr, err := uc.usrRepository.GetByID(ctx, usrID)
+	usr, err := getUsrIdentity(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	if usr == nil {
-		return nil, apperror.ErrUnauthenticated(nil)
 	}
 
 	if usr.Role != domain.SuperUsrRole || onlyMyGroups {
@@ -53,10 +46,8 @@ func (uc *PaginateGroupUseCase) Execute(
 }
 
 func NewPaginateGroupUseCase(
-	ur domain.UsrRepository,
 	gr domain.GroupRepository,
 ) *PaginateGroupUseCase {
-	helper.NotNilOrPanic(ur, "UsrRepository")
 	helper.NotNilOrPanic(gr, "GroupRepository")
-	return &PaginateGroupUseCase{ur, gr}
+	return &PaginateGroupUseCase{gr}
 }

@@ -10,18 +10,13 @@ import (
 )
 
 type UpdateNodeCommentUseCase struct {
-	usrRepository         domain.UsrRepository
 	nodeCommentRepository domain.NodeCommentRepository
 }
 
-func (uc *UpdateNodeCommentUseCase) Execute(ctx context.Context, usrID domain.UsrID, commentID domain.NodeCommentID, content string) (*domain.NodeComment, error) {
-	usr, err := uc.usrRepository.GetByID(ctx, usrID)
+func (uc *UpdateNodeCommentUseCase) Execute(ctx context.Context, commentID domain.NodeCommentID, content string) (*domain.NodeComment, error) {
+	usr, err := getUsrIdentity(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	if usr == nil {
-		return nil, apperror.ErrUnauthenticated(nil)
 	}
 
 	comment, err := uc.nodeCommentRepository.GetByID(ctx, commentID)
@@ -52,10 +47,8 @@ func (uc *UpdateNodeCommentUseCase) Execute(ctx context.Context, usrID domain.Us
 }
 
 func NewUpdateNodeCommentUseCase(
-	ur domain.UsrRepository,
 	ncr domain.NodeCommentRepository,
 ) *UpdateNodeCommentUseCase {
-	helper.NotNilOrPanic(ur, "UsrRepository")
 	helper.NotNilOrPanic(ncr, "NodeCommentRepository")
-	return &UpdateNodeCommentUseCase{ur, ncr}
+	return &UpdateNodeCommentUseCase{ncr}
 }

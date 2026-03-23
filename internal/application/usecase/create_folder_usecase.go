@@ -14,17 +14,12 @@ import (
 type CreateFolderUseCase struct {
 	accessChecker
 	nodeRepository domain.NodeRepository
-	usrRepository  domain.UsrRepository
 }
 
-func (uc *CreateFolderUseCase) Execute(ctx context.Context, creatorID domain.UsrID, args *dto.CreateFolderDTO) (*domain.Node, error) {
-	usr, err := uc.usrRepository.GetByID(ctx, creatorID)
+func (uc *CreateFolderUseCase) Execute(ctx context.Context, args *dto.CreateFolderDTO) (*domain.Node, error) {
+	usr, err := getUsrIdentity(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	if usr == nil {
-		return nil, apperror.ErrUnauthenticated(nil)
 	}
 
 	if !usr.Role.CanCreateNode() {
@@ -89,12 +84,10 @@ func (uc *CreateFolderUseCase) Execute(ctx context.Context, creatorID domain.Usr
 
 func NewCreateFolderUseCase(
 	nr domain.NodeRepository,
-	ur domain.UsrRepository,
 	gur domain.GroupUsrRepository,
 ) *CreateFolderUseCase {
 	helper.NotNilOrPanic(nr, "NodeRepository")
-	helper.NotNilOrPanic(ur, "UsrRepository")
 	helper.NotNilOrPanic(gur, "GroupUsrRepository")
 	ac := accessChecker{gur}
-	return &CreateFolderUseCase{ac, nr, ur}
+	return &CreateFolderUseCase{ac, nr}
 }

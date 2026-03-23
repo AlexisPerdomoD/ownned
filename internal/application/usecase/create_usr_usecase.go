@@ -32,12 +32,12 @@ func (uc *CreateUsrUseCase) Execute(
 		return nil, err
 	}
 
-	usr, err := uc.usrRepository.GetByUsername(ctx, args.Username)
+	newUsr, err := uc.usrRepository.GetByUsername(ctx, args.Username)
 	if err != nil {
 		return nil, err
 	}
 
-	if usr != nil {
+	if newUsr != nil {
 		detail := make(map[string]string)
 		detail["reason"] = fmt.Sprintf("username '%s' already in use for another user", args.Username)
 		return nil, apperror.ErrConflic(detail)
@@ -64,7 +64,7 @@ func (uc *CreateUsrUseCase) Execute(
 		return nil, err
 	}
 
-	usr = &domain.Usr{
+	newUsr = &domain.Usr{
 		ID:        usrID,
 		Username:  args.Username,
 		Role:      args.Role,
@@ -74,17 +74,17 @@ func (uc *CreateUsrUseCase) Execute(
 
 	usrNodeRoot := &domain.Node{
 		ID:          usrNodeRootID,
-		Name:        fmt.Sprintf("%s_usr_root_folder", usr.ID),
-		UsrID:       usr.ID,
+		Name:        fmt.Sprintf("%s_usr_root_folder", newUsr.ID),
+		UsrID:       newUsr.ID,
 		Description: "Auto generated root node for particular user.",
 		Type:        domain.FolderNodeType,
-		Path:        domain.NodePathUsrRoot.NewChildPath(usr.ID),
+		Path:        domain.NodePathUsrRoot.NewChildPath(newUsr.ID),
 	}
 
 	usrRootGroup := &domain.Group{
 		ID:          usrGroupID,
-		UsrID:       usr.ID,
-		Name:        fmt.Sprintf("%s_group", usr.ID),
+		UsrID:       newUsr.ID,
+		Name:        fmt.Sprintf("%s_group", newUsr.ID),
 		Description: "Auto generated group for particular user.",
 	}
 
@@ -96,7 +96,7 @@ func (uc *CreateUsrUseCase) Execute(
 	usrGroups := col.Set[domain.UpsertGroupUsr]{}
 	usrGroups.Add(domain.UpsertGroupUsr{
 		GroupID: usrRootGroup.ID,
-		UsrID:   usr.ID,
+		UsrID:   newUsr.ID,
 		Access:  domain.GroupOwnerAccess,
 	})
 
@@ -104,19 +104,19 @@ func (uc *CreateUsrUseCase) Execute(
 		for _, v := range args.Access {
 			usrGroups.Add(domain.UpsertGroupUsr{
 				GroupID: v.GroupID,
-				UsrID:   usr.ID,
+				UsrID:   newUsr.ID,
 				Access:  v.Access,
 			})
 		}
 	}
 
 	if err = uc.unitOfWorkFactory.Do(ctx, func(tx domain.UnitOfWork) error {
-		if err := tx.UsrRepository().Create(tx.Ctx(), usr); err != nil {
+		if err := tx.UsrRepository().Create(tx.Ctx(), newUsr); err != nil {
 			uc.log.DebugContext(tx.Ctx(), "error creating usr", "err", err, "stack", debug.Stack())
 			return err
 		}
 
-		if err := tx.UsrPwdRepository().SetPwd(tx.Ctx(), usr.ID, pwdHash); err != nil {
+		if err := tx.UsrPwdRepository().SetPwd(tx.Ctx(), newUsr.ID, pwdHash); err != nil {
 			uc.log.DebugContext(tx.Ctx(), "error creating usr pwd", "err", err, "stack", debug.Stack())
 			return err
 		}
@@ -148,7 +148,7 @@ func (uc *CreateUsrUseCase) Execute(
 		return nil, err
 	}
 
-	return usr, nil
+	return newUsr, nil
 }
 
 func NewCreateUsrUseCase(

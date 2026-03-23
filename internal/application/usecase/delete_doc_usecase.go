@@ -17,18 +17,13 @@ type DeleteDocUseCase struct {
 	storage        storage.StorageManager
 	docRepository  domain.DocRepository
 	nodeRepository domain.NodeRepository
-	usrRepository  domain.UsrRepository
 	log            *slog.Logger
 }
 
-func (uc *DeleteDocUseCase) Execute(ctx context.Context, usrID domain.UsrID, docID domain.DocID) (*dto.FileNodeDTO, error) {
-	usr, err := uc.usrRepository.GetByID(ctx, usrID)
+func (uc *DeleteDocUseCase) Execute(ctx context.Context, docID domain.DocID) (*dto.FileNodeDTO, error) {
+	usr, err := getUsrIdentity(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	if usr == nil {
-		return nil, apperror.ErrUnauthenticated(nil)
 	}
 
 	if !usr.Role.CanDeleteDoc() {
@@ -89,17 +84,15 @@ func NewDeleteDocUseCase(
 	s storage.StorageManager,
 	dr domain.DocRepository,
 	nr domain.NodeRepository,
-	ur domain.UsrRepository,
 	gur domain.GroupUsrRepository,
 	mainLogger *slog.Logger,
 ) *DeleteDocUseCase {
 	helper.NotNilOrPanic(s, "StorageManager")
 	helper.NotNilOrPanic(dr, "DocRepository")
 	helper.NotNilOrPanic(nr, "NodeRepository")
-	helper.NotNilOrPanic(ur, "UsrRepository")
 	helper.NotNilOrPanic(gur, "GroupUsrRepository")
 	helper.NotNilOrPanic(mainLogger, "mainLogger")
 	log := mainLogger.With("usecase", "DeleteDocUseCase")
 	ac := accessChecker{gur}
-	return &DeleteDocUseCase{ac, s, dr, nr, ur, log}
+	return &DeleteDocUseCase{ac, s, dr, nr, log}
 }

@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"ownned/internal/application/usecase"
-	"ownned/internal/infrastructure/sctx"
 	"ownned/internal/infrastructure/transport/http/decoder"
 	"ownned/internal/infrastructure/transport/http/encoder"
 	"ownned/internal/infrastructure/transport/http/view"
@@ -23,18 +22,6 @@ type NodeCommentHandler struct {
 }
 
 func (h *NodeCommentHandler) GetNodeCommentsHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := sctx.GetSession(r.Context())
-	if err != nil {
-		_ = encoder.WriteJSONError(w, err)
-		return
-	}
-
-	usrID, err := uuid.Parse(session.UsrID)
-	if err != nil {
-		_ = encoder.WriteJSONError(w, apperror.ErrInternal(nil))
-		return
-	}
-
 	nodeID, err := uuid.Parse(chi.URLParam(r, "nodeID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -43,7 +30,7 @@ func (h *NodeCommentHandler) GetNodeCommentsHandler(w http.ResponseWriter, r *ht
 		return
 	}
 
-	comments, err := h.getNodeComments.Execute(r.Context(), usrID, nodeID)
+	comments, err := h.getNodeComments.Execute(r.Context(), nodeID)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
 		return
@@ -58,18 +45,6 @@ func (h *NodeCommentHandler) GetNodeCommentsHandler(w http.ResponseWriter, r *ht
 }
 
 func (h *NodeCommentHandler) CreateNodeCommentHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := sctx.GetSession(r.Context())
-	if err != nil {
-		_ = encoder.WriteJSONError(w, err)
-		return
-	}
-
-	usrID, err := uuid.Parse(session.UsrID)
-	if err != nil {
-		_ = encoder.WriteJSONError(w, apperror.ErrInternal(nil))
-		return
-	}
-
 	nodeID, err := uuid.Parse(chi.URLParam(r, "nodeID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -84,7 +59,7 @@ func (h *NodeCommentHandler) CreateNodeCommentHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	comment, err := h.createNodeComment.Execute(r.Context(), usrID, nodeID, body.Content)
+	comment, err := h.createNodeComment.Execute(r.Context(), nodeID, body.Content)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
 		return
@@ -94,18 +69,6 @@ func (h *NodeCommentHandler) CreateNodeCommentHandler(w http.ResponseWriter, r *
 }
 
 func (h *NodeCommentHandler) UpdateNodeCommentHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := sctx.GetSession(r.Context())
-	if err != nil {
-		_ = encoder.WriteJSONError(w, err)
-		return
-	}
-
-	usrID, err := uuid.Parse(session.UsrID)
-	if err != nil {
-		_ = encoder.WriteJSONError(w, apperror.ErrInternal(nil))
-		return
-	}
-
 	nodeCommentID, err := uuid.Parse(chi.URLParam(r, "nodeCommentID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -120,7 +83,7 @@ func (h *NodeCommentHandler) UpdateNodeCommentHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	comment, err := h.updateNodeComment.Execute(r.Context(), usrID, nodeCommentID, body.Content)
+	comment, err := h.updateNodeComment.Execute(r.Context(), nodeCommentID, body.Content)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
 		return
@@ -130,18 +93,6 @@ func (h *NodeCommentHandler) UpdateNodeCommentHandler(w http.ResponseWriter, r *
 }
 
 func (h *NodeCommentHandler) DeleteNodeCommentHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := sctx.GetSession(r.Context())
-	if err != nil {
-		_ = encoder.WriteJSONError(w, err)
-		return
-	}
-
-	usrID, err := uuid.Parse(session.UsrID)
-	if err != nil {
-		_ = encoder.WriteJSONError(w, apperror.ErrInternal(nil))
-		return
-	}
-
 	nodeCommentID, err := uuid.Parse(chi.URLParam(r, "nodeCommentID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -150,7 +101,7 @@ func (h *NodeCommentHandler) DeleteNodeCommentHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	comment, err := h.deleteNodeComment.Execute(r.Context(), usrID, nodeCommentID)
+	comment, err := h.deleteNodeComment.Execute(r.Context(), nodeCommentID)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
 		return

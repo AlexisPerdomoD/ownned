@@ -7,7 +7,6 @@ import (
 
 	"ownned/internal/application/dto"
 	"ownned/internal/application/usecase"
-	"ownned/internal/infrastructure/sctx"
 	"ownned/internal/infrastructure/transport/http/decoder"
 	"ownned/internal/infrastructure/transport/http/encoder"
 	"ownned/internal/infrastructure/transport/http/view"
@@ -34,13 +33,7 @@ func (h *GroupHandler) GetGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	usrID, err := sctx.GetUsrID(r.Context())
-	if err != nil {
-		_ = encoder.WriteJSONError(w, err)
-		return
-	}
-
-	group, err := h.getGroup.Execute(r.Context(), usrID, groupID)
+	group, err := h.getGroup.Execute(r.Context(), groupID)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
 		return
@@ -50,12 +43,6 @@ func (h *GroupHandler) GetGroupHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *GroupHandler) PaginateGroupHandler(w http.ResponseWriter, r *http.Request) {
-	usrID, err := sctx.GetUsrID(r.Context())
-	if err != nil {
-		_ = encoder.WriteJSONError(w, err)
-		return
-	}
-
 	var search string
 	var limit, page uint
 	q := r.URL.Query()
@@ -73,7 +60,11 @@ func (h *GroupHandler) PaginateGroupHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	res, err := h.paginateGroup.Execute(
-		r.Context(), usrID, page, limit, search, false)
+		r.Context(),
+		page,
+		limit,
+		search,
+		false)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
 		return
@@ -85,12 +76,6 @@ func (h *GroupHandler) PaginateGroupHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *GroupHandler) CreateGroupHandler(w http.ResponseWriter, r *http.Request) {
-	usrID, err := sctx.GetUsrID(r.Context())
-	if err != nil {
-		_ = encoder.WriteJSONError(w, err)
-		return
-	}
-
 	body, err := decoder.ReadFromJSON[dto.CreateGroupDTO](r.Body)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
@@ -102,7 +87,7 @@ func (h *GroupHandler) CreateGroupHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	group, err := h.createGroup.Execute(r.Context(), usrID, body)
+	group, err := h.createGroup.Execute(r.Context(), body)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
 		return
@@ -112,12 +97,6 @@ func (h *GroupHandler) CreateGroupHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (h *GroupHandler) DeleteGroupHandler(w http.ResponseWriter, r *http.Request) {
-	usrID, err := sctx.GetUsrID(r.Context())
-	if err != nil {
-		_ = encoder.WriteJSONError(w, err)
-		return
-	}
-
 	groupID, err := uuid.Parse(chi.URLParam(r, "groupID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -126,7 +105,7 @@ func (h *GroupHandler) DeleteGroupHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	group, err := h.deleteGroup.Execute(r.Context(), usrID, groupID)
+	group, err := h.deleteGroup.Execute(r.Context(), groupID)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
 		return

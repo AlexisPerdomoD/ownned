@@ -15,21 +15,16 @@ import (
 
 type DeleteNodeUseCase struct {
 	accessChecker
-	usrRepository  domain.UsrRepository
 	nodeRepository domain.NodeRepository
 	docRepository  domain.DocRepository
 	storage        storage.StorageManager
 	log            *slog.Logger
 }
 
-func (uc *DeleteNodeUseCase) Execute(ctx context.Context, usrID domain.UsrID, nodeID domain.NodeID) error {
-	usr, err := uc.usrRepository.GetByID(ctx, usrID)
+func (uc *DeleteNodeUseCase) Execute(ctx context.Context, nodeID domain.NodeID) error {
+	usr, err := getUsrIdentity(ctx)
 	if err != nil {
 		return err
-	}
-
-	if usr == nil {
-		return apperror.ErrUnauthenticated(nil)
 	}
 
 	if usr.Role != domain.LimitedUsrRole {
@@ -107,14 +102,12 @@ func (uc *DeleteNodeUseCase) deleteDocsAsync(docs []domain.Doc) {
 }
 
 func NewDeleteNodeUseCase(
-	ur domain.UsrRepository,
 	nr domain.NodeRepository,
 	dr domain.DocRepository,
 	gur domain.GroupUsrRepository,
 	storage storage.StorageManager,
 	mainLogger *slog.Logger,
 ) *DeleteNodeUseCase {
-	helper.NotNilOrPanic(ur, "UsrRepository")
 	helper.NotNilOrPanic(nr, "NodeRepository")
 	helper.NotNilOrPanic(dr, "DocRepository")
 	helper.NotNilOrPanic(gur, "GroupUsrRepository")
@@ -123,5 +116,5 @@ func NewDeleteNodeUseCase(
 	ac := accessChecker{gur}
 	logger := mainLogger.With("usecase", "DeleteNodeUseCase")
 
-	return &DeleteNodeUseCase{ac, ur, nr, dr, storage, logger}
+	return &DeleteNodeUseCase{ac, nr, dr, storage, logger}
 }

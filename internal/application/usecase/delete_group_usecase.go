@@ -11,18 +11,13 @@ import (
 
 type DeleteGroupUseCase struct {
 	accessChecker
-	usrRepository   domain.UsrRepository
 	groupRepository domain.GroupRepository
 }
 
-func (uc *DeleteGroupUseCase) Execute(ctx context.Context, usrID domain.UsrID, groupID domain.GroupID) (*domain.Group, error) {
-	usr, err := uc.usrRepository.GetByID(ctx, usrID)
+func (uc *DeleteGroupUseCase) Execute(ctx context.Context, groupID domain.GroupID) (*domain.Group, error) {
+	usr, err := getUsrIdentity(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	if usr == nil {
-		return nil, apperror.ErrUnauthenticated(nil)
 	}
 
 	if !usr.Role.CanDeleteGroup() {
@@ -60,9 +55,8 @@ func (uc *DeleteGroupUseCase) Execute(ctx context.Context, usrID domain.UsrID, g
 	return group, nil
 }
 
-func NewDeleteGroupUseCase(ur domain.UsrRepository, gr domain.GroupRepository, gur domain.GroupUsrRepository) *DeleteGroupUseCase {
-	helper.NotNilOrPanic(ur, "usrRepository")
+func NewDeleteGroupUseCase(gr domain.GroupRepository, gur domain.GroupUsrRepository) *DeleteGroupUseCase {
 	helper.NotNilOrPanic(gr, "groupRepository")
 	ac := accessChecker{gur}
-	return &DeleteGroupUseCase{ac, ur, gr}
+	return &DeleteGroupUseCase{ac, gr}
 }

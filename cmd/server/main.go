@@ -88,10 +88,10 @@ func main() {
 	}
 
 	// SERVICES
-	l := slog.New(slog.
+	lg := slog.New(slog.
 		NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
-	jwtService := serv.NewJWTManagerST(
+	jwtManager := serv.NewJWTManagerST(
 		[]byte(cfg.SessionSecret),
 		time.Hour,
 		"ownned",
@@ -108,7 +108,7 @@ func main() {
 	storage := serv.NewStorageManagerFS(cfg.LocalStorageDir)
 
 	// MIDLEWARES
-	authmiddleware := middleware.NewAuthMiddleware(jwtService)
+	authM := middleware.NewAuthMiddleware(jwtManager)
 
 	usrRepository := pg.NewUsrRepository(db)
 	usrPwdRepository := pg.NewUsrPwdRepository(db)
@@ -117,7 +117,7 @@ func main() {
 	groupRepository := pg.NewGroupRepository(db)
 	groupUsrRepository := pg.NewGroupUsrRepository(db)
 	docRepository := pg.NewDocRepository(db)
-	unitOfWorkFactory := pg.NewUnitOfWorkFactory(db, l, time.Second*30)
+	unitOfWorkFactory := pg.NewUnitOfWorkFactory(db, lg, time.Second*30)
 
 	// GROUPS
 	getGroup := usecase.
@@ -127,21 +127,16 @@ func main() {
 			groupRepository,
 			groupUsrRepository)
 	paginateGroup := usecase.
-		NewPaginateGroupUseCase(
-			usrRepository,
-			groupRepository)
+		NewPaginateGroupUseCase(groupRepository)
 	createGroup := usecase.
-		NewCreateGroupUseCase(
-			usrRepository,
-			unitOfWorkFactory)
+		NewCreateGroupUseCase(unitOfWorkFactory)
 	deleteGroup := usecase.
 		NewDeleteGroupUseCase(
-			usrRepository,
 			groupRepository,
 			groupUsrRepository)
 
 	// GROUPS ROUTES
-	groupHandler := handler.
+	groupH := handler.
 		NewGroupHandler(
 			getGroup,
 			paginateGroup,
@@ -149,17 +144,17 @@ func main() {
 			deleteGroup)
 	groupR := chi.NewRouter()
 
-	groupR.Post("/", authmiddleware.
-		IsAuthenticated(groupHandler.CreateGroupHandler))
+	groupR.Post("/", authM.
+		IsAuthenticated(groupH.CreateGroupHandler))
 
-	groupR.Get("/{groupID}", authmiddleware.
-		IsAuthenticated(groupHandler.GetGroupHandler))
+	groupR.Get("/{groupID}", authM.
+		IsAuthenticated(groupH.GetGroupHandler))
 
-	groupR.Get("/paginate", authmiddleware.
-		IsAuthenticated(groupHandler.PaginateGroupHandler))
+	groupR.Get("/paginate", authM.
+		IsAuthenticated(groupH.PaginateGroupHandler))
 
-	groupR.Delete("/{groupID}", authmiddleware.
-		IsAuthenticated(groupHandler.DeleteGroupHandler))
+	groupR.Delete("/{groupID}", authM.
+		IsAuthenticated(groupH.DeleteGroupHandler))
 
 	// USERS
 	createUsr := usecase.
@@ -167,7 +162,7 @@ func main() {
 			usrRepository,
 			unitOfWorkFactory,
 			pwdHasher,
-			l)
+			lg)
 	getUsr := usecase.
 		NewGetUsrUseCase(usrRepository)
 	paginateUsr := usecase.
@@ -177,9 +172,9 @@ func main() {
 			usrRepository,
 			usrPwdRepository,
 			pwdHasher,
-			jwtService)
+			jwtManager)
 	// USR ROUTES
-	usrHandler := handler.
+	usrH := handler.
 		NewUsrHandler(
 			loginUsr,
 			createUsr,
@@ -190,130 +185,119 @@ func main() {
 				SameSite: http.SameSiteLaxMode,
 			})
 	usrR := chi.NewRouter()
-	usrR.Get("/{usrID}", authmiddleware.
-		IsAuthenticated(usrHandler.GetUsrHandler))
-	usrR.Post("/", authmiddleware.
-		IsSuperUsr(usrHandler.CreateUsrHandler))
-	usrR.Get("/paginate", authmiddleware.
-		IsAuthenticated(usrHandler.PaginateUsrHandler))
-	usrR.Post("/login", usrHandler.LoginUsrHandler)
-	usrR.Delete("/logout", usrHandler.LogoutUsrHandler)
+	usrR.Get("/{usrID}", authM.
+		IsAuthenticated(usrH.GetUsrHandler))
+	usrR.Post("/", authM.
+		IsSuperUsr(usrH.CreateUsrHandler))
+	usrR.Get("/paginate", authM.
+		IsAuthenticated(usrH.PaginateUsrHandler))
+	usrR.Post("/login", usrH.LoginUsrHandler)
+	usrR.Delete("/logout", usrH.LogoutUsrHandler)
 
 	// NODES
 	getRoot := usecase.
 		NewGetRootNodesUseCase(
 			nodeRepository,
-			usrRepository,
 			groupRepository,
-			l)
+			lg)
 	createFolder := usecase.
 		NewCreateFolderUseCase(
 			nodeRepository,
-			usrRepository,
 			groupUsrRepository)
 	getNode := usecase.
 		NewGetNodeByIDUseCase(
-			usrRepository,
 			nodeRepository,
 			docRepository,
 			groupUsrRepository,
-			l)
+			lg)
 	// NODES ROUTES
-	nodeHandler := handler.
+	nodeH := handler.
 		NewNodeHandler(
 			getRoot,
 			createFolder,
 			getNode)
 	nodeR := chi.NewRouter()
-	nodeR.Get("/", authmiddleware.
-		IsAuthenticated(nodeHandler.GetRootHandler))
-	nodeR.Post("/", authmiddleware.
-		IsAuthenticated(nodeHandler.CreateFolderHandler))
-	nodeR.Get("/{nodeID}", authmiddleware.
-		IsAuthenticated(nodeHandler.GetNodeHandler))
+	nodeR.Get("/", authM.
+		IsAuthenticated(nodeH.GetRootHandler))
+	nodeR.Post("/", authM.
+		IsAuthenticated(nodeH.CreateFolderHandler))
+	nodeR.Get("/{nodeID}", authM.
+		IsAuthenticated(nodeH.GetNodeHandler))
 
 	// NODE COMMENTS
 	getNodeComments := usecase.
 		NewGetNodeCommentsUseCase(
-			usrRepository,
 			nodeRepository,
 			nodeCommentRepository,
 			groupUsrRepository)
 	createNodeComment := usecase.
 		NewCreateNodeCommentUseCase(
-			usrRepository,
 			nodeRepository,
 			nodeCommentRepository,
 			groupUsrRepository,
-			l)
+			lg)
 	updateNodeComment := usecase.
 		NewUpdateNodeCommentUseCase(
-			usrRepository,
 			nodeCommentRepository)
 	deleteNodeComment := usecase.
 		NewDeleteNodeCommentUseCase(
-			usrRepository,
 			nodeRepository,
 			nodeCommentRepository,
 			groupUsrRepository)
 	// NODE COMMENTS ROUTES
-	nodeCommentHandler := handler.
+	nodeCommentH := handler.
 		NewNodeCommentHandler(
 			getNodeComments,
 			createNodeComment,
 			updateNodeComment,
 			deleteNodeComment)
 	nodeCommentR := chi.NewRouter()
-	nodeR.Get("/:nodeID/comments", authmiddleware.
-		IsAuthenticated(nodeCommentHandler.GetNodeCommentsHandler))
-	nodeR.Post("/:nodeID/comments", authmiddleware.
-		IsAuthenticated(nodeCommentHandler.CreateNodeCommentHandler))
-	nodeCommentR.Patch("/{nodeCommentID}", authmiddleware.
-		IsAuthenticated(nodeCommentHandler.UpdateNodeCommentHandler))
-	nodeCommentR.Delete("/{nodeCommentID}", authmiddleware.
-		IsAuthenticated(nodeCommentHandler.DeleteNodeCommentHandler))
+	nodeR.Get("/{nodeID}/comments", authM.
+		IsAuthenticated(nodeCommentH.GetNodeCommentsHandler))
+	nodeR.Post("/{nodeID}/comments", authM.
+		IsAuthenticated(nodeCommentH.CreateNodeCommentHandler))
+	nodeCommentR.Patch("/{nodeCommentID}", authM.
+		IsAuthenticated(nodeCommentH.UpdateNodeCommentHandler))
+	nodeCommentR.Delete("/{nodeCommentID}", authM.
+		IsAuthenticated(nodeCommentH.DeleteNodeCommentHandler))
 
 	// DOCS
 	createDoc := usecase.
 		NewCreateDocUseCase(
-			usrRepository,
 			docRepository,
 			nodeRepository,
 			groupUsrRepository,
 			unitOfWorkFactory,
 			storage,
-			l)
+			lg)
 	deleteDoc := usecase.
 		NewDeleteDocUseCase(
 			storage,
 			docRepository,
 			nodeRepository,
-			usrRepository,
 			groupUsrRepository,
-			l)
+			lg)
 
 	// DOCS ROUTES
-	docHandler := handler.
+	docH := handler.
 		NewDocHandler(
 			createDoc,
 			deleteDoc)
 	docR := chi.NewRouter()
-	docR.Post("/", authmiddleware.
-		IsAuthenticated(docHandler.CreateDocHandler))
-	docR.Delete("/{docID}", authmiddleware.
-		IsAuthenticated(docHandler.DeleteDocHandler))
+	docR.Post("/", authM.
+		IsAuthenticated(docH.CreateDocHandler))
+	docR.Delete("/{docID}", authM.
+		IsAuthenticated(docH.DeleteDocHandler))
 
 	// SERVER ROUTES
-
 	r := chi.NewRouter()
 	r.Mount("/api/v1/groups", groupR)
 	r.Mount("/api/v1/usrs", usrR)
 	r.Mount("/api/v1/nodes", nodeR)
 	r.Mount("/api/v1/comments", nodeCommentR)
 	r.Mount("/api/v1/docs", docR)
+
 	logRoutes(r)
-
-	l.Info("server starting at:", "port", cfg.Port)
-
+	lg.Info("server starting at:", "Mode", cfg.Mode, "port", cfg.Port)
 	_ = http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), r)
 }

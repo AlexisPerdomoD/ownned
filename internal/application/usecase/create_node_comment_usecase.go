@@ -14,7 +14,6 @@ import (
 
 type CreateNodeCommentUseCase struct {
 	accessChecker
-	usrRepository         domain.UsrRepository
 	nodeRepository        domain.NodeRepository
 	nodeCommentRepository domain.NodeCommentRepository
 	log                   *slog.Logger
@@ -22,17 +21,12 @@ type CreateNodeCommentUseCase struct {
 
 func (uc *CreateNodeCommentUseCase) Execute(
 	ctx context.Context,
-	usrID domain.UsrID,
 	nodeID domain.NodeID,
 	content string,
 ) (*domain.NodeComment, error) {
-	usr, err := uc.usrRepository.GetByID(ctx, usrID)
+	usr, err := getUsrIdentity(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	if usr == nil {
-		return nil, apperror.ErrUnauthenticated(nil)
 	}
 
 	node, err := uc.nodeRepository.GetByID(ctx, nodeID)
@@ -64,8 +58,8 @@ func (uc *CreateNodeCommentUseCase) Execute(
 	}
 	comment := &domain.NodeComment{
 		ID:      commentID,
-		NodeID:  nodeID,
-		UsrID:   usrID,
+		NodeID:  node.ID,
+		UsrID:   usr.ID,
 		Content: content,
 	}
 
@@ -77,18 +71,16 @@ func (uc *CreateNodeCommentUseCase) Execute(
 }
 
 func NewCreateNodeCommentUseCase(
-	ur domain.UsrRepository,
 	nr domain.NodeRepository,
 	ncr domain.NodeCommentRepository,
 	gur domain.GroupUsrRepository,
 	mainLogger *slog.Logger,
 ) *CreateNodeCommentUseCase {
-	helper.NotNilOrPanic(ur, "UsrRepository")
 	helper.NotNilOrPanic(nr, "NodeRepository")
 	helper.NotNilOrPanic(ncr, "NodeCommentRepository")
 	helper.NotNilOrPanic(gur, "GroupUsrRepository")
 	helper.NotNilOrPanic(mainLogger, "mainLogger")
 	log := mainLogger.With("usecase", "CreateNodeCommentUseCase")
 	ac := accessChecker{gur}
-	return &CreateNodeCommentUseCase{ac, ur, nr, ncr, log}
+	return &CreateNodeCommentUseCase{ac, nr, ncr, log}
 }

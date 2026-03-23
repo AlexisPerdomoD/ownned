@@ -11,19 +11,14 @@ import (
 
 type DeleteNodeCommentUseCase struct {
 	accessChecker
-	usrRepository         domain.UsrRepository
 	nodeRepository        domain.NodeRepository
 	nodeCommentRepository domain.NodeCommentRepository
 }
 
-func (uc *DeleteNodeCommentUseCase) Execute(ctx context.Context, usrID domain.UsrID, commentID domain.NodeCommentID) (*domain.NodeComment, error) {
-	usr, err := uc.usrRepository.GetByID(ctx, usrID)
+func (uc *DeleteNodeCommentUseCase) Execute(ctx context.Context, commentID domain.NodeCommentID) (*domain.NodeComment, error) {
+	usr, err := getUsrIdentity(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	if usr == nil {
-		return nil, apperror.ErrUnauthenticated(nil)
 	}
 
 	comment, err := uc.nodeCommentRepository.GetByID(ctx, commentID)
@@ -52,15 +47,13 @@ func (uc *DeleteNodeCommentUseCase) Execute(ctx context.Context, usrID domain.Us
 }
 
 func NewDeleteNodeCommentUseCase(
-	ur domain.UsrRepository,
 	nr domain.NodeRepository,
 	ncr domain.NodeCommentRepository,
 	gur domain.GroupUsrRepository,
 ) *DeleteNodeCommentUseCase {
-	helper.NotNilOrPanic(ur, "UsrRepository")
 	helper.NotNilOrPanic(nr, "NodeRepository")
 	helper.NotNilOrPanic(ncr, "NodeCommentRepository")
 	helper.NotNilOrPanic(gur, "GroupUsrRepository")
 	ac := accessChecker{gur}
-	return &DeleteNodeCommentUseCase{ac, ur, nr, ncr}
+	return &DeleteNodeCommentUseCase{ac, nr, ncr}
 }

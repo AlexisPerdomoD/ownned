@@ -11,19 +11,14 @@ import (
 
 type GetRootNodesUseCase struct {
 	nodeRepository  domain.NodeRepository
-	usrRepository   domain.UsrRepository
 	groupRepository domain.GroupRepository
 	log             *slog.Logger
 }
 
-func (uc *GetRootNodesUseCase) Execute(ctx context.Context, usrID domain.UsrID) ([]domain.Node, error) {
-	usr, err := uc.usrRepository.GetByID(ctx, usrID)
+func (uc *GetRootNodesUseCase) Execute(ctx context.Context) ([]domain.Node, error) {
+	usr, err := getUsrIdentity(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	if usr == nil {
-		return nil, apperror.ErrUnauthenticated(nil)
 	}
 
 	switch usr.Role {
@@ -57,14 +52,12 @@ func (uc *GetRootNodesUseCase) Execute(ctx context.Context, usrID domain.UsrID) 
 
 func NewGetRootNodesUseCase(
 	nr domain.NodeRepository,
-	ur domain.UsrRepository,
 	gr domain.GroupRepository,
 	mainLogger *slog.Logger,
 ) *GetRootNodesUseCase {
 	helper.NotNilOrPanic(nr, "NodeRepository")
-	helper.NotNilOrPanic(ur, "UsrRepository")
 	helper.NotNilOrPanic(gr, "GroupUsrRepository")
 	helper.NotNilOrPanic(mainLogger, "mainLogger")
 	log := mainLogger.With("usecase", "GetRootNodesUseCase")
-	return &GetRootNodesUseCase{nr, ur, gr, log}
+	return &GetRootNodesUseCase{nr, gr, log}
 }

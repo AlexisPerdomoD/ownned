@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"ownned/internal/application/usecase"
-	"ownned/internal/infrastructure/sctx"
 	"ownned/internal/infrastructure/transport/http/decoder"
 	"ownned/internal/infrastructure/transport/http/encoder"
 	"ownned/internal/infrastructure/transport/http/view"
@@ -22,19 +21,7 @@ type NodeHandler struct {
 }
 
 func (c *NodeHandler) GetRootHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := sctx.GetSession(r.Context())
-	if err != nil {
-		_ = encoder.WriteJSONError(w, err)
-		return
-	}
-
-	usrID, err := uuid.Parse(session.UsrID)
-	if err != nil {
-		_ = encoder.WriteJSONError(w, apperror.ErrUnauthenticated(nil))
-		return
-	}
-
-	nodes, err := c.getRoot.Execute(r.Context(), usrID)
+	nodes, err := c.getRoot.Execute(r.Context())
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
 		return
@@ -57,21 +44,7 @@ func (c *NodeHandler) GetNodeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := sctx.GetSession(r.Context())
-	if err != nil {
-		_ = encoder.WriteJSONError(w, err)
-		return
-	}
-
-	usrID, err := uuid.Parse(session.UsrID)
-	if err != nil {
-		detail := make(map[string]string)
-		detail["reason"] = "Something went wrong from internal server state, please try again later."
-		_ = encoder.WriteJSONError(w, apperror.ErrInternal(detail))
-		return
-	}
-
-	node, err := c.getNode.Execute(r.Context(), usrID, nodeID)
+	node, err := c.getNode.Execute(r.Context(), nodeID)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
 		return
@@ -110,19 +83,7 @@ func (c *NodeHandler) CreateFolderHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	session, err := sctx.GetSession(r.Context())
-	if err != nil {
-		_ = encoder.WriteJSONError(w, err)
-		return
-	}
-
-	usrID, err := uuid.Parse(session.UsrID)
-	if err != nil {
-		_ = encoder.WriteJSONError(w, apperror.ErrUnauthenticated(nil))
-		return
-	}
-
-	folder, err := c.createFolder.Execute(r.Context(), usrID, body)
+	folder, err := c.createFolder.Execute(r.Context(), body)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
 		return

@@ -11,21 +11,16 @@ import (
 )
 
 type CreateGroupUseCase struct {
-	ur  domain.UsrRepository
 	uow domain.UnitOfWorkFactory
 }
 
 func (uc *CreateGroupUseCase) Execute(
 	ctx context.Context,
-	usrID domain.UsrID,
 	args *dto.CreateGroupDTO,
 ) (*domain.Group, error) {
-	usr, err := uc.ur.GetByID(ctx, usrID)
+	usr, err := getUsrIdentity(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if usr == nil {
-		return nil, apperror.ErrUnauthenticated(nil)
 	}
 
 	if !usr.Role.CanCreateGroup() {
@@ -69,8 +64,7 @@ func (uc *CreateGroupUseCase) Execute(
 	return group, nil
 }
 
-func NewCreateGroupUseCase(ur domain.UsrRepository, uowf domain.UnitOfWorkFactory) *CreateGroupUseCase {
-	helper.NotNilOrPanic(ur, "UsrRepository")
+func NewCreateGroupUseCase(uowf domain.UnitOfWorkFactory) *CreateGroupUseCase {
 	helper.NotNilOrPanic(uowf, "UnitOfWorkFactory")
-	return &CreateGroupUseCase{ur, uowf}
+	return &CreateGroupUseCase{uowf}
 }

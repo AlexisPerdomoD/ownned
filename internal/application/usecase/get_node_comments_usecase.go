@@ -11,19 +11,14 @@ import (
 
 type GetNodeCommentsUseCase struct {
 	accessChecker
-	usrRepository         domain.UsrRepository
 	nodeRepository        domain.NodeRepository
 	nodeCommentRepository domain.NodeCommentRepository
 }
 
-func (uc *GetNodeCommentsUseCase) Execute(ctx context.Context, usrID domain.UsrID, nodeID domain.NodeID) ([]domain.NodeComment, error) {
-	usr, err := uc.usrRepository.GetByID(ctx, usrID)
+func (uc *GetNodeCommentsUseCase) Execute(ctx context.Context, nodeID domain.NodeID) ([]domain.NodeComment, error) {
+	usr, err := getUsrIdentity(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	if usr == nil {
-		return nil, apperror.ErrUnauthenticated(nil)
 	}
 
 	node, err := uc.nodeRepository.GetByID(ctx, nodeID)
@@ -52,15 +47,13 @@ func (uc *GetNodeCommentsUseCase) Execute(ctx context.Context, usrID domain.UsrI
 }
 
 func NewGetNodeCommentsUseCase(
-	ur domain.UsrRepository,
 	nr domain.NodeRepository,
 	ncr domain.NodeCommentRepository,
 	gur domain.GroupUsrRepository,
 ) *GetNodeCommentsUseCase {
-	helper.NotNilOrPanic(ur, "UsrRepository")
 	helper.NotNilOrPanic(nr, "NodeRepository")
 	helper.NotNilOrPanic(ncr, "NodeCommentRepository")
 	helper.NotNilOrPanic(gur, "GroupUsrRepository")
 	ac := accessChecker{gur}
-	return &GetNodeCommentsUseCase{ac, ur, nr, ncr}
+	return &GetNodeCommentsUseCase{ac, nr, ncr}
 }

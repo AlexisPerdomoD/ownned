@@ -17,14 +17,10 @@ type GetGroupUseCase struct {
 	nodeRepository  domain.NodeRepository
 }
 
-func (uc *GetGroupUseCase) Execute(ctx context.Context, usrID domain.UsrID, groupID domain.GroupID) (*dto.PopulateGroupDTO, error) {
-	usr, err := uc.usrRepository.GetByID(ctx, usrID)
+func (uc *GetGroupUseCase) Execute(ctx context.Context, groupID domain.GroupID) (*dto.PopulateGroupDTO, error) {
+	usr, err := getUsrIdentity(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	if usr == nil {
-		return nil, apperror.ErrUnauthenticated(nil)
 	}
 
 	group, err := uc.groupRepository.GetByID(ctx, groupID)

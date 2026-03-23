@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"ownned/internal/application/usecase"
-	"ownned/internal/infrastructure/sctx"
 	"ownned/internal/infrastructure/transport/http/decoder"
 	"ownned/internal/infrastructure/transport/http/encoder"
 	"ownned/internal/infrastructure/transport/http/view"
@@ -21,18 +20,6 @@ type DocHandler struct {
 }
 
 func (h *DocHandler) CreateDocHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := sctx.GetSession(r.Context())
-	if err != nil {
-		_ = encoder.WriteJSONError(w, err)
-		return
-	}
-
-	usrID, err := uuid.Parse(session.UsrID)
-	if err != nil {
-		_ = encoder.WriteJSONError(w, err)
-		return
-	}
-
 	dto, err := decoder.CreateDocInputDTOFromMultipartOnDemand(r)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
@@ -50,7 +37,7 @@ func (h *DocHandler) CreateDocHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	fileNode, err := h.createDoc.Execute(r.Context(), usrID, dto)
+	fileNode, err := h.createDoc.Execute(r.Context(), dto)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
 		return
@@ -61,18 +48,6 @@ func (h *DocHandler) CreateDocHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DocHandler) DeleteDocHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := sctx.GetSession(r.Context())
-	if err != nil {
-		_ = encoder.WriteJSONError(w, err)
-		return
-	}
-
-	usrID, err := uuid.Parse(session.UsrID)
-	if err != nil {
-		_ = encoder.WriteJSONError(w, err)
-		return
-	}
-
 	docID, err := uuid.Parse(chi.URLParam(r, "docID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -81,7 +56,7 @@ func (h *DocHandler) DeleteDocHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deletedFileNode, err := h.deleteDoc.Execute(r.Context(), usrID, docID)
+	deletedFileNode, err := h.deleteDoc.Execute(r.Context(), docID)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
 		return
