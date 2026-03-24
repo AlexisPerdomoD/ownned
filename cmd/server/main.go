@@ -161,6 +161,7 @@ func main() {
 	paginateGroup := usecase.
 		NewPaginateGroupUseCase(groupRepository)
 	updateGroup := usecase.
+		// TODO: add swagger doc here
 		NewUpdateGroupUseCase(groupRepository)
 	createGroup := usecase.
 		NewCreateGroupUseCase(unitOfWorkFactory)
@@ -379,12 +380,19 @@ func main() {
 			nodeRepository,
 			groupUsrRepository,
 			lg)
+	downloadDoc := usecase.
+		NewDownloadDocUseCase(
+			nodeRepository,
+			docRepository,
+			groupUsrRepository,
+			storage)
 
 	// ROUTES
 	docH := handler.
 		NewDocHandler(
 			createDoc,
-			deleteDoc)
+			deleteDoc,
+			downloadDoc)
 	docR := chi.NewRouter()
 	docR.Post("/", authM.
 		// TODO: Add swagger doc here
@@ -392,6 +400,9 @@ func main() {
 	docR.Delete("/{docID}", authM.
 		// TODO: Add swagger doc here
 		IsAuthenticated(docH.DeleteDocHandler))
+	docR.Get("/{docID}/download", authM.
+		// TODO: add swagger doc here
+		IsAuthenticated(docH.DownloadDocHandler))
 
 	// =========================================================================
 	// SERVER START POINT
