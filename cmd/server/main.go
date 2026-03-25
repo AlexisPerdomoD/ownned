@@ -79,6 +79,7 @@ func main() {
 	// =========================================================================
 
 	cfg := config.LoadEnvConfig()
+
 	// =========================================================================
 	// DB
 	// =========================================================================
@@ -419,6 +420,18 @@ func main() {
 	r.Mount("/api/v1/comments", nodeCommentR)
 	// TODO: Add swagger doc here
 	r.Mount("/api/v1/docs", docR)
+
+	// =========================================================================
+	// SERVE WEB APP
+	// =========================================================================
+
+	// Static assets
+	r.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/dist/assets"))))
+
+	// SPA fallback
+	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "web/dist/index.html")
+	}))
 
 	logRoutes(r)
 	lg.Info("server starting at:", "Mode", cfg.Mode, "port", cfg.Port)

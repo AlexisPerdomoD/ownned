@@ -2,10 +2,12 @@
 /bin/
 /build/
 /dist/
+web/dist
+web/app/dist
 *.exe
 *.test
 *.out
-
+node_modules
 .env
 
 .DS_Store

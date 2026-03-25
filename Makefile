@@ -12,6 +12,8 @@ TEST_PG_DB_URL := postgresql://$(TEST_PG_USER):$(TEST_PG_PASSWORD)@$(TEST_PG_HOS
 # FILES
 DB_COMPOSE_FILE := db-docker-compose.yaml
 TEST_DB_COMPOSE_FILE := db-docker-compose.test.yaml
+# VARS 
+HTTP_SERVER_BINARY=bin/server
 ################################################################################
 # LOCAL DB COMMANDS
 ################################################################################
@@ -78,8 +80,23 @@ migrate-up: check-migrate
 migrate-down: check-migrate
 	migrate -path $(PG_MIGRATION_DIR) -database "$(PG_DB_URL)" down
 
-start: 
-	go run ./cmd/server 
+build-web:
+	@cd web/app && pnpm i && pnpm build
+	@rm -rf web/dist
+	@cp -r web/app/dist web/dist
+	@echo "Web properly build!"
+
+build-http:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+	go build -ldflags="-s -w" -o $(HTTP_SERVER_BINARY) ./cmd/server
+	@echo "Bin properly compiled!"
+
+build-http-lite:
+	go build -o $(HTTP_SERVER_BINARY) ./cmd/server
+
+start-http: build-http 
+	@echo "Starting running HTTP Server..."
+	@$(HTTP_SERVER_BINARY)
 
 superusr: 
 	GOTRACEBACK=all go run ./cmd/superusr $(ARGS)
