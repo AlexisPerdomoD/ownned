@@ -1,4 +1,4 @@
-import prettier from 'eslint-config-prettier'
+// import prettier from 'eslint-config-prettier'
 import solid from 'eslint-plugin-solid'
 import globals from 'globals'
 
@@ -56,8 +56,8 @@ export default [
             semi: ['error', 'never'],
             'lines-between-class-members': ['warn', 'always', { exceptAfterSingleLine: true }]
         }
-    },
+    }
 
     // evita conflictos con prettier
-    prettier
+    // prettier
 ]
