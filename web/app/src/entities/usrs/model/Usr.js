@@ -1,6 +1,6 @@
 import z from 'zod'
 
-import { ValidationError } from '../../../shared/errors'
+import { ValidationError } from '@shared/errors'
 
 class Usr {
     #role

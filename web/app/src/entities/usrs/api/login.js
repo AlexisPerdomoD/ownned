@@ -1,10 +1,17 @@
 import z from 'zod'
 
-import { reqJSON } from '../../../shared/api/client'
-import { ValidationError } from '../../../shared/errors'
+import { reqJSON } from '@shared/api/client'
+import { ValidationError } from '@shared/errors'
+
 import { buildUsr } from '../model'
 
-export class LoginPwdDTO {
+/**
+ * @typedef {Object} LoginPwdArgs
+ * @property {string} username
+ * @property {string} password
+ */
+
+class LoginPwdDTO {
     static #schema = z.strictObject({
         username: z.email('Invalid email provided as username.'),
         password: z
@@ -27,12 +34,6 @@ export class LoginPwdDTO {
     }
 
     /**
-     * @typedef {Object} LoginPwdArgs
-     * @property {string} username
-     * @property {string} password
-     */
-
-    /**
      * @param {LoginPwdArgs} args
      */
     static build(args) {
@@ -50,15 +51,19 @@ export class LoginPwdDTO {
     }
 }
 
-export const buildLoginPwdDTO = LoginPwdDTO.build
-
 /**
- * @param {LoginPwdDTO} dto
+ * Login a user after properly validating of the expected arguments.
+ *
+ * @param {LoginPwdArgs} args
+ * @throws {import('@shared/errors').ValidationError} If the arguments (username, password) are invalid.
+ * @throws {import('@shared/errors').ApiError} if api returns an error.
+ *
  */
-export async function login(dto) {
+export async function login(args) {
+    const dto = LoginPwdDTO.build(args)
     const payload = await reqJSON('/api/v1/usrs/login', {
         method: 'POST',
-        body: JSON.stringify(dto.toJSON())
+        body: JSON.stringify(dto)
     })
 
     return buildUsr(payload)
