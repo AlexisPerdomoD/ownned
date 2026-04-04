@@ -1,7 +1,5 @@
 import z from 'zod'
 
-import { ValidationError } from '@shared/errors'
-
 class Usr {
     #role
 
@@ -65,11 +63,18 @@ class Usr {
 
     /**
      * @param {unknown} args
+     * @returns {[true, Usr] | [false, Record<string, string>]}
      */
     static build(args) {
         const result = Usr.#schema.safeParse(args)
         if (!result.success) {
-            throw new ValidationError('Invalid Usr data provided', result.error)
+            const issues = {}
+            result.error.issues.forEach(
+                issue =>
+                    (issues[issue.path.at(-1)?.toString() ?? 'general'] =
+                        issue.message)
+            )
+            return [false, issues]
         }
 
         const {
@@ -83,16 +88,19 @@ class Usr {
             updated_at
         } = result.data
 
-        return new Usr(
-            id,
-            firstname,
-            lastname,
-            username,
-            role,
-            role_title,
-            created_at,
-            updated_at
-        )
+        return [
+            true,
+            new Usr(
+                id,
+                firstname,
+                lastname,
+                username,
+                role,
+                role_title,
+                created_at,
+                updated_at
+            )
+        ]
     }
 }
 

@@ -2,9 +2,12 @@
 // API ERRORS (ApiError)
 // ─────────────────────────────────────────────────────────────────────────────
 export class ApiError extends Error {
-    /** @param {string} message */
-    constructor(message) {
+    /** @param {string} message
+     *  @param {Record<string, string> | null} detail
+     * */
+    constructor(message, detail = null) {
         super(message)
+        this.detail = detail
     }
 }
 
