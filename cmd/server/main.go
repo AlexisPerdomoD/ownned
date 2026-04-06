@@ -251,6 +251,8 @@ func main() {
 			lg)
 	getUsr := usecase.
 		NewGetUsrUseCase(usrRepository)
+	getMe := usecase.
+		NewGetMeUseCase(usrRepository)
 	paginateUsr := usecase.
 		NewPaginateUsrUseCase(usrRepository)
 	loginUsr := usecase.
@@ -265,6 +267,7 @@ func main() {
 		NewUsrHandler(
 			loginUsr,
 			createUsr,
+			getMe,
 			getUsr,
 			paginateUsr,
 			handler.UsrHandlerConfig{
@@ -272,12 +275,14 @@ func main() {
 				SameSite: http.SameSiteLaxMode,
 			})
 	usrR := chi.NewRouter()
+	usrR.Get("/me", authM.
+		IsAuthenticated(usrH.GetMeHandler))
 	usrR.Get("/{usrID}", authM.
 		IsAuthenticated(usrH.GetUsrHandler))
-	usrR.Post("/", authM.
-		IsSuperUsr(usrH.CreateUsrHandler))
 	usrR.Get("/paginate", authM.
 		IsAuthenticated(usrH.PaginateUsrHandler))
+	usrR.Post("/", authM.
+		IsSuperUsr(usrH.CreateUsrHandler))
 	usrR.Post("/login", usrH.LoginUsrHandler)
 	usrR.Delete("/logout", usrH.LogoutUsrHandler)
 

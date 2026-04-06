@@ -25,9 +25,20 @@ type UsrHandlerConfig struct {
 type UsrHandler struct {
 	loginUsr    *usecase.LoginUsrUseCase
 	createUsr   *usecase.CreateUsrUseCase
+	getMe       *usecase.GetMeUseCase
 	getUsr      *usecase.GetUsrUseCase
 	paginateUsr *usecase.PaginateUsrUseCase
 	cfg         UsrHandlerConfig
+}
+
+func (c *UsrHandler) GetMeHandler(w http.ResponseWriter, r *http.Request) {
+	usr, err := c.getMe.Execute(r.Context())
+	if err != nil {
+		_ = encoder.WriteJSONError(w, err)
+		return
+	}
+
+	_ = encoder.WriteJSON(w, http.StatusOK, view.UsrViewFromDomain(usr))
 }
 
 func (c *UsrHandler) GetUsrHandler(w http.ResponseWriter, r *http.Request) {
@@ -111,7 +122,7 @@ func (c *UsrHandler) LoginUsrHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionToken, err := c.loginUsr.Execute(r.Context(), *body)
+	sessionToken, usr, err := c.loginUsr.Execute(r.Context(), *body)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
 		return
@@ -127,9 +138,7 @@ func (c *UsrHandler) LoginUsrHandler(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   3600,
 	})
 
-	resp := make(map[string]string)
-	resp["message"] = "logged properly"
-	_ = encoder.WriteJSON(w, http.StatusCreated, resp)
+	_ = encoder.WriteJSON(w, http.StatusCreated, view.UsrViewFromDomain(usr))
 }
 
 func (c *UsrHandler) LogoutUsrHandler(w http.ResponseWriter, r *http.Request) {
@@ -152,13 +161,15 @@ func (c *UsrHandler) LogoutUsrHandler(w http.ResponseWriter, r *http.Request) {
 func NewUsrHandler(
 	lu *usecase.LoginUsrUseCase,
 	cu *usecase.CreateUsrUseCase,
+	gm *usecase.GetMeUseCase,
 	gu *usecase.GetUsrUseCase,
 	pu *usecase.PaginateUsrUseCase,
 	cfg UsrHandlerConfig,
 ) *UsrHandler {
 	helper.NotNilOrPanic(lu, "LoginUsrUseCase")
 	helper.NotNilOrPanic(cu, "CreateUsrUseCase")
+	helper.NotNilOrPanic(gm, "GetMeUseCase")
 	helper.NotNilOrPanic(gu, "GetUsrUseCase")
 	helper.NotNilOrPanic(pu, "PaginateUsrUseCase")
-	return &UsrHandler{lu, cu, gu, pu, cfg}
+	return &UsrHandler{lu, cu, gm, gu, pu, cfg}
 }

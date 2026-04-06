@@ -21,25 +21,25 @@ type LoginUsrUseCase struct {
 func (uc *LoginUsrUseCase) Execute(
 	ctx context.Context,
 	args dto.LoginUsrDTO,
-) (session string, err error) {
+) (session string, usr *domain.Usr, err error) {
 	if err := args.Validate(); err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	usr, err := uc.usrRepository.GetByUsername(ctx, args.Username)
+	usr, err = uc.usrRepository.GetByUsername(ctx, args.Username)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	if usr == nil {
 		details := make(map[string]string)
 		details["reason"] = "invalid credentials"
-		return "", apperror.ErrUnauthenticated(details)
+		return "", nil, apperror.ErrUnauthenticated(details)
 	}
 
 	usrPwdHash, err := uc.usrPwdRepository.GetPwd(ctx, usr.ID)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	defer auth.ZeroBytes(usrPwdHash)
 
@@ -48,10 +48,10 @@ func (uc *LoginUsrUseCase) Execute(
 		details := make(map[string]string)
 		details["reason"] = "invalid credentials"
 		if errors.Is(err, auth.ErrInvalidPwd) {
-			return "", apperror.ErrUnauthenticated(details)
+			return "", nil, apperror.ErrUnauthenticated(details)
 		}
 
-		return "", err
+		return "", nil, err
 	}
 
 	sessionPayload := auth.JWTAccessPayload{
@@ -61,10 +61,10 @@ func (uc *LoginUsrUseCase) Execute(
 
 	session, err = uc.jwtManager.GenerateAccessToken(sessionPayload)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	return session, nil
+	return session, usr, nil
 }
 
 func NewLoginUsrUseCase(
