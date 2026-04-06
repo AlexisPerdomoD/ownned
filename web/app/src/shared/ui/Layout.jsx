@@ -1,4 +1,4 @@
-import { Divider } from './atoms'
+import { Divider } from './Atoms'
 
 /**
  * Layout de aplicación con sidebar colapsable.

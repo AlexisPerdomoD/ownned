@@ -54,7 +54,11 @@ export default [
                 }
             ],
             semi: ['error', 'never'],
-            'lines-between-class-members': ['warn', 'always', { exceptAfterSingleLine: true }]
+            'lines-between-class-members': [
+                'warn',
+                'always',
+                { exceptAfterSingleLine: true }
+            ]
         }
     }
 

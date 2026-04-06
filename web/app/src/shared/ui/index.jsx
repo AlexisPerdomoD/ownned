@@ -3,16 +3,16 @@ export { Button } from './Button'
 export { Input } from './Input'
 export { Badge } from './Badge'
 export { Card } from './Card'
-export { Divider, Avatar, Spinner, EmptyState } from './atoms'
+export { Divider, Avatar, Spinner, EmptyState } from './Atoms'
 
 // ─── Formularios ─────────────────────────────────────────────────────────────
-export { Select, Textarea, Checkbox } from './form'
+export { Select, Textarea, Checkbox } from './Form'
 
 // ─── Navegación ──────────────────────────────────────────────────────────────
-export { Tabs, Breadcrumb } from './navigation'
+export { Tabs, Breadcrumb } from './Navigation'
 
 // ─── Layout ──────────────────────────────────────────────────────────────────
-export { AppShell, NavItem, PageHeader } from './layout'
+export { AppShell, NavItem, PageHeader } from './Layout'
 
 // ─── Datos ───────────────────────────────────────────────────────────────────
 export { Table, Pagination } from './Table'

@@ -6,7 +6,7 @@ import z from 'zod'
  * @property {string} password
  */
 
-class LoginPwdDTO {
+export class LoginPwdDTO {
     static #schema = z.strictObject({
         username: z.email('Invalid email provided as username.'),
         password: z

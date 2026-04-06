@@ -1,6 +1,6 @@
 import z from 'zod'
 
-class Usr {
+export class Usr {
     #role
 
     /**

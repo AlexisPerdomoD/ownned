@@ -1,5 +1,5 @@
-@import 'tailwindcss';
 @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap');
+@import 'tailwindcss';
 
 /* ============================================================
    DESIGN TOKENS
@@ -12,12 +12,15 @@
     --color-surface: #fdfbf7;
     --color-border: #d6cfc2;
     --color-border-subtle: #e8e2d9;
+    --color-border-danger: #b05e39;
     --color-muted: #8c8478;
     --color-ink: #4a453e;
     --color-ink-dark: #2a2520;
     --color-accent: #c4714a;
     --color-accent-hover: #b05e39;
     --color-accent-pale: #f0ddd4;
+    --color-success: #4a9b5f;
+    --color-danger: #b05e39;
 
     /* Tipografía */
     --font-sans: 'DM Sans', system-ui, sans-serif;
@@ -65,6 +68,9 @@
     --color-accent: #d4845c;
     --color-accent-hover: #e09070;
     --color-accent-pale: #3a2e28;
+    --color-success: #4a9b5f;
+    --color-danger: #b05e39;
+    --color-border-danger: #b05e39;
 }
 
 /* ============================================================

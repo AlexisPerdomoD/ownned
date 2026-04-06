@@ -28,7 +28,7 @@ export function Input({
             {label && (
                 <label
                     for={inputId}
-                    class="text-[--text-xs] text-[--color-muted] tracking-wide uppercase"
+                    class="text-xs text-muted tracking-wide uppercase"
                 >
                     {label}
                 </label>
@@ -36,7 +36,7 @@ export function Input({
 
             <div class="relative flex items-center">
                 {prefix && (
-                    <span class="absolute left-3 text-[--color-muted] flex items-center">
+                    <span class="absolute left-3 text-muted flex items-center">
                         {prefix}
                     </span>
                 )}
@@ -45,14 +45,14 @@ export function Input({
                     id={inputId}
                     class={`
                         w-full
-                        font-[--font-sans] font-light text-[--text-sm]
-                        text-[--color-ink-dark] placeholder:text-[--color-muted]
-                        bg-[--color-surface] border rounded-[--radius-xs]
+                        font-sans font-light text-sm
+                        text-ink-dark placeholder:text-muted
+                        bg-surface border rounded-xs
                         px-3 py-2
-                        transition-colors duration-[--ease-base]
-                        focus:outline-none focus:border-[--color-ink]
+                        transition-colors ease-base
+                        focus:outline-none focus:border-ink
                         disabled:opacity-40 disabled:cursor-not-allowed
-                        ${error ? 'border-red-400 focus:border-red-500' : 'border-[--color-border] hover:border-[--color-muted]'}
+                        ${error ? 'border-red-400 focus:border-red-500' : 'border-border hover:border-muted'}
                         ${prefix ? 'pl-9' : ''}
                         ${suffix ? 'pr-9' : ''}
                     `}
@@ -60,16 +60,14 @@ export function Input({
                 />
 
                 {suffix && (
-                    <span class="absolute right-3 text-[--color-muted] flex items-center">
+                    <span class="absolute right-3 text-muted flex items-center">
                         {suffix}
                     </span>
                 )}
             </div>
 
-            {error && <p class="text-[--text-xs] text-red-500">{error}</p>}
-            {!error && hint && (
-                <p class="text-[--text-xs] text-[--color-muted]">{hint}</p>
-            )}
+            {error && <p class="text-xs text-danger">{error}</p>}
+            {!error && hint && <p class="text-xs text-muted">{hint}</p>}
         </div>
     )
 }

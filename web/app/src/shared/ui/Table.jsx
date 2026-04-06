@@ -1,7 +1,6 @@
 import { For, Show } from 'solid-js'
 
-import { Spinner } from './atoms'
-import { EmptyState } from './atoms'
+import { EmptyState, Spinner } from './Atoms'
 
 /**
  * @typedef {Object} TableColumn

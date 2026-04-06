@@ -11,7 +11,7 @@ import { buildUsr } from '../model'
  * @throws {import('@shared/errors').ApiError} if api returns an error.
  *
  */
-export async function login(dto) {
+export async function apiLogin(dto) {
     const payload = await reqJSON('/api/v1/usrs/login', {
         method: 'POST',
         body: JSON.stringify(dto)

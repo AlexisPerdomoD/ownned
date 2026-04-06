@@ -22,26 +22,56 @@ let nextId = 0
 /**
  * @param {string} message
  * @param {'default' | 'success' | 'error' | 'warning'} [type='default']
+ * @param {string} [code='default']
  * @param {number} [duration=3500]
  */
-function addToast(message, type = 'default', duration = 3500) {
+function addToast(
+    message,
+    type = 'default',
+    code = 'default',
+    duration = 3500
+) {
     const id = ++nextId
-    setToasts(prev => [...prev, { id, message, type }])
+    setToasts(prev => [...prev, { id, message, type, code }])
     setTimeout(() => {
         setToasts(prev => prev.filter(t => t.id !== id))
     }, duration)
 }
 
-/** API pública de toast */
+function clearToasts() {
+    setToasts([])
+}
+
+/**
+ * @param {string} code
+ */
+function clearToastsByCode(code) {
+    setToasts(prev => prev.filter(t => t.code !== code))
+}
+
 export const toast = Object.assign(
     (msg, duration) => addToast(msg, 'default', duration),
     {
-        /** @param {string} msg @param {number} [duration] */
-        success: (msg, duration) => addToast(msg, 'success', duration),
-        /** @param {string} msg @param {number} [duration] */
-        error: (msg, duration) => addToast(msg, 'error', duration),
-        /** @param {string} msg @param {number} [duration] */
-        warning: (msg, duration) => addToast(msg, 'warning', duration)
+        /** @param {string} msg
+         * @param {string | undefined} code
+         * @param {number | undefined} duration */
+        success: (msg, code, duration) =>
+            addToast(msg, 'success', code, duration),
+        /**
+         * @param {string} msg
+         * @param {string | undefined} code
+         * @param {number | undefined} duration */
+        error: (msg, code, duration) => addToast(msg, 'error', code, duration),
+        /**
+         * @param {string} msg
+         * @param {string | undefined} code
+         * @param {number | undefined} duration */
+        warning: (msg, code, duration) =>
+            addToast(msg, 'warning', code, duration),
+        /** clear all toasts */
+        clear: clearToasts,
+        /** clear toasts by code */
+        clearCode: clearToastsByCode
     }
 )
 
