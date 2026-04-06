@@ -1,7 +1,7 @@
 import { Show } from 'solid-js'
 
 import { Spinner } from '@/shared/ui/Atoms'
-import { useNavigate } from '@solidjs/router'
+import { Navigate } from '@solidjs/router'
 
 import { useAuth } from '../providers/AuthProvider'
 
@@ -12,7 +12,6 @@ import { useAuth } from '../providers/AuthProvider'
  */
 export function ProtectedRoute(props) {
     const { state } = useAuth()
-    const navigate = useNavigate()
 
     return (
         <>
@@ -24,7 +23,10 @@ export function ProtectedRoute(props) {
                     </section>
                 }
             >
-                <Show when={state.usr} fallback={navigate('/login')}>
+                <Show
+                    when={state.usr}
+                    fallback={() => <Navigate href="/login" />}
+                >
                     {props.children}
                 </Show>
             </Show>

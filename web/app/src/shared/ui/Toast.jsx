@@ -76,7 +76,7 @@ export const toast = Object.assign(
 )
 
 const typeStyles = {
-    default: 'bg-[--color-ink-dark] text-[--color-bg]',
+    default: 'bg-ink-dark text-bg',
     success: 'bg-green-800 text-green-50',
     error: 'bg-red-700 text-red-50',
     warning: 'bg-amber-700 text-amber-50'
@@ -126,7 +126,7 @@ export function Toaster() {
     return (
         <Portal>
             <div
-                class="fixed bottom-5 right-5 z-100 flex flex-col gap-2 items-end"
+                class="fixed top-5 right-5 z-100 flex flex-col gap-2 items-end"
                 aria-live="polite"
                 aria-label="Notificaciones"
             >
@@ -135,8 +135,8 @@ export function Toaster() {
                         <div
                             class={`
                                 flex items-center gap-2.5
-                                px-4 py-2.5 rounded-[--radius-xs]
-                                text-[--text-sm] font-[--font-sans] font-normal
+                                px-4 py-2.5 rounded-xs
+                                text-sm font-sans font-normal
                                 shadow-sm min-w-48 max-w-xs
                                 animate-[fadeInUp_0.2s_ease]
                                 ${typeStyles[t.type]}

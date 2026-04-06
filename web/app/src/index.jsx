@@ -4,7 +4,7 @@ import { ProtectedRoute } from '@features/auth/ui/ProtectedRoute'
 import { GroupsView } from '@pages/GroupsView'
 import { HomeView } from '@pages/HomeView'
 import { LoginView } from '@pages/LoginView'
-import { Route, Router } from '@solidjs/router'
+import { Navigate, Route, Router } from '@solidjs/router'
 
 import { AuthProvider } from './features/auth/providers/AuthProvider'
 import './index.css'
@@ -15,8 +15,9 @@ export function App() {
         <AuthProvider>
             <Router>
                 <Route path="/login" component={LoginView} />
+                <Route path="/" component={() => <Navigate href="/home" />} />
                 <Route
-                    path="/"
+                    path="/home"
                     component={() => (
                         <ProtectedRoute>
                             <HomeView />
