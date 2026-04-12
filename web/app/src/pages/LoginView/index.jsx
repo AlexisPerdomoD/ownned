@@ -9,7 +9,7 @@ export function LoginView() {
                         Login to your account
                     </h1>
                     <p class="text-sm text-center">
-                        If you don't have an account, why are you here?
+                        If you don't have an account, why are you here? 
                     </p>
                 </section>
 
