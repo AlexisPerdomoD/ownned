@@ -53,7 +53,7 @@ export function AuthProvider(props) {
 
     /**
      * Login the user.
-     * @param { import('@entities/usrs/api/login').LoginPwdDTO } sanitizedCredentials
+     * @param { import('@/entities/usrs/api/loginUsr').LoginPwdDTO } sanitizedCredentials
      *
      */
     const loginPwd = sanitizedCredentials =>

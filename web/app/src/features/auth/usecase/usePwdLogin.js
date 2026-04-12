@@ -42,7 +42,8 @@ export function usePwdLogin() {
      * @param {string} value
      */
     const setField = (field, value) => {
-        setFields(prev => ({ ...prev, [field]: value }))
+        setFields(field, value)
+
         if (issues[field]) {
             setIssues(prev => ({ ...prev, [field]: undefined }))
         }
@@ -61,6 +62,8 @@ export function usePwdLogin() {
             setIssues(dto)
             return
         }
+
+        globalThis.console.log(dto)
 
         return loginPwd(dto)
             .then(() => navigate('/home', { replace: true }))
