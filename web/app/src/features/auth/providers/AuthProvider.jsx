@@ -6,10 +6,10 @@ import { apiGetMe, apiLogin } from '@/entities/usrs/api'
 /**
  * @typedef {Object} AuthCtx
  * @property {Object} state
- * @property {import('@entities/usrs/model/Usr').Usr | null} state.usr
+ * @property {import('@/entities/usrs').Usr | null} state.usr
  * @property {boolean} state.checked
  *
- * @property {(credentials: import('@entities/usrs/model/LoginPwdDTO').LoginPwdDTO) => Promise<void>} loginPwd
+ * @property {(credentials: import('@entities/usrs/api/login').LoginPwdDTO) => Promise<void>} loginPwd
  * @property {() => Promise<void>} logout
  */
 
@@ -36,7 +36,15 @@ export function useAuth() {
  * @returns {import('solid-js').JSX.Element}
  */
 export function AuthProvider(props) {
-    const [state, setState] = createStore({ usr: null, checked: false })
+    /**
+     *  @type AuthCtx['state']
+     */
+    const initialState = {
+        usr: null,
+        checked: false
+    }
+
+    const [state, setState] = createStore(initialState)
 
     onMount(
         () => apiGetMe().then(usr => setState({ usr, checked: true }))
@@ -45,7 +53,7 @@ export function AuthProvider(props) {
 
     /**
      * Login the user.
-     * @param { import('@entities/usrs/model/LoginPwdDTO').LoginPwdDTO } sanitizedCredentials
+     * @param { import('@entities/usrs/api/login').LoginPwdDTO } sanitizedCredentials
      *
      */
     const loginPwd = sanitizedCredentials =>

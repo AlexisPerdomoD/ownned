@@ -1,7 +1,7 @@
 import { createSignal } from 'solid-js'
 import { createStore } from 'solid-js/store'
 
-import { buildLoginPwdDTO } from '@/entities/usrs/model'
+import { buildLoginPwdDTO } from '@/entities/usrs/api'
 import { ApiError } from '@/shared/errors'
 import { useNavigate } from '@solidjs/router'
 
@@ -56,7 +56,7 @@ export function usePwdLogin() {
         setIssues({})
         setLoading(true)
 
-        const [ok, dto] = buildLoginPwdDTO(fields)
+        const [ok, dto] = buildLoginPwdDTO(fields.username, fields.password)
         if (!ok) {
             setIssues(dto)
             return
