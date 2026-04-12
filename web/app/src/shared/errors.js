@@ -35,12 +35,3 @@ export class ApiUnknownError extends ApiError {}
 // FRONTEND ERRORS (ClientError)
 // ─────────────────────────────────────────────────────────────────────────────
 export class ClientError extends Error {}
-
-export class ValidationError extends ClientError {
-    /** @param {string} message */
-    /** @param {import('zod').ZodError | undefined} issues */
-    constructor(message, issues) {
-        super(message)
-        this.issues = issues
-    }
-}

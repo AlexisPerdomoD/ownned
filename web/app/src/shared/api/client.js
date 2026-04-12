@@ -31,7 +31,7 @@ export async function reqJSON(path, opts = {}) {
         const msg = await r
             .json()
             .then(res => res?.detail?.reason || res.message)
-            .catch(() => 'Can not process server response.')
+            .catch(() => 'Can not process server response message.')
 
         switch (r.status) {
             case 400:

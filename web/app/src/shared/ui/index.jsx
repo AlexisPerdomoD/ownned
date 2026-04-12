@@ -21,3 +21,6 @@ export { Table, Pagination } from './Table'
 export { Modal } from './Modal'
 export { ConfirmDialog } from './ConfirmDialog'
 export { Toaster, toast } from './Toast'
+
+// ─── Feedback ───────────────────────────────────────────────────────────────
+export { ErrView } from './ErrView'

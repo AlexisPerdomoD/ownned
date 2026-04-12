@@ -10,6 +10,7 @@
     --color-bg: #f5f0e8;
     --color-bg-2: #ede6d8;
     --color-surface: #fdfbf7;
+    --color-surface-hover: #f5f0e8;
     --color-border: #d6cfc2;
     --color-border-subtle: #e8e2d9;
     --color-border-danger: #b05e39;
@@ -60,6 +61,7 @@
     --color-bg: #1c1916;
     --color-bg-2: #252019;
     --color-surface: #2e2923;
+    --color-surface-hover: #241f1b;
     --color-border: #3d3830;
     --color-border-subtle: #322d27;
     --color-muted: #7a7268;
