@@ -9,7 +9,7 @@ services:
     ports:
       - "5502:5432"
     tmpfs:
-      - /var/lib/postgresql/data
+      - /var/lib/postgresql/ownned_test_data
     networks:
       - ownned_test
 networks:
