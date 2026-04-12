@@ -44,7 +44,7 @@ export class LoginPwdDTO {
             return [false, issues]
         }
 
-        const dto = new LoginPwdDTO(r)
+        const dto = new LoginPwdDTO(r.data)
         return [true, dto]
     }
 }

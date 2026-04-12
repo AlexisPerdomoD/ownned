@@ -1,4 +1,4 @@
-import { reqJSON } from '@/shared/api/client';
+import { reqJSON } from '@/shared/api/client'
 
 /**
  * Get the root nodes of the current user.
@@ -6,5 +6,5 @@ import { reqJSON } from '@/shared/api/client';
  * @returns {Promise<import('@/entities/nodes').Node[]>}
  */
 export async function apiGetRoot() {
-    return await reqJSON('/api/v1/nodes/root')
+    return await reqJSON('/api/v1/nodes')
 }
