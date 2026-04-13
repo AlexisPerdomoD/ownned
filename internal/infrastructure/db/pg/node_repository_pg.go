@@ -109,9 +109,9 @@ func (r *nodeRepository) GetByID(ctx context.Context, id domain.NodeID) (*domain
 	return &d, nil
 }
 
-func (r *nodeRepository) GetChildren(ctx context.Context, folderID domain.NodePath) ([]domain.Node, error) {
+func (r *nodeRepository) GetChildren(ctx context.Context, folderPath domain.NodePath) ([]domain.Node, error) {
 	q := fmt.Sprintf("%s\nWHERE nlevel(n.path)=nlevel($1::ltree)+1", getNodeQuery)
-	rows, err := r.db.QueryxContext(ctx, q, folderID.String())
+	rows, err := r.db.QueryxContext(ctx, q, folderPath)
 	if err != nil {
 		return nil, err
 	}

@@ -14,7 +14,7 @@ export function useGetNode(getId) {
      *     >>}
      */
     const [node, setNode] = createSignal(null)
-    const [loading, setLoading] = createSignal(false)
+    const [loading, setLoading] = createSignal(true)
 
     createEffect(() => {
         const id = getId()

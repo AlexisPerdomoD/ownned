@@ -66,7 +66,7 @@ export function usePwdLogin() {
         globalThis.console.log(dto)
 
         return loginPwd(dto)
-            .then(() => navigate('/home', { replace: true }))
+            .then(() => navigate('/nodes', { replace: true }))
             .catch(err => {
                 if (err instanceof ApiError) {
                     setIssues({ general: err.message, _id: Date.now() })

@@ -22,24 +22,22 @@ export function App() {
                         component={() => <Navigate href="/nodes" />}
                     />
                     <Route path="/nodes">
-                        <Router>
-                            <Route
-                                path="/"
-                                component={() => (
-                                    <ProtectedRoute>
-                                        <HomeView />
-                                    </ProtectedRoute>
-                                )}
-                            />
-                            <Route
-                                path="/:id"
-                                component={() => (
-                                    <ProtectedRoute>
-                                        <NodeView />
-                                    </ProtectedRoute>
-                                )}
-                            />
-                        </Router>
+                        <Route
+                            path="/"
+                            component={() => (
+                                <ProtectedRoute>
+                                    <HomeView />
+                                </ProtectedRoute>
+                            )}
+                        />
+                        <Route
+                            path="/:id"
+                            component={() => (
+                                <ProtectedRoute>
+                                    <NodeView />
+                                </ProtectedRoute>
+                            )}
+                        />
                     </Route>
                     <Route
                         path="/groups"

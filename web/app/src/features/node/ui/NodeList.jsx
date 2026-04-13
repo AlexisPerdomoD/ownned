@@ -43,7 +43,7 @@ const FolderOpenIcon = () => (
  * @param {string} [props.title] - Header title
  * @param {string} [props.emptyMessage] - Message when there are no nodes
  * @param {boolean} [props.loading] - Loading state
- * @param {() => void} [props.onNodeClick] - Callback on node click
+ * @param {(node: import('@entities/nodes').Node) => void} [props.onNodeClick] - Callback to navigate to node
  * @param {(node: import('@entities/nodes').Node) => void} [props.onEdit] - Callback to edit
  * @param {(node: import('@entities/nodes').Node) => void} [props.onDelete] - Callback to delete
  * @param {() => void} [props.onCreate] - Callback to create a new node

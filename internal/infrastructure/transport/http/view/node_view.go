@@ -15,7 +15,7 @@ type NodeView struct {
 	Path        domain.NodePath `json:"path"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
-	Children    []NodeView      `json:"children,omitempty"`
+	Children    []NodeView      `json:"children"`
 	Doc         *DocView        `json:"doc,omitempty"`
 }
 
