@@ -1,4 +1,4 @@
-import { render } from 'solid-js/web'
+import { ErrorBoundary, render } from 'solid-js/web'
 
 import { ProtectedRoute } from '@features/auth/ui/ProtectedRoute'
 import { GroupsView } from '@pages/GroupsView'
@@ -8,32 +8,50 @@ import { Navigate, Route, Router } from '@solidjs/router'
 
 import { AuthProvider } from './features/auth/providers/AuthProvider'
 import './index.css'
-import { Toaster } from './shared/ui'
+import { NodeView } from './pages/NodeView'
+import { ErrView, Toaster } from './shared/ui'
 
 export function App() {
     return (
         <AuthProvider>
-            <Router>
-                <Route path="/login" component={LoginView} />
-                <Route path="/" component={() => <Navigate href="/home" />} />
-                <Route
-                    path="/home"
-                    component={() => (
-                        <ProtectedRoute>
-                            <HomeView />
-                        </ProtectedRoute>
-                    )}
-                />
-                <Route
-                    path="/groups"
-                    component={() => (
-                        <ProtectedRoute>
-                            <GroupsView />
-                        </ProtectedRoute>
-                    )}
-                />
-            </Router>
-            <Toaster />
+            <ErrorBoundary fallback={error => <ErrView error={error} />}>
+                <Router>
+                    <Route path="/login" component={LoginView} />
+                    <Route
+                        path="/"
+                        component={() => <Navigate href="/nodes" />}
+                    />
+                    <Route path="/nodes">
+                        <Router>
+                            <Route
+                                path="/"
+                                component={() => (
+                                    <ProtectedRoute>
+                                        <HomeView />
+                                    </ProtectedRoute>
+                                )}
+                            />
+                            <Route
+                                path="/:id"
+                                component={() => (
+                                    <ProtectedRoute>
+                                        <NodeView />
+                                    </ProtectedRoute>
+                                )}
+                            />
+                        </Router>
+                    </Route>
+                    <Route
+                        path="/groups"
+                        component={() => (
+                            <ProtectedRoute>
+                                <GroupsView />
+                            </ProtectedRoute>
+                        )}
+                    />
+                </Router>
+                <Toaster />
+            </ErrorBoundary>
         </AuthProvider>
     )
 }
