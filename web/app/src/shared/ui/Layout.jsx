@@ -161,6 +161,8 @@ export function NavItem({
  * @param {string} [props.subtitle]
  * @param {import('solid-js').JSX.Element} [props.actions]  - Slot derecho para botones.
  * @param {import('solid-js').JSX.Element} [props.breadcrumb]
+ * @param {() => void} [props.onBack] - Callback para botón atrás.
+ * @param {string} [props.backTo] - Ruta para botón atrás (usa navigate si no hay callback).
  * @param {string} [props.class]
  * @returns {import('solid-js').JSX.Element}
  */
@@ -169,11 +171,34 @@ export function PageHeader({
     subtitle,
     actions,
     breadcrumb,
+    onBack,
+    backTo,
     class: cls = ''
 }) {
     return (
         <div class={`flex items-start justify-between gap-4 mb-6 ${cls}`}>
             <div class="flex flex-col gap-1">
+                {(breadcrumb || onBack || backTo) && (
+                    <div class="flex items-center gap-2 mb-1">
+                        {onBack && (
+                            <button
+                                type="button"
+                                onClick={onBack}
+                                class="text-[--text-sm] text-[--color-accent] hover:underline"
+                            >
+                                ← Back
+                            </button>
+                        )}
+                        {backTo && !onBack && (
+                            <a
+                                href={backTo}
+                                class="text-[--text-sm] text-[--color-accent] hover:underline"
+                            >
+                                ← Back
+                            </a>
+                        )}
+                    </div>
+                )}
                 {breadcrumb}
                 <h1 class="font-[--font-serif] text-[--text-2xl] text-[--color-ink-dark] leading-tight">
                     {title}

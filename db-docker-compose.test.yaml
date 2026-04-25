@@ -1,7 +1,7 @@
 services:
   db:
     container_name: ownned_test_container
-    image: pgvector/pgvector:pg16
+    image: postgres:17-alpine
     environment:
       POSTGRES_DB: test_db
       POSTGRES_USER: postgres

@@ -1,6 +1,6 @@
 import { createSignal, onMount } from 'solid-js'
 
-import { apiGetRoot } from '@/entities/nodes/api'
+import { apiGetRoot } from '@/entities/nodes/api/getRoot'
 
 /**
  * Hook to get user root node.

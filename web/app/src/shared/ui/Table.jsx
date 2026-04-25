@@ -31,28 +31,19 @@ const alignClass = {
  * @param {string} [props.class]
  * @returns {import('solid-js').JSX.Element}
  */
-export function Table({
-    columns,
-    rows,
-    rowKey = 'id',
-    loading = false,
-    emptyTitle = 'Sin resultados',
-    emptyDescription,
-    onRowClick,
-    class: cls = ''
-}) {
+export function Table(props) {
     return (
-        <div class={`w-full overflow-x-auto ${cls}`}>
+        <div class={`w-full overflow-x-auto ${props.class ?? ''}`}>
             <table class="w-full border-collapse font-[--font-sans] text-[--text-sm]">
                 <thead>
                     <tr class="border-b border-[--color-border]">
-                        <For each={columns}>
+                        <For each={props.columns}>
                             {col => (
                                 <th
                                     class={`
                                         px-3 py-2.5 font-normal
-                                        text-[--text-xs] tracking-wide uppercase
-                                        text-[--color-muted]
+                                        text-text-xs tracking-wide uppercase
+                                        text-muted
                                         ${alignClass[col.align ?? 'left']}
                                         ${col.class ?? ''}
                                     `}
@@ -65,10 +56,10 @@ export function Table({
                 </thead>
 
                 <tbody>
-                    <Show when={loading}>
+                    <Show when={props.loading}>
                         <tr>
                             <td
-                                colspan={columns.length}
+                                colspan={props.columns.length}
                                 class="py-12 text-center"
                             >
                                 <Spinner size="md" class="mx-auto" />
@@ -76,29 +67,29 @@ export function Table({
                         </tr>
                     </Show>
 
-                    <Show when={!loading && rows?.length === 0}>
+                    <Show when={!props.loading && props.rows?.length === 0}>
                         <tr>
-                            <td colspan={columns.length}>
+                            <td colspan={props.columns.length}>
                                 <EmptyState
-                                    title={emptyTitle}
-                                    description={emptyDescription}
+                                    title={props.emptyTitle}
+                                    description={props.emptyDescription}
                                 />
                             </td>
                         </tr>
                     </Show>
 
-                    <Show when={!loading && rows?.length > 0}>
-                        <For each={rows}>
+                    <Show when={!props.loading && props.rows?.length > 0}>
+                        <For each={props.rows}>
                             {row => (
                                 <tr
                                     class={`
                                         border-b border-[--color-border-subtle]
                                         transition-colors duration-[--ease-base]
-                                        ${onRowClick ? 'hover:bg-[--color-bg-2] cursor-pointer' : 'hover:bg-[--color-bg-2]/50'}
+                                        ${props.onRowClick ? 'hover:bg-bg-2 cursor-pointer' : 'hover:bg-bg-2/50'}
                                     `}
-                                    onClick={() => onRowClick?.(row)}
+                                    onClick={() => props.onRowClick?.(row)}
                                 >
-                                    <For each={columns}>
+                                    <For each={props.columns}>
                                         {col => (
                                             <td
                                                 class={`
@@ -136,50 +127,47 @@ export function Table({
  * @param {string} [props.class]
  * @returns {import('solid-js').JSX.Element}
  */
-export function Pagination({
-    page,
-    total,
-    pageSize = 20,
-    onChange,
-    class: cls = ''
-}) {
-    const totalPages = () => Math.ceil(total / pageSize)
-    const from = () => Math.min((page - 1) * pageSize + 1, total)
-    const to = () => Math.min(page * pageSize, total)
+export function Pagination(props) {
+    const totalPages = () => Math.ceil(props.total / props.pageSize)
+    const from = () =>
+        Math.min((props.page - 1) * (props.pageSize ?? 20) + 1, props.total)
+    const to = () => Math.min(props.page * (props.pageSize ?? 20), props.total)
 
     return (
-        <div class={`flex items-center justify-between gap-4 ${cls}`}>
-            <span class="text-[--text-xs] text-[--color-muted] font-[--font-mono]">
-                {from()}–{to()} de {total}
+        <div
+            class={`flex items-center justify-between gap-4 ${props.class ?? ''}`}
+        >
+            <span class="text-xs text-muted font-mono">
+                {from()}–{to()} de {props.total}
             </span>
 
             <div class="flex items-center gap-1">
                 <button
-                    disabled={page <= 1}
-                    onClick={() => onChange(page - 1)}
+                    disabled={props.page <= 1}
+                    onClick={() => props.onChange(props.page - 1)}
                     class="
-                        px-3 py-1.5 text-[--text-sm] text-[--color-ink]
-                        border border-[--color-border] rounded-[--radius-xs]
-                        hover:bg-[--color-bg-2] disabled:opacity-30
+                        px-3 py-1.5 text-sm text-ink
+                        border border-border rounded-xs
+                        hover:bg-bg-2 disabled:opacity-30
                         disabled:cursor-not-allowed transition-colors
-                        duration-[--ease-base] cursor-pointer
+                        duration-base cursor-pointer
                     "
                     aria-label="Página anterior"
                 >
                     ←
                 </button>
-                <span class="px-3 py-1.5 text-[--text-xs] text-[--color-muted] font-[--font-mono]">
-                    {page} / {totalPages()}
+                <span class="px-3 py-1.5 text-xs text-muted font-mono">
+                    {props.page} / {totalPages()}
                 </span>
                 <button
-                    disabled={page >= totalPages()}
-                    onClick={() => onChange(page + 1)}
+                    disabled={props.page >= totalPages()}
+                    onClick={() => props.onChange(props.page + 1)}
                     class="
-                        px-3 py-1.5 text-[--text-sm] text-[--color-ink]
-                        border border-[--color-border] rounded-[--radius-xs]
-                        hover:bg-[--color-bg-2] disabled:opacity-30
+                        px-3 py-1.5 text-sm text-ink
+                        border border-border rounded--xs
+                        hover:bg-bg-2 disabled:opacity-30
                         disabled:cursor-not-allowed transition-colors
-                        duration-[--ease-base] cursor-pointer
+                        duration-base cursor-pointer
                     "
                     aria-label="Página siguiente"
                 >

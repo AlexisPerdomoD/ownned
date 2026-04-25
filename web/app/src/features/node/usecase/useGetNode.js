@@ -1,6 +1,6 @@
 import { createEffect, createSignal } from 'solid-js'
 
-import { apiGetNode } from '@/entities/nodes/api'
+import { apiGetNode } from '@/entities/nodes/api/getNode'
 
 /**
  * @param {() => string} getId
