@@ -47,9 +47,9 @@ Commercial cloud storage means surrendering control over your data. Ownned exist
 | Layer    | Technology                                |
 | -------- | ----------------------------------------- |
 | Backend  | Go 1.25, go-chi/chi, sqlx, golang-migrate |
-| Frontend | SolidJS, TailwindCSS 4, Vite, Zod        |
-| Database | PostgreSQL 16 (ltree, pgvector)          |
-| Runtime  | Docker, Docker Compose                     |
+| Frontend | SolidJS, TailwindCSS 4, Vite, Zod         |
+| Database | PostgreSQL 16 (ltree, pgvector)           |
+| Runtime  | Docker, Docker Compose                    |
 
 ## Architecture
 
@@ -87,65 +87,65 @@ Commercial cloud storage means surrendering control over your data. Ownned exist
 
 ### Layer Responsibilities
 
-| Layer         | Package                              | Responsibility                            |
-| ------------- | ------------------------------------ | ---------------------------------------- |
-| Transport     | `internal/infrastructure/transport/`  | HTTP handlers, middleware, encoders/decoders |
-| Application   | `internal/application/`              | Use cases, DTOs, storage interfaces      |
-| Domain        | `internal/domain/`                   | Entities: Doc, Group, Node, Usr        |
-| Infrastructure | `internal/infrastructure/`            | PostgreSQL repos, JWT, Argon2, file storage |
-| Shared        | `pkg/`                              | Public packages: apperror, col, pagination |
+| Layer          | Package                              | Responsibility                               |
+| -------------- | ------------------------------------ | -------------------------------------------- |
+| Transport      | `internal/infrastructure/transport/` | HTTP handlers, middleware, encoders/decoders |
+| Application    | `internal/application/`              | Use cases, DTOs, storage interfaces          |
+| Domain         | `internal/domain/`                   | Entities: Doc, Group, Node, Usr              |
+| Infrastructure | `internal/infrastructure/`           | PostgreSQL repos, JWT, Argon2, file storage  |
+| Shared         | `pkg/`                               | Public packages: apperror, col, pagination   |
 
 ## API Endpoints
 
 ### Authentication (`/api/v1/usrss`)
 
-| Method | Endpoint          | Description         |
-| ------ | ----------------- | ------------------- |
-| POST   | `/usrss/login`    | Login               |
-| POST   | `/usrss/register`  | Register user       |
-| GET    | `/usrss/me`        | Current user        |
-| DELETE | `/usrss/logout`   | Logout              |
+| Method | Endpoint          | Description   |
+| ------ | ----------------- | ------------- |
+| POST   | `/usrss/login`    | Login         |
+| POST   | `/usrss/register` | Register user |
+| GET    | `/usrss/me`       | Current user  |
+| DELETE | `/usrss/logout`   | Logout        |
 
 ### Nodes (`/api/v1/nodes`)
 
-| Method | Endpoint       | Description          |
-| ------ | -------------- | -------------------- |
-| GET    | `/nodes`       | List root nodes      |
-| POST   | `/nodes`       | Create folder        |
-| GET    | `/nodes/:id`   | Get node by ID       |
-| PUT    | `/nodes/:id`   | Update node          |
-| DELETE | `/nodes/:id`   | Delete node          |
+| Method | Endpoint     | Description     |
+| ------ | ------------ | --------------- |
+| GET    | `/nodes`     | List root nodes |
+| POST   | `/nodes`     | Create folder   |
+| GET    | `/nodes/:id` | Get node by ID  |
+| PUT    | `/nodes/:id` | Update node     |
+| DELETE | `/nodes/:id` | Delete node     |
 
 ### Groups (`/api/v1/groups`)
 
-| Method | Endpoint                      | Description       |
-| ------ | ----------------------------- | ----------------- |
-| GET    | `/groups/paginate`             | List groups       |
-| POST   | `/groups`                     | Create group     |
-| GET    | `/groups/:id`                 | Group details     |
-| PUT    | `/groups/:id`                 | Update group     |
-| DELETE | `/groups/:id`                 | Delete group     |
-| POST   | `/groups/:id/users`           | Assign user      |
-| DELETE | `/groups/:id/users/:userId`   | Remove user      |
-| POST   | `/groups/:id/nodes`           | Associate node    |
-| DELETE | `/groups/:id/nodes/:nodeId`   | Dissociate node  |
+| Method | Endpoint                    | Description     |
+| ------ | --------------------------- | --------------- |
+| GET    | `/groups/paginate`          | List groups     |
+| POST   | `/groups`                   | Create group    |
+| GET    | `/groups/:id`               | Group details   |
+| PUT    | `/groups/:id`               | Update group    |
+| DELETE | `/groups/:id`               | Delete group    |
+| POST   | `/groups/:id/users`         | Assign user     |
+| DELETE | `/groups/:id/users/:userId` | Remove user     |
+| POST   | `/groups/:id/nodes`         | Associate node  |
+| DELETE | `/groups/:id/nodes/:nodeId` | Dissociate node |
 
 ### Documents (`/api/v1/docs`)
 
-| Method | Endpoint             | Description          |
-| ------ | -------------------- | --------------------|
-| POST   | `/docs`              | Upload document     |
-| GET    | `/docs/:id/download` | Download document   |
-| DELETE | `/docs/:id`          | Delete document     |
+| Method | Endpoint             | Description       |
+| ------ | -------------------- | ----------------- |
+| POST   | `/docs`              | Upload document   |
+| GET    | `/docs/:id/download` | Download document |
+| DELETE | `/docs/:id`          | Delete document   |
 
 ### Comments (`/api/v1/comments`)
 
-| Method | Endpoint               | Description          |
-| ------ | ----------------------| --------------------|
-| GET    | `/comments?node_id=x` | List by node        |
-| POST   | `/comments`           | Create comment      |
-| PATCH  | `/comments/:id`      | Edit comment        |
-| DELETE | `/comments/:id`      | Delete comment      |
+| Method | Endpoint              | Description    |
+| ------ | --------------------- | -------------- |
+| GET    | `/comments?node_id=x` | List by node   |
+| POST   | `/comments`           | Create comment |
+| PATCH  | `/comments/:id`       | Edit comment   |
+| DELETE | `/comments/:id`       | Delete comment |
 
 ## Getting Started
 
@@ -191,14 +191,14 @@ make approot ARGS="-usrname admin@example.com"
 
 ### Development Commands
 
-| Command            | Description                         |
-| ------------------ | ----------------------------------- |
-| `make db-local-up`   | Start local PostgreSQL (port 5501)  |
-| `make db-local-down` | Stop local PostgreSQL               |
-| `make migrate-up`    | Run migrations                      |
-| `make test-local`    | Run tests with test database        |
-| `make build-web`     | Build web application               |
-| `make start-http`    | Build and run HTTP server           |
+| Command              | Description                        |
+| -------------------- | ---------------------------------- |
+| `make db-local-up`   | Start local PostgreSQL (port 5501) |
+| `make db-local-down` | Stop local PostgreSQL              |
+| `make migrate-up`    | Run migrations                     |
+| `make test-local`    | Run tests with test database       |
+| `make build-web`     | Build web application              |
+| `make start-http`    | Build and run HTTP server          |
 
 ## Project Structure
 
