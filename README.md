@@ -4,54 +4,54 @@
 [![SolidJS](https://img.shields.io/badge/SolidJS-1.9.12-2c4f7c?logo=solid)](https://solidjs.com)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
-> _"Tus datos, tu servidor, tu control."_
+> _"Your data, your server, your control."_
 
-Ownned es una plataforma de almacenamiento en la nube de autocuidado (_self-hosted_) diseñada para uso personal y colaboración en grupos pequeños. Construida con enfoque en privacidad, simplicidad de despliegue y funcionalidades autocontenidas.
+Ownned is a self-hosted cloud storage platform designed for personal use and small group collaboration. Built with a focus on privacy, deployment simplicity, and self-contained features.
 
-## Propósito
+## Purpose
 
-El almacenamiento en la nube comercial implica ceder control sobre tus datos. Ownned existe como alternativa:
+Commercial cloud storage means surrendering control over your data. Ownned exists as an alternative:
 
-- **Autocontenido.** Todo lo que necesitas en un solo部署: base de datos, API, y cliente web.
-- **Privacidad por diseño.** Tus archivos nunca salen de tu infraestructura.
-- **Despliegue simple.** Docker Compose para desarrollo, binario único para producción.
-- **Colaboración sin fricciones.** Sistema de grupos con permisos granulares para compartir con amigos y familia.
+- **Self-contained.** Everything you need in a single deployment: database, API, and web client.
+- **Privacy by design.** Your files never leave your infrastructure.
+- **Simple deployment.** Docker Compose for development, single binary for production.
+- **Frictionless collaboration.** Group system with granular permissions for sharing with friends and family.
 
 ## Features
 
-### Gestión de Archivos
+### File Management
 
-- Estructura jerárquica de carpetas con anidamiento ilimitado
-- Upload y download de archivos con metadatos
-- Sistema de comentarios en nodos para colaboración
+- Hierarchical folder structure with unlimited nesting
+- File upload and download with metadata tracking
+- Comment system on nodes for collaboration
 
-### Colaboración por Grupos
+### Group Collaboration
 
-- Creación y administración de grupos
-- Tres niveles de acceso: `read_only`, `write`, `owner`
-- Asociación de carpetas/archivos a grupos para compartición
+- Group creation and management
+- Three access levels: `read_only`, `write`, `owner`
+- Folder/file association with groups for sharing
 
-### Autenticación y Autorización
+### Authentication & Authorization
 
-- JWT con tokens seguros
-- Hash de contraseñas con Argon2
-- Tres roles: **Super User**, **Normal User**, **Limited User**
+- JWT with secure tokens
+- Password hashing with Argon2
+- Three roles: **Super User**, **Normal User**, **Limited User**
 
-### API REST Completa
+### Complete REST API
 
-- CRUD completo para nodos, grupos, usuarios y documentos
-- Endpoints documentados para integración
+- Full CRUD for nodes, groups, users, and documents
+- Documented endpoints for integration
 
 ## Tech Stack
 
-| Layer    | Technology                              |
-| -------- | -------------------------------------- |
+| Layer    | Technology                                |
+| -------- | ----------------------------------------- |
 | Backend  | Go 1.25, go-chi/chi, sqlx, golang-migrate |
-| Frontend | SolidJS, TailwindCSS 4, Vite, Zod     |
-| Database | PostgreSQL 16 (ltree, pgvector)         |
-| Runtime  | Docker, Docker Compose                  |
+| Frontend | SolidJS, TailwindCSS 4, Vite, Zod        |
+| Database | PostgreSQL 16 (ltree, pgvector)          |
+| Runtime  | Docker, Docker Compose                     |
 
-## Arquitectura
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -63,89 +63,89 @@ El almacenamiento en la nube comercial implica ceder control sobre tus datos. Ow
 │                        Server (Go)                           │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
 │  │   Router    │  │ Middlewares │  │      Handlers       │  │
-│  │  (chi v5)   │  │  (JWT Auth) │  │  (Groups, Nodes,    │  │
+│  │  (chi v5)   │  │  (JWT Auth) │  │  (Groups, Nodes,  │  │
 │  │             │  │             │  │   Users, Docs)      │  │
 │  └──────┬──────┘  └─────────────┘  └──────────┬──────────┘  │
 │         │                                       │              │
 │  ┌──────▼──────────────────────────────────────▼──────────┐  │
 │  │                     Use Cases                            │  │
-│  │   (Business Logic — Create, Read, Update, Delete)     │  │
+│  │   (Business Logic — Create, Read, Update, Delete)      │  │
 │  └──────┬──────────────────────────────────────▲──────────┘  │
 │         │                                       │              │
 │  ┌──────▼──────────────────────────────────────▼──────────┐  │
 │  │                   Repositories                            │  │
-│  │        (PostgreSQL via sqlx — ltree for hierarchy)     │  │
+│  │        (PostgreSQL via sqlx — ltree for hierarchy)      │  │
 │  └──────────────────────────────────────────────────────────┘  │
 └───────────────────────────────────────────────────────────────┘
                           │
               ┌───────────┴───────────┐
-              │   PostgreSQL 16       │
-              │   (port 5501)         │
-              │   ltree + pgvector    │
+              │   PostgreSQL 16        │
+              │   (port 5501)          │
+              │   ltree + pgvector     │
               └───────────────────────┘
 ```
 
-### Layer responsibilities
+### Layer Responsibilities
 
-| Layer        | Package                              | Responsibility                              |
-| ------------ | ------------------------------------ | ------------------------------------------ |
-| Transport    | `internal/infrastructure/transport/` | HTTP handlers, middleware, encoders/decoders |
-| Application  | `internal/application/`               | Use cases, DTOs, storage interfaces        |
-| Domain       | `internal/domain/`                    | Entities: Doc, Group, Node, Usr            |
-| Infrastructure | `internal/infrastructure/`           | PostgreSQL repos, JWT, Argon2, file storage |
-| Shared       | `pkg/`                               | Public packages: apperror, col, pagination |
+| Layer         | Package                              | Responsibility                            |
+| ------------- | ------------------------------------ | ---------------------------------------- |
+| Transport     | `internal/infrastructure/transport/`  | HTTP handlers, middleware, encoders/decoders |
+| Application   | `internal/application/`              | Use cases, DTOs, storage interfaces      |
+| Domain        | `internal/domain/`                   | Entities: Doc, Group, Node, Usr        |
+| Infrastructure | `internal/infrastructure/`            | PostgreSQL repos, JWT, Argon2, file storage |
+| Shared        | `pkg/`                              | Public packages: apperror, col, pagination |
 
 ## API Endpoints
 
-### Autenticación (`/api/v1/usrss`)
+### Authentication (`/api/v1/usrss`)
 
-| Method | Endpoint            | Description              |
-| ------ | ------------------- | ------------------------|
-| POST   | `/usrss/login`      | Iniciar sesión           |
-| POST   | `/usrss/register`   | Registrar usuario        |
-| GET    | `/usrss/me`         | Usuario autenticado       |
-| DELETE | `/usrss/logout`     | Cerrar sesión            |
+| Method | Endpoint          | Description         |
+| ------ | ----------------- | ------------------- |
+| POST   | `/usrss/login`    | Login               |
+| POST   | `/usrss/register`  | Register user       |
+| GET    | `/usrss/me`        | Current user        |
+| DELETE | `/usrss/logout`   | Logout              |
 
-### Nodos (`/api/v1/nodes`)
+### Nodes (`/api/v1/nodes`)
 
-| Method | Endpoint           | Description                |
-| ------ | ------------------ | --------------------------|
-| GET    | `/nodes`           | Listar nodos raíz         |
-| POST   | `/nodes`           | Crear carpeta             |
-| GET    | `/nodes/:id`       | Obtener nodo por ID       |
-| PUT    | `/nodes/:id`       | Actualizar nodo           |
-| DELETE | `/nodes/:id`       | Eliminar nodo             |
+| Method | Endpoint       | Description          |
+| ------ | -------------- | -------------------- |
+| GET    | `/nodes`       | List root nodes      |
+| POST   | `/nodes`       | Create folder        |
+| GET    | `/nodes/:id`   | Get node by ID       |
+| PUT    | `/nodes/:id`   | Update node          |
+| DELETE | `/nodes/:id`   | Delete node          |
 
-### Grupos (`/api/v1/groups`)
+### Groups (`/api/v1/groups`)
 
-| Method | Endpoint                        | Description            |
-| ------ | ------------------------------- | ---------------------- |
-| GET    | `/groups/paginate`              | Listar grupos          |
-| POST   | `/groups`                       | Crear grupo            |
-| GET    | `/groups/:id`                   | Detalle de grupo       |
-| PUT    | `/groups/:id`                   | Actualizar grupo       |
-| DELETE | `/groups/:id`                   | Eliminar grupo         |
-| POST   | `/groups/:id/users`            | Asignar usuario        |
-| DELETE | `/groups/:id/users/:userId`    | Remover usuario        |
-| POST   | `/groups/:id/nodes`            | Asociar nodo          |
-| DELETE | `/groups/:id/nodes/:nodeId`    | Desasociar nodo       |
+| Method | Endpoint                      | Description       |
+| ------ | ----------------------------- | ----------------- |
+| GET    | `/groups/paginate`             | List groups       |
+| POST   | `/groups`                     | Create group     |
+| GET    | `/groups/:id`                 | Group details     |
+| PUT    | `/groups/:id`                 | Update group     |
+| DELETE | `/groups/:id`                 | Delete group     |
+| POST   | `/groups/:id/users`           | Assign user      |
+| DELETE | `/groups/:id/users/:userId`   | Remove user      |
+| POST   | `/groups/:id/nodes`           | Associate node    |
+| DELETE | `/groups/:id/nodes/:nodeId`   | Dissociate node  |
 
-### Documentos (`/api/v1/docs`)
+### Documents (`/api/v1/docs`)
 
-| Method | Endpoint                   | Description        |
-| ------ | -------------------------- | ------------------ |
-| POST   | `/docs`                    | Subir documento     |
-| GET    | `/docs/:id/download`      | Descargar documento |
-| DELETE | `/docs/:id`               | Eliminar documento  |
+| Method | Endpoint             | Description          |
+| ------ | -------------------- | --------------------|
+| POST   | `/docs`              | Upload document     |
+| GET    | `/docs/:id/download` | Download document   |
+| DELETE | `/docs/:id`          | Delete document     |
 
-### Comentarios (`/api/v1/comments`)
+### Comments (`/api/v1/comments`)
 
-| Method | Endpoint                | Description              |
-| ------ | ----------------------- | ------------------------|
-| GET    | `/comments?node_id=x`   | Listar por nodo         |
-| POST   | `/comments`             | Crear comentario        |
-| PATCH  | `/comments/:id`         | Editar comentario        |
-| DELETE | `/comments/:id`          | Eliminar comentario     |
+| Method | Endpoint               | Description          |
+| ------ | ----------------------| --------------------|
+| GET    | `/comments?node_id=x` | List by node        |
+| POST   | `/comments`           | Create comment      |
+| PATCH  | `/comments/:id`      | Edit comment        |
+| DELETE | `/comments/:id`      | Delete comment      |
 
 ## Getting Started
 
@@ -153,52 +153,52 @@ El almacenamiento en la nube comercial implica ceder control sobre tus datos. Ow
 
 - Go 1.25+
 - Node.js 20+
-- PostgreSQL 16 (o Docker para desarrollo local)
-- Docker y Docker Compose
+- PostgreSQL 16 (or Docker for local development)
+- Docker and Docker Compose
 
-### Instalación
+### Installation
 
 ```bash
-# 1. Clonar
+# 1. Clone
 git clone https://github.com/<user>/owned.git
 cd owned
 
-# 2. Configurar entorno
+# 2. Configure environment
 cp .env.example .env
 
-# 3. Iniciar base de datos
+# 3. Start database
 make db-local-up
 
-# 4. Ejecutar migraciones
+# 4. Run migrations
 make migrate-up
 
-# 5. Construir y ejecutar
+# 5. Build and run
 make build-web
 make start-http
 ```
 
-El servidor estará disponible en `http://localhost:3000`.
+Server available at `http://localhost:3000`.
 
-### Primeros Pasos
+### First Steps
 
 ```bash
-# Crear super usuario
+# Create super user
 make superusr ARGS="-usrname admin@example.com -pwd password123"
 
-# Inicializar carpetas raíz
+# Initialize root folders
 make approot ARGS="-usrname admin@example.com"
 ```
 
 ### Development Commands
 
-| Command              | Description                        |
-| -------------------- | ---------------------------------- |
-| `make db-local-up`   | Iniciar PostgreSQL local (5501)    |
-| `make db-local-down` | Detener PostgreSQL local            |
-| `make migrate-up`    | Ejecutar migraciones                |
-| `make test-local`    | Ejecutar pruebas con DB de test     |
-| `make build-web`     | Construir aplicación web            |
-| `make start-http`    | Construir y ejecutar servidor       |
+| Command            | Description                         |
+| ------------------ | ----------------------------------- |
+| `make db-local-up`   | Start local PostgreSQL (port 5501)  |
+| `make db-local-down` | Stop local PostgreSQL               |
+| `make migrate-up`    | Run migrations                      |
+| `make test-local`    | Run tests with test database        |
+| `make build-web`     | Build web application               |
+| `make start-http`    | Build and run HTTP server           |
 
 ## Project Structure
 
@@ -220,9 +220,9 @@ make approot ARGS="-usrname admin@example.com"
 │   │
 │   └── infrastructure/
 │       ├── config/          # Environment configuration
-│       ├── db/             # PostgreSQL repos + migrations
-│       ├── serv/           # Service implementations
-│       └── transport/       # HTTP handlers, middleware
+│       ├── db/              # PostgreSQL repos + migrations
+│       ├── serv/            # Service implementations
+│       └── transport/        # HTTP handlers, middleware
 │
 ├── pkg/                     # Public packages
 │   ├── apperror/           # Application errors
@@ -232,7 +232,7 @@ make approot ARGS="-usrname admin@example.com"
 │
 └── web/app/                # SolidJS frontend
     └── src/
-        ├── entities/       # API entities and types
+        ├── entities/        # API entities and types
         ├── features/       # Feature modules
         ├── pages/          # Page components
         └── shared/         # Design system components
@@ -240,37 +240,37 @@ make approot ARGS="-usrname admin@example.com"
 
 ## Roadmap
 
-### Inmediato — Cliente Web Funcional
+### Immediate — Functional Web Client
 
-- [x] CRUD completo de archivos y carpetas
-- [x] Upload y download de documentos
-- [x] Sistema de comentarios
-- [x] Gestión de grupos con permisos
-- [x] Autenticación JWT con logout
-- [ ] **Swagger/OpenAPI** — Documentación mantenible de la API
-- [ ] **Streaming downloads** — Descarga por chunks/ranges para archivos grandes
-- [ ] **UI refinada** — Mejoras visuales en comentarios, metadata de archivos
+- [x] Full CRUD for files and folders
+- [x] Document upload and download
+- [x] Comment system
+- [x] Group management with permissions
+- [x] JWT authentication with logout
+- [ ] **Swagger/OpenAPI** — Maintainable API documentation
+- [ ] **Streaming downloads** — Chunk/range downloads for large files
+- [ ] **Refined UI** — Visual improvements for comments, file metadata
 
-### Corto Plazo — Visores y Reproducción
+### Short Term — Viewers and Playback
 
-- [ ] **Reproductor de video** — Soporte para formatos estándar (MP4, WebM)
-- [ ] **Visor de documentos** — PDF, imágenes, documentos de office
-- [ ] **Preview de archivos** — Thumbnails y previsualización inline
+- [ ] **Video player** — Support for standard formats (MP4, WebM)
+- [ ] **Document viewer** — PDF, images, office documents
+- [ ] **File preview** — Thumbnails and inline previews
 
-### Mediano Plazo — Almacenamiento Flexible
+### Medium Term — Flexible Storage
 
-- [ ] **SQLite driver** — Opción para despliegues acotados (Raspberry Pi, VPS pequeño)
-- [ ] **Storage abstraction** — Interface para S3, Google Cloud Storage, Backblaze B2
+- [ ] **SQLite driver** — Option for small deployments (Raspberry Pi, small VPS)
+- [ ] **Storage abstraction** — Interface for S3, Google Cloud Storage, Backblaze B2
 
-### Largo Plazo — Clientes Multiplataforma
+### Long Term — Multiplatform Clients
 
-- [ ] **Cliente Mobile** — App nativa o PWA para iOS/Android
-- [ ] **Smart TV Client** — App para TV conectadas (Samsung, LG, Apple TV)
-- [ ] **CLI Client** — Herramienta de línea de comandos para scripting
+- [ ] **Mobile client** — Native app or PWA for iOS/Android
+- [ ] **Smart TV client** — App for connected TVs (Samsung, LG, Apple TV)
+- [ ] **CLI client** — Command-line tool for scripting
 
 ## Contributing
 
-Contribuciones son bienvenidas. Por favor abre un issue o pull request en [GitHub](https://github.com/AlexisPerdomoD/owned).
+Contributions are welcome. Please open an issue or pull request on [GitHub](https://github.com/AlexisPerdomoD/owned).
 
 ## License
 
