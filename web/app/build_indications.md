@@ -35,9 +35,12 @@ web/app/src/
 │   │   ├── api/
 │   │   │   └── index.js     # DTOs + APIs completas para Groups CRUD
 │   │   └── index.js          # Tipos: Group, GroupUsr, GroupNode, PopulatedGroup
-│   └── comments/
+│   ├── comments/
+│   │   └── api/
+│   │       └── index.js      # DTOs + APIs para comentarios
+│   └── docs/
 │       └── api/
-│           └── index.js      # DTOs + APIs para comentarios
+│           └── index.js      # DTOs + APIs para documentos (upload, download, delete)
 │
 ├── features/                   # Lógica de negocio por módulo
 │   ├── auth/
@@ -54,13 +57,16 @@ web/app/src/
 │   │   ├── ui/
 │   │   │   ├── DocCard.jsx
 │   │   │   ├── NodeCard.jsx
-│   │   │   └── NodeList.jsx
+│   │   │   ├── NodeList.jsx
+│   │   │   └── UploadDropzone.jsx   # Drag & drop para upload de archivos
 │   │   └── usecase/
 │   │       ├── useGetNode.js        # Hook: obtener nodo por ID
 │   │       ├── useGetRoot.js       # Hook: obtener nodos raíz
 │   │       ├── useCreateFolder.js # Hook: crear carpeta
 │   │       ├── useUpdateNode.js # Hook: actualizar nodo
 │   │       ├── useDeleteNode.js # Hook: eliminar nodo
+│   │       ├── useCreateDoc.js   # Hook: upload de archivo
+│   │       ├── useDeleteDoc.js   # Hook: eliminar archivo
 │   │       └── index.js
 │   ├── group/
 │   │   ├── ui/
@@ -87,10 +93,12 @@ web/app/src/
 │   │       └── index.js
 │   └── comment/
 │       ├── ui/
-│       │   └── CommentsList.jsx
+│       │   ├── CommentsList.jsx
+│       │   └── CommentItem.jsx    # Comentario individual con edit inline
 │       └── usecase/
 │           ├── useGetComments.js
 │           ├── useCreateComment.js
+│           ├── useUpdateComment.js # Editar comentario
 │           ├── useDeleteComment.js
 │           └── index.js
 │
@@ -199,17 +207,20 @@ web/app/src/
 - `PageHeader` con título del nodo y botón Back → `/nodes`
 - Tabs: Contents | Comments (para carpetas)
 - Sección de crear nueva subcarpeta (si es folder)
+- Zona de upload de archivos (drag & drop) (si es folder)
 - Botones Edit/Delete en header
 - Formulario modal para crear/editar
 
 **Componentes**:
 
 - `NodeOverview`: info del nodo (nombre, tipo, descripción, fechas)
-- `NodeList` para children
-- `DocCard` para archivos
+- `NodeList` para children (subcarpetas)
+- `DocCard` para archivos con botones download/delete
+- `UploadDropzone` para drag & drop de archivos
 - `CommentsList` + `CommentForm` para comentarios
 - Tabs para Contents/Comments
 - `NodeForm` modal (crear/editar)
+- `CommentItem` para comentarios editables inline
 
 ---
 
@@ -338,7 +349,7 @@ web/app/src/
 | Table      | shared/ui/Table.jsx      | columns, rows, emptyTitle        |
 | Pagination | shared/ui/Table.jsx      | page, total, onChange            |
 | PageHeader | shared/ui/Layout.jsx     | title, subtitle, actions, backTo |
-| Navbar     | shared/ui/Navbar.jsx     | Links + logout                   |
+| Navbar     | shared/ui/Navbar.jsx     | Links + logout button           |
 | Tabs       | shared/ui/Navigation.jsx | items, active, onChange          |
 
 ---
@@ -502,7 +513,20 @@ function MyComponent(props) {
 | ------ | ---------------------------- | -------------------- | -------------- |
 | GET    | `/api/v1/comments?node_id=x` |                      | Lista por nodo |
 | POST   | `/api/v1/comments`           | `{node_id, content}` | Crear          |
+| PATCH  | `/api/v1/comments/:id`       | `{content}`         | Editar         |
 | DELETE | `/api/v1/comments/:id`       |                      | Eliminar       |
+
+### 7.6 Documentos
+
+| Método | Ruta                      | Body                  | Descripción        |
+| ------ | ------------------------- | --------------------- | ------------------ |
+| POST   | `/api/v1/docs`           | multipart/form-data   | Upload archivo     |
+| GET    | `/api/v1/docs/:id/download` |                     | Download archivo   |
+| DELETE | `/api/v1/docs/:id`       |                       | Eliminar archivo   |
+
+**Nota**: Upload requiere `multipart/form-data` con campos:
+- `file`: El archivo binario
+- `node_id`: UUID del nodo carpeta padre
 
 ---
 
@@ -538,10 +562,22 @@ function MyComponent(props) {
 - [x] NotFoundView (404)
 - [x] Design System completo
 
-### ⏳ Pendiente
+### ⏳ Pendiente - Versión Funcional Inicial
 
-- [ ] Documentos: Upload/Download UI
-- [x] Crear Usuario: CRUD alineado con backend (CORREGIDO)
+#### P0 - Críticos
+
+- [x] **Documentos: Upload UI** - `entities/docs/api/index.js` + `useCreateDoc.js` + `UploadDropzone.jsx`
+- [x] **Documentos: Download UI** - `useDeleteDoc.js` + integración en `DocCard.jsx`
+- [x] **Logout flow** - Botón logout en Navbar → `DELETE /api/v1/usrs/logout`
+
+#### P1 - Importantes
+
+- [ ] **Editar comentario** - `useUpdateComment.js` + `CommentItem.jsx` con modo edit inline
+
+#### P2 - Mejoras UX
+
+- [ ] **Node selector visual** - En `GroupView`, cambiar input UUID por selector con search
+- [ ] **Access badges** - Mostrar nivel de acceso con badges en `GroupUsersList`
 
 ---
 
@@ -549,11 +585,10 @@ function MyComponent(props) {
 
 ### 10.1 Áreas de Mejora Futura
 
-1. **Documentos**: Implementar UI para upload/download
-2. **Breadcrumb**: Añadir Navigation.breadcrumb en NodeView
-3. **Search Global**: Búsqueda unificada en navbar
-4. **Theme Toggle**: Soporte dark/light mode
-5. **Infinite Scroll**: Alternativa a Pagination para listas grandes
+1. **Breadcrumb**: Añadir Navigation.breadcrumb en NodeView
+2. **Search Global**: Búsqueda unificada en navbar
+3. **Theme Toggle**: Soporte dark/light mode
+4. **Infinite Scroll**: Alternativa a Pagination para listas grandes
 
 ### 10.2 Dependencias Actuales
 
@@ -565,4 +600,202 @@ zod: ^4.3.6
 ```
 
 > **Nota**: No agregar nuevas dependencias sin justificación extrema.
+
+---
+
+## 11. Guía de Implementación - Features Pendientes
+
+### 11.1 Document Upload/Download (P0)
+
+#### Archivos a crear:
+
+```
+entities/docs/
+└── api/
+    └── index.js          # DTOs + APIs
+
+features/node/
+├── ui/
+│   └── UploadDropzone.jsx  # Drag & drop component
+└── usecase/
+    ├── useCreateDoc.js     # Upload hook
+    └── useDeleteDoc.js     # Delete hook
+```
+
+#### API `entities/docs/api/index.js`
+
+```javascript
+// DTO para upload (usa FormData, no JSON)
+class CreateDocDTO {
+    static #schema = z.strictObject({
+        node_id: z.string().uuid('Invalid UUID format.'),
+        // file se maneja separado en FormData
+    })
+}
+
+export async function apiCreateDoc(formData) {
+    // POST /api/v1/docs con Content-Type: multipart/form-data
+    // No usa reqJSON - usa fetch directo
+}
+
+export async function apiDeleteDoc(docId) {
+    // DELETE /api/v1/docs/:docId
+}
+
+export async function apiDownloadDoc(docId) {
+    // GET /api/v1/docs/:docId/download
+    // Retorna blob para download
+}
+```
+
+#### UI `UploadDropzone.jsx`
+
+- Drag & drop zone con feedback visual
+- Acepta cualquier tipo de archivo
+- Muestra progreso de upload
+- Integrar en `NodeView` cuando `node.type === 'folder'`
+
+#### Integración en `DocCard.jsx`
+
+```jsx
+// Already exists, needs:
+// - Download button → apiDownloadDoc
+// - Delete button → useDeleteDoc + refresh
+```
+
+### 11.2 Logout Flow (P0)
+
+#### Modificar `Navbar.jsx`
+
+```jsx
+// Agregar botón logout que llama a:
+// DELETE /api/v1/usrs/logout
+// Limpiar cookie de sesión
+// Redirect a /login
+```
+
+#### API existente a usar:
+
+- `DELETE /api/v1/usrs/logout` - No requiere body, limpia cookie
+
+### 11.3 Editar Comentario (P1)
+
+#### Archivos a modificar:
+
+```
+features/comment/
+├── ui/
+│   └── CommentItem.jsx   # CREAR - item individual con edit
+└── usecase/
+    └── index.js          # AGREGAR useUpdateComment
+```
+
+#### Hook `useUpdateComment.js`
+
+```javascript
+export function useUpdateComment() {
+    const [loading, setLoading] = createSignal(false)
+
+    const update = async (commentId, content) => {
+        // PATCH /api/v1/comments/:id con { content }
+        // Retorna [success, comment]
+    }
+
+    return { update, loading }
+}
+```
+
+#### UI `CommentItem.jsx`
+
+- Muestra contenido del comentario
+- Botón "Edit" que muestra input inline
+- Botón "Save" para confirmar
+- Botón "Cancel" para abortar
+- Mantiene modo edit local hasta confirmar
+
+### 11.4 Node Selector Visual (P2)
+
+#### Mejora en `GroupView`
+
+```jsx
+// En lugar de:
+// <input name="node_id" placeholder="node-id" />
+
+// Crear NodeSelector:
+// - Input con búsqueda
+// - Dropdown con resultados de /api/v1/nodes
+// - Muestra nombre del nodo seleccionado
+```
+
+#### Componente sugerido:
+
+```
+features/node/
+└── ui/
+    └── NodeSelector.jsx  # CREAR
+```
+
+---
+
+## 12. Convenciones API Client
+
+### 12.1 Upload con FormData
+
+Para uploads de archivos, NO usar `reqJSON`. Usar fetch directo:
+
+```javascript
+export async function apiCreateDoc(formData) {
+    const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('session='))
+        ?.split('=')[1]
+
+    const res = await fetch('/api/v1/docs', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+    })
+
+    if (!res.ok) throw new Error('Upload failed')
+    return res.json()
+}
+```
+
+### 12.2 Download de archivos
+
+```javascript
+export async function apiDownloadDoc(docId) {
+    const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('session='))
+        ?.split('=')[1]
+
+    const res = await fetch(`/api/v1/docs/${docId}/download`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    })
+
+    const blob = await res.blob()
+    // Crear link temporal para download
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+}
+```
+
+---
+
+## 13. Testing Checklist
+
+Antes de considerar una feature completa, verificar:
+
+- [ ] Loading state visible durante operaciones
+- [ ] Error handling con mensajes apropiados
+- [ ] Toast feedback en operaciones exitosas
+- [ ] Refresh de datos después de CRUD
+- [ ] Navegación correcta después de acciones
+- [ ] Props accedidas como `props.x` (no desestructuradas)
+- [ ] Null checks en datos opcionales
 
