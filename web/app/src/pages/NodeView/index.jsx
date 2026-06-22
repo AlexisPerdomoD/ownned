@@ -6,14 +6,17 @@ import {
     useDeleteComment,
     useGetComments
 } from '@/features/comments/usecase'
-import { DocCard, NodeList } from '@/features/node/ui'
+import { apiDownloadDoc } from '@/entities/docs/api'
+import { DocCard, NodeList, UploadDropzone } from '@/features/node/ui'
 import {
+    useCreateDoc,
     useCreateFolder,
+    useDeleteDoc,
     useDeleteNode,
     useGetNode,
     useUpdateNode
 } from '@/features/node/usecase'
-import { Button, PageHeader, Spinner, Tabs } from '@/shared/ui'
+import { Button, PageHeader, Spinner, Tabs, toast } from '@/shared/ui'
 import { useNavigate, useParams } from '@solidjs/router'
 
 function NodeOverview({ node, onEdit, onDelete }) {
@@ -146,6 +149,9 @@ export function NodeView() {
     const { update, loading: updating } = useUpdateNode()
     const { remove, loading: deleting } = useDeleteNode()
 
+    const { upload, loading: uploading } = useCreateDoc(() => params.id)
+    const { remove: deleteDoc, loading: deletingDoc } = useDeleteDoc()
+
     const [showForm, setShowForm] = createSignal(false)
     const [editingNode, setEditingNode] = createSignal(null)
     const [showCreate, setShowCreate] = createSignal(false)
@@ -193,8 +199,38 @@ export function NodeView() {
         }
     }
 
+    const handleUpload = async file => {
+        const [success, err] = await upload(file)
+        if (!success) {
+            toast({ type: 'error', message: err?.general ?? 'Upload failed' })
+            return
+        }
+        toast({ type: 'success', message: 'File uploaded successfully' })
+    }
+
+    const handleDownload = async doc => {
+        try {
+            await apiDownloadDoc(doc.id, doc.title)
+        } catch (e) {
+            toast({ type: 'error', message: e.message ?? 'Download failed' })
+        }
+    }
+
+    const handleDeleteDoc = async doc => {
+        if (!confirm(`Delete "${doc.title}"?`)) return
+        const [success, err] = await deleteDoc(doc.id)
+        if (!success) {
+            toast({ type: 'error', message: err?.general ?? 'Delete failed' })
+            return
+        }
+        toast({ type: 'success', message: 'File deleted successfully' })
+    }
+
     const nodeData = () => node()
     const canEdit = () => nodeData()?.type === 'folder'
+
+    const folderChildren = () => nodeData()?.children?.filter(n => n.type === 'folder') ?? []
+    const fileChildren = () => nodeData()?.children?.filter(n => n.type === 'file') ?? []
 
     return (
         <section class="flex flex-col p-6">
@@ -228,9 +264,38 @@ export function NodeView() {
                             {nodeData()?.name}'s contents
                         </h3>
                         <NodeList
-                            nodes={nodeData()?.children ?? []}
+                            nodes={folderChildren()}
                             loading={loading()}
                             onNodeClick={n => navigate(`/nodes/${n.id}`)}
+                        />
+                    </section>
+
+                    <section class="mt-4">
+                        <h3 class="font-serif text-lg mb-2">Files</h3>
+                        <Show
+                            when={fileChildren().length > 0}
+                            fallback={
+                                <p class="text-sm text-[--color-muted]">
+                                    No files in this folder
+                                </p>
+                            }
+                        >
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {fileChildren().map(fileNode => (
+                                    <DocCard
+                                        doc={fileNode.doc}
+                                        onDownload={handleDownload}
+                                        onDelete={handleDeleteDoc}
+                                    />
+                                ))}
+                            </div>
+                        </Show>
+                    </section>
+
+                    <section class="mt-4">
+                        <UploadDropzone
+                            onUpload={handleUpload}
+                            loading={uploading()}
                         />
                     </section>
                 </Show>
@@ -257,10 +322,10 @@ export function NodeView() {
                 >
                     <section class="mt-4">
                         <h3 class="font-serif text-lg mb-2">
-                            {nodeData()?.name}'s contents
+                            Folders
                         </h3>
                         <NodeList
-                            nodes={nodeData()?.children ?? []}
+                            nodes={folderChildren()}
                             loading={loading()}
                             onNodeClick={n => navigate(`/nodes/${n.id}`)}
                         />

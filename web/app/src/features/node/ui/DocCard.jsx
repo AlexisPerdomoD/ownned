@@ -51,6 +51,23 @@ const TrashIcon = () => (
     </svg>
 )
 
+const DownloadIcon = () => (
+    <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+    >
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+)
+
 const formatDate = dateStr => {
     if (!dateStr) return ''
     const date = new Date(dateStr)
@@ -82,7 +99,7 @@ const formatRelativeDate = dateStr => {
  * @param {Object} props
  * @param {import('@entities/nodes').Doc} props.doc
  * @param {(doc: import('@entities/nodes').Doc) => void} [props.onClick] - Callback when card is clicked
- * @param {(doc: import('@entities/nodes').Doc) => void} [props.onEdit] - Callback for edit action
+ * @param {(doc: import('@entities/nodes').Doc) => void} [props.onDownload] - Callback for download action
  * @param {(doc: import('@entities/nodes').Doc) => void} [props.onDelete] - Callback for delete action
  * @param {string} [props.class]
  */
@@ -137,20 +154,20 @@ export function DocCard(props) {
                     )}
                 </div>
 
-                {(props.onEdit || props.onDelete) && (
+                {(props.onDownload || props.onDelete) && (
                     <div class="flex items-center gap-1">
-                        {props.onEdit && (
+                        {props.onDownload && (
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={e => {
                                     e.stopPropagation()
-                                    props.onEdit(props.doc)
+                                    props.onDownload(props.doc)
                                 }}
                                 class="p-1.5"
-                                title="Edit"
+                                title="Download"
                             >
-                                <EditIcon />
+                                <DownloadIcon />
                             </Button>
                         )}
                         {props.onDelete && (
