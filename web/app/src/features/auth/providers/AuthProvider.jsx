@@ -1,7 +1,7 @@
 import { createContext, onMount, useContext } from 'solid-js'
 import { createStore } from 'solid-js/store'
 
-import { apiGetMe, apiLogin } from '@/entities/usrs/api'
+import { apiGetMe, apiLogin, apiLogout } from '@/entities/usrs/api'
 
 /**
  * @typedef {Object} AuthCtx
@@ -63,9 +63,13 @@ export function AuthProvider(props) {
         })
     // TODO: check if here errors need to be handled
 
-    // TODO: create logout api
-    // TODO: check if here errors need to be handled
-    const logout = async () => setState({ usr: null, checked: false })
+    const logout = async () => {
+        try {
+            await apiLogout()
+        } finally {
+            setState({ usr: null, checked: true })
+        }
+    }
 
     return (
         <AuthCtx.Provider value={{ state, loginPwd, logout }}>
