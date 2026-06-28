@@ -92,6 +92,14 @@ web/app/      # SolidJS frontend
 - `.env` is included by Makefile (do not add to .gitignore)
 - Config loaded via `internal/infrastructure/config/env_config.go`
 
+## Commit Convention
+
+Use conventional commits: `type(scope): description`
+
+Types: `feat`, `refactor`, `fix`, `docs`, `test`, `chore`, `videcode`
+
+Commits must be atomic — each commit compiles independently and represents a single logical change.
+
 ## Go Module
 
 - Module name: `ownned` (not `owned`)
