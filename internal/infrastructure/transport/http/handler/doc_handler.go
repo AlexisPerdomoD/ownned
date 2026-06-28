@@ -1,11 +1,12 @@
 package handler
 
 import (
-	"net/http"
-
+	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-
+	"io"
+	"net/http"
+	"ownned/internal/application/storage"
 	"ownned/internal/application/usecase"
 	"ownned/internal/infrastructure/transport/http/decoder"
 	"ownned/internal/infrastructure/transport/http/encoder"
@@ -76,19 +77,59 @@ func (h *DocHandler) DownloadDocHandler(w http.ResponseWriter, r *http.Request) 
 		detail := make(map[string]string)
 		detail["reason"] = "Invalid doc ID provided."
 		_ = encoder.WriteJSONError(w, apperror.ErrBadRequest(detail))
+		return
 	}
 
-	doc, file, err := h.downloadDoc.Execute(r.Context(), docID)
+	var offset, limit uint64
+	if rangeHeader := r.Header.Get("Range"); rangeHeader != "" {
+		var ok bool
+		offset, limit, ok = parseRange(rangeHeader)
+		if !ok {
+			detail := make(map[string]string)
+			detail["reason"] = "Invalid Range header provided."
+			_ = encoder.WriteJSONError(w, apperror.ErrBadRequest(detail))
+			return
+		}
+
+	}
+
+	cmd := storage.DownloadCmd{
+		Key:    docID,
+		Offset: offset,
+		Limit:  limit,
+	}
+
+	doc, file, err := h.downloadDoc.Execute(r.Context(), cmd)
 	if err != nil {
 		_ = encoder.WriteJSONError(w, err)
 		return
 	}
-	defer func() { _ = file.Close() }()
-	// TODO ver como manejamos los haders
-	print(doc, file)
-}
 
-// todo handling streaming download
+	defer func() { _ = file.Close() }()
+
+	if cmd.Offset >= doc.SizeInBytes {
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes */%d", doc.SizeInBytes))
+		w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+		return
+	}
+
+	w.Header().Set("Content-Type", doc.MimeType)
+
+	if cmd.Offset > 0 || cmd.Limit > 0 {
+		startByte := cmd.Offset
+		endByte := cmd.Offset + cmd.Limit - 1
+		if cmd.Limit == 0 || endByte >= doc.SizeInBytes {
+			endByte = doc.SizeInBytes - 1
+		}
+
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d",
+			startByte,
+			endByte,
+			doc.SizeInBytes))
+		w.WriteHeader(http.StatusPartialContent)
+	}
+	_, _ = io.Copy(w, file)
+}
 
 func NewDocHandler(
 	cduc *usecase.CreateDocUseCase,
