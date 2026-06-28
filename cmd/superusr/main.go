@@ -13,7 +13,7 @@ import (
 	"ownned/internal/domain"
 	"ownned/internal/infrastructure/config"
 	"ownned/internal/infrastructure/db/pg"
-	"ownned/internal/infrastructure/serv"
+	"ownned/internal/infrastructure/srv"
 )
 
 func main() {
@@ -52,7 +52,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	hasher := serv.NewPwdHasherArgon2(
+	hasher := srv.NewPwdHasherArgon2(
 		cfg.PwdTime,
 		cfg.PwdMemKiB,
 		cfg.PwdThreads,

@@ -13,7 +13,7 @@ import (
 	"ownned/internal/application/usecase"
 	"ownned/internal/infrastructure/config"
 	"ownned/internal/infrastructure/db/pg"
-	"ownned/internal/infrastructure/serv"
+	"ownned/internal/infrastructure/srv"
 	"ownned/internal/infrastructure/transport/http/handler"
 	"ownned/internal/infrastructure/transport/http/middleware"
 )
@@ -104,19 +104,19 @@ func main() {
 
 	lg := slog.New(slog.
 		NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	jwtManager := serv.
+	jwtManager := srv.
 		NewJWTManagerST(
 			[]byte(cfg.SessionSecret),
 			time.Hour,
 			"ownned")
-	pwdHasher := serv.
+	pwdHasher := srv.
 		NewPwdHasherArgon2(
 			cfg.PwdTime,
 			cfg.PwdMemKiB,
 			cfg.PwdThreads,
 			cfg.PwdHashLen,
 			cfg.PwdSaltLen)
-	storage := serv.
+	storage := srv.
 		NewStorageManagerFS(cfg.LocalStorageDir)
 
 	// =========================================================================
