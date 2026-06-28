@@ -18,21 +18,21 @@ type DownloadDocUseCase struct {
 }
 
 func (uc *DownloadDocUseCase) Execute(
-	ctx context.Context, docID domain.DocID,
+	ctx context.Context, cmd storage.DownloadCmd,
 ) (*domain.Doc, io.ReadCloser, error) {
 	usr, err := getUsrIdentity(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	doc, err := uc.docRepository.GetByID(ctx, docID)
+	doc, err := uc.docRepository.GetByID(ctx, cmd.Key)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if doc == nil {
 		detail := make(map[string]string)
-		detail["reason"] = "Doc was not found by the given ID=" + docID.String()
+		detail["reason"] = "Doc was not found by the given ID=" + cmd.Key.String()
 		return nil, nil, apperror.ErrNotFound(detail)
 	}
 
@@ -60,7 +60,7 @@ func (uc *DownloadDocUseCase) Execute(
 		return nil, nil, apperror.ErrForbidden(detail)
 	}
 
-	file, err := uc.storage.Download(ctx, doc.ID.String())
+	file, err := uc.storage.Download(ctx, cmd)
 	if err != nil {
 		return nil, nil, err
 	}

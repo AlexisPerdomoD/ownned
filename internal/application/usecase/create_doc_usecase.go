@@ -30,7 +30,9 @@ type CreateDocUseCase struct {
 	logger            *slog.Logger
 }
 
-func (uc *CreateDocUseCase) Execute(ctx context.Context, arg *dto.CreateDocInputDTO) (*CreateDocUseCaseResponse, error) {
+func (uc *CreateDocUseCase) Execute(
+	ctx context.Context,
+	arg *dto.CreateDocInputDTO) (*CreateDocUseCaseResponse, error) {
 	usr, err := getUsrIdentity(ctx)
 	if err != nil {
 		return nil, err
@@ -85,8 +87,8 @@ func (uc *CreateDocUseCase) Execute(ctx context.Context, arg *dto.CreateDocInput
 		return nil, err
 	}
 
-	uploadCommand := storage.StorageUploadCommand{
-		Key:          docID.String(),
+	uploadCommand := storage.UploadCmd{
+		Key:          docID,
 		MaxSizeBytes: arg.ExpectedSize,
 		File:         arg.File,
 	}
@@ -122,7 +124,9 @@ func (uc *CreateDocUseCase) Execute(ctx context.Context, arg *dto.CreateDocInput
 	return response, nil
 }
 
-func (uc *CreateDocUseCase) saveDoc(ctx context.Context, response *CreateDocUseCaseResponse) error {
+func (uc *CreateDocUseCase) saveDoc(
+	ctx context.Context,
+	response *CreateDocUseCaseResponse) error {
 	err := uc.unitOfWorkFactory.Do(ctx, func(tx domain.UnitOfWork) error {
 		txCtx := tx.Ctx()
 		if err := tx.NodeRepository().Create(txCtx, response.Node); err != nil {
@@ -136,7 +140,7 @@ func (uc *CreateDocUseCase) saveDoc(ctx context.Context, response *CreateDocUseC
 		return nil
 	})
 	if err != nil {
-		deleteErr := uc.storage.Delete(ctx, response.Doc.ID.String())
+		deleteErr := uc.storage.Delete(ctx, response.Doc.ID)
 		if deleteErr != nil {
 			uc.logger.Warn("error deleting file after document creation err",
 				"err",

@@ -42,7 +42,9 @@ func (uc *DeleteNodeUseCase) Execute(ctx context.Context, nodeID domain.NodeID) 
 
 	canDo, err := uc.hasNodeAccessTo(ctx, usr, node.Path, domain.GroupWriteAccess)
 	if err != nil {
-		uc.log.WarnContext(ctx, "failed to check if user can access node", "nodeID", nodeID, "error", err)
+		uc.log.WarnContext(ctx, "failed to check if user can access node",
+			"nodeID", nodeID,
+			"error", err)
 		return err
 	}
 
@@ -83,7 +85,7 @@ func (uc *DeleteNodeUseCase) deleteDocsAsync(docs []domain.Doc) {
 
 	deletions := concurrent.MapConcurrent(
 		docs,
-		func(doc domain.Doc) (*domain.Doc, error) { return &doc, storage.Delete(ctx, doc.ID.String()) },
+		func(doc domain.Doc) (*domain.Doc, error) { return &doc, storage.Delete(ctx, doc.ID) },
 		20,
 	)
 

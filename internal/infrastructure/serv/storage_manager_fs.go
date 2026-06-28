@@ -2,7 +2,6 @@ package serv
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,8 +13,8 @@ type storageManagerFS struct {
 	Dir string
 }
 
-func (stg *storageManagerFS) Put(ctx context.Context, c storage.StorageUploadCommand) (uint64, error) {
-	fname := filepath.Join(stg.Dir, c.Key)
+func (stg *storageManagerFS) Put(ctx context.Context, c storage.UploadCmd) (uint64, error) {
+	fname := filepath.Join(stg.Dir, c.Key.String())
 	f, err := os.OpenFile(fname, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return 0, err
@@ -33,7 +32,10 @@ func (stg *storageManagerFS) Put(ctx context.Context, c storage.StorageUploadCom
 
 	// aseguramos que reader esté al inicio
 	if seeker, ok := c.File.(io.Seeker); ok {
-		_, _ = seeker.Seek(0, io.SeekStart)
+		if _, err = seeker.Seek(0, io.SeekStart); err != nil {
+			return 0, err
+		}
+
 	}
 
 	r := io.LimitReader(c.File, int64(c.MaxSizeBytes)+1)
@@ -46,12 +48,14 @@ func (stg *storageManagerFS) Put(ctx context.Context, c storage.StorageUploadCom
 		err = storage.ErrFileTooLarge
 	}
 
-	fmt.Printf("uploaded file %s size %d\n", fname, n)
 	return uint64(n), err
 }
 
-func (stg *storageManagerFS) Download(ctx context.Context, key storage.FileKey) (io.ReadCloser, error) {
-	fname := filepath.Join(stg.Dir, key)
+func (stg *storageManagerFS) Download(
+	ctx context.Context,
+	c storage.DownloadCmd) (io.ReadCloser, error) {
+
+	fname := filepath.Join(stg.Dir, c.Key.String())
 	f, err := os.Open(fname)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -61,13 +65,29 @@ func (stg *storageManagerFS) Download(ctx context.Context, key storage.FileKey) 
 		return nil, err
 	}
 
+	if c.Offset > 0 {
+		if _, err = f.Seek(int64(c.Offset), io.SeekStart); err != nil {
+			_ = f.Close()
+			return nil, err
+		}
+	}
+
+	if c.Limit > 0 {
+		return struct {
+			io.Reader
+			io.Closer
+		}{
+			Reader: io.LimitReader(f, int64(c.Limit)),
+			Closer: f,
+		}, nil
+	}
+
 	return f, nil
 }
 
-func (stg *storageManagerFS) Delete(ctx context.Context, k storage.FileKey) error {
-	fname := filepath.Join(stg.Dir, k)
-	err := os.Remove(fname)
-	if err != nil && !os.IsNotExist(err) {
+func (stg *storageManagerFS) Delete(ctx context.Context, k storage.FKey) error {
+	fname := filepath.Join(stg.Dir, k.String())
+	if err := os.Remove(fname); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 

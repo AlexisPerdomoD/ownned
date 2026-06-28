@@ -68,7 +68,7 @@ func (uc *DeleteDocUseCase) Execute(ctx context.Context, docID domain.DocID) (*d
 		return nil, apperror.ErrForbidden(detail)
 	}
 
-	if err := uc.storage.Delete(ctx, doc.ID.String()); err != nil {
+	if err := uc.storage.Delete(ctx, doc.ID); err != nil {
 		uc.log.WarnContext(ctx, "failed to delete doc from storage", "docID", docID, "err", err)
 		return nil, err
 	}
