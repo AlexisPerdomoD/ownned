@@ -25,13 +25,13 @@ func parseRange(header string) (offset, limit uint64, ok bool) {
 
 	rangeVal := strings.TrimSpace(header[len(prefix):])
 
-	hyphen := strings.IndexByte(rangeVal, '-')
-	if hyphen < 0 {
+	before, after, ok := strings.Cut(rangeVal, "-")
+	if !ok {
 		return 0, 0, false
 	}
 
-	startStr := strings.TrimSpace(rangeVal[:hyphen])
-	endStr := strings.TrimSpace(rangeVal[hyphen+1:])
+	startStr := strings.TrimSpace(before)
+	endStr := strings.TrimSpace(after)
 
 	if startStr == "" {
 		return 0, 0, false
