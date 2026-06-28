@@ -41,7 +41,7 @@ make test-local           # Spins up test DB (port 5502), runs all tests, tears 
 - **Dev**: PostgreSQL on port 5501, DB `local_db`
 - **Test**: PostgreSQL on port 5502, DB `test_db`
 - Migrations: `./internal/infrastructure/db/migrations/postgres/`
-- Requires `migrate` CLI installed (not managed via go get)
+- Requires `migrate` CLI installed with the postgres driver (install via `go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest`)
 
 ## Frontend
 

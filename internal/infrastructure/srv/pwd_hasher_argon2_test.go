@@ -165,7 +165,7 @@ func TestPwdHasherArgon2_RequiredReHash(t *testing.T) {
 
 	t.Run("returns true when time differs", func(t *testing.T) {
 		hash, _ := hasher.Hash([]byte("password"))
-		modifiedHash := bytes.ReplaceAll(hash, []byte("t=1"), []byte("t=3"))
+		modifiedHash := bytes.ReplaceAll(hash, []byte("t=3"), []byte("t=1"))
 
 		result := hasher.RequiredReHash(modifiedHash)
 		if !result {

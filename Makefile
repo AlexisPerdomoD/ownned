@@ -50,7 +50,7 @@ test-migrate-up: test-local-up-db
 	@migrate -path $(PG_MIGRATION_DIR) -database $(TEST_PG_DB_URL) up
 
 test-migrate-down: test-local-up-db
-	@migrate -path $(CR_MIGRATION_DIR) -database $(TEST_PG_DB_URL) down
+	@migrate -path $(PG_MIGRATION_DIR) -database $(TEST_PG_DB_URL) down
 
 test-local: test-migrate-up
 	@clear
