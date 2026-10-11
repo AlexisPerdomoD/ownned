@@ -11,37 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// usrIdentity is the user identity
-type usrIdentity struct {
-	ID   domain.UsrID
-	Role domain.UsrRole
-}
-
-// getUsrIdentity returns the user identity from the context
-func getUsrIdentity(ctx context.Context) (i usrIdentity, err error) {
-	s, err := auth.GetSession(ctx)
-	if err != nil {
-		return i, err
-	}
-
-	usrID, err := uuid.Parse(s.UsrID)
-	if err != nil {
-		detail := make(map[string]string)
-		detail["reason"] = "invalid user ID"
-		return i, apperror.ErrInternal(detail)
-	}
-
-	if !s.Role.IsValid() {
-		detail := make(map[string]string)
-		detail["reason"] = "invalid user role"
-		return i, apperror.ErrForbidden(detail)
-	}
-
-	i.ID = usrID
-	i.Role = s.Role
-	return i, nil
-}
-
 // accessChecker is an abstraction to access business logic related
 type accessChecker struct {
 	groupUsrRepository domain.GroupUsrRepository

@@ -15,9 +15,9 @@ type DocID = uuid.UUID
 type Doc struct {
 	ID          DocID
 	NodeID      NodeID
-	Description string
 	Title       string
 	Filename    string
+	Description string
 	MimeType    string
 	SizeInBytes uint64
 	CreatedAt   time.Time

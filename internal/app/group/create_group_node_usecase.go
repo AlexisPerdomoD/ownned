@@ -1,0 +1,69 @@
+package group
+
+import (
+	"context"
+	"fmt"
+
+	"ownned/internal/app/apperror"
+	"ownned/internal/app/identity"
+	"ownned/internal/domain"
+)
+
+type CreateGroupNodeUseCase struct {
+	AccessChecker
+	groupNodeRepository GroupNodeRepository
+}
+
+func NewCreateGroupNodeUseCase(
+	groupNode GroupNodeRepository,
+	groupUsr GroupUsrRepository,
+) *CreateGroupNodeUseCase {
+	return &CreateGroupNodeUseCase{
+		AccessChecker:       AccessChecker{groupUsr},
+		groupNodeRepository: groupNode,
+	}
+}
+
+func (uc *CreateGroupNodeUseCase) Execute(
+	ctx context.Context,
+	groupID domain.GroupID,
+	nodeID domain.NodeID) error {
+
+	usr, err := identity.Get(ctx)
+	if err != nil {
+		return err
+	}
+
+	if !usr.Role.CanAssignGroupNode() {
+		detail := make(map[string]string)
+		detail["reason"] = "User can not do this action."
+		return apperror.ErrForbidden(detail)
+	}
+
+	yes, err := uc.hasGroupAccessTo(ctx, usr, groupID, domain.GroupOwnerAccess)
+	if err != nil {
+		return err
+	}
+
+	if !yes {
+		detail := make(map[string]string)
+		detail["reason"] = fmt.Sprintf("User does not have access enough to group")
+		return apperror.ErrForbidden(detail)
+	}
+
+	yes, err = uc.hasNodeAccessTo(ctx, nodeID, domain.GroupOwnerAccess)
+	if err != nil {
+		return err
+	}
+
+	if !yes {
+		detail := make(map[string]string)
+		detail["reason"] = fmt.Sprintf("User does not have access enough to node")
+		return apperror.ErrForbidden(detail)
+	}
+
+	return uc.groupNodeRepository.Upsert(ctx, &UpsertGroupNode{
+		GroupID: groupID,
+		NodeID:  nodeID,
+	})
+}

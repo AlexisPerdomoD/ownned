@@ -1,6 +1,10 @@
 // Package pagination provides pagination functionality for the application layer.
 package pagination
 
+const DefaultLimit = 20
+const DefaultHighestLimit = 120
+const DefaultPage = 1
+
 type PaginationParam struct {
 	Search string `json:"search"`
 	Limit  uint   `json:"limit"`
@@ -9,7 +13,7 @@ type PaginationParam struct {
 
 func (p *PaginationParam) GetSafePage() uint {
 	if p.Page == 0 {
-		return 1
+		return DefaultPage
 	}
 
 	return p.Page
@@ -17,11 +21,11 @@ func (p *PaginationParam) GetSafePage() uint {
 
 func (p *PaginationParam) GetSafeLimit() uint {
 	if p.Limit == 0 {
-		return 20
+		return DefaultLimit
 	}
 
 	if p.Limit > 120 {
-		return 120
+		return DefaultHighestLimit
 	}
 
 	return p.Limit

@@ -1,0 +1,80 @@
+package group
+
+import (
+	"context"
+
+	"ownned/internal/app/apperror"
+	"ownned/internal/app/identity"
+	"ownned/internal/app/tx"
+	"ownned/internal/domain"
+
+	"github.com/google/uuid"
+)
+
+type CreateGroupDTO struct {
+	Name        string `json:"name" validate:"required,min=1,max=255,excludes=\\/"`
+	Description string `json:"description" validate:"max=1000"`
+}
+
+type CreateGroupNodeTx interface {
+	tx.TxCtx
+
+	GroupRepository() GroupRepository
+	GroupUsrRepository() GroupUsrRepository
+}
+
+type CreateGroupUseCase struct {
+	txFactory tx.TxFactory[CreateGroupNodeTx]
+}
+
+func NewCreateGroupUseCase(txFactory tx.TxFactory[CreateGroupNodeTx]) *CreateGroupUseCase {
+	return &CreateGroupUseCase{txFactory}
+}
+
+func (uc *CreateGroupUseCase) Execute(ctx context.Context, args CreateGroupDTO) (*domain.Group, error) {
+	usr, err := identity.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if !usr.Role.CanCreateGroup() {
+		detail := make(map[string]string)
+		detail["reason"] = "Usr does not have permission to do this action."
+		return nil, apperror.ErrForbidden(detail)
+	}
+
+	groupID, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
+
+	group := &domain.Group{
+		ID:          groupID,
+		UsrID:       usr.ID,
+		Name:        args.Name,
+		Description: args.Description,
+	}
+
+	groupUsr := &UpsertGroupUsr{
+		GroupID: group.ID,
+		UsrID:   usr.ID,
+		Access:  domain.GroupOwnerAccess,
+	}
+
+	if err := uc.txFactory.Do(ctx, func(t CreateGroupNodeTx) error {
+
+		if err := t.GroupRepository().Create(t.Ctx(), group); err != nil {
+			return err
+		}
+
+		if err := t.GroupUsrRepository().Upsert(t.Ctx(), groupUsr); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return group, nil
+}
