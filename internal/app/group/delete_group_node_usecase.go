@@ -9,7 +9,7 @@ import (
 )
 
 type DeleteGroupNodeUseCase struct {
-	AccessChecker
+	accessChecker
 	groupNodeRepository GroupNodeRepository
 }
 
@@ -19,7 +19,7 @@ func NewDeleteGroupNodeUseCase(
 ) *DeleteGroupNodeUseCase {
 
 	return &DeleteGroupNodeUseCase{
-		AccessChecker:       AccessChecker{groupUsr},
+		accessChecker:       accessChecker{groupUsr},
 		groupNodeRepository: groupNode,
 	}
 }
@@ -40,7 +40,7 @@ func (uc *DeleteGroupNodeUseCase) Execute(
 		return apperror.ErrForbidden(detail)
 	}
 
-	yes, err := uc.hasGroupAccessTo(ctx, usr, groupID, domain.GroupOwnerAccess)
+	yes, err := uc.HasGroupAccessTo(ctx, groupID, domain.GroupOwnerAccess)
 	if err != nil {
 		return err
 	}

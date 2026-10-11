@@ -7,16 +7,35 @@ import (
 	"ownned/internal/domain"
 )
 
-type AccessChecker struct {
-	groupUsr GroupUsrRepository
+type AccessChecker interface {
+	// HasNodeAccessToFromPath checks if a user has access to a node based on the user's role and the access of the node to the user
+	HasNodeAccessToFromPath(
+		ctx context.Context,
+		pth domain.NodePath,
+		accs domain.GroupUsrAccess) (bool, error)
+
+	// HasNodeAccessTo checks if a user has access to a node based on the user's role and the access of the node to the user
+	HasNodeAccessTo(
+		ctx context.Context,
+		nodeID domain.NodeID,
+		accs domain.GroupUsrAccess) (bool, error)
+
+	// HasGroupAccessTo checks if a user has access to a group based on the user's role and the access of the group to the user
+	HasGroupAccessTo(
+		ctx context.Context,
+		groupID domain.GroupID,
+		reqAccs domain.GroupUsrAccess) (bool, error)
 }
 
-func NewAccessChecker(usrGroup GroupUsrRepository) *AccessChecker {
-	return &AccessChecker{usrGroup}
+type accessChecker struct {
+	groupUsrs GroupUsrRepository
 }
 
-// hasNodeAccessToFromPath checks if a user has access to a node based on the user's role and the access of the node to the user
-func (ac *AccessChecker) hasNodeAccessToFromPath(
+func NewAccessChecker(usrGroup GroupUsrRepository) AccessChecker {
+	return &accessChecker{usrGroup}
+}
+
+func (ac *accessChecker) HasNodeAccessToFromPath(
 	ctx context.Context,
 	pth domain.NodePath,
 	accs domain.GroupUsrAccess,
@@ -30,7 +49,7 @@ func (ac *AccessChecker) hasNodeAccessToFromPath(
 		return true, nil
 	}
 
-	if err := ac.groupUsr.HasAccessFromPath(ctx, u.ID, pth, accs); err != nil {
+	if err := ac.groupUsrs.HasAccessFromPath(ctx, u.ID, pth, accs); err != nil {
 		if errors.Is(err, domain.ErrNoAccess) {
 			return false, nil
 		}
@@ -41,8 +60,7 @@ func (ac *AccessChecker) hasNodeAccessToFromPath(
 	return true, nil
 }
 
-// hasNodeAccessTo checks if a user has access to a node based on the user's role and the access of the node to the user
-func (ac *AccessChecker) hasNodeAccessTo(
+func (ac *accessChecker) HasNodeAccessTo(
 	ctx context.Context,
 	nodeID domain.NodeID,
 	accs domain.GroupUsrAccess,
@@ -56,7 +74,7 @@ func (ac *AccessChecker) hasNodeAccessTo(
 		return true, nil
 	}
 
-	if err := ac.groupUsr.HasAccess(ctx, u.ID, nodeID, accs); err != nil {
+	if err := ac.groupUsrs.HasAccess(ctx, u.ID, nodeID, accs); err != nil {
 		if errors.Is(err, domain.ErrNoAccess) {
 			return false, nil
 		}
@@ -67,18 +85,22 @@ func (ac *AccessChecker) hasNodeAccessTo(
 	return true, nil
 }
 
-// hasGroupAccessTo checks if a user has access to a group based on the user's role and the access of the group to the user
-func (ac *AccessChecker) hasGroupAccessTo(
+// HasGroupAccessTo checks if a user has access to a group based on the user's role and the access of the group to the user
+func (ac *accessChecker) HasGroupAccessTo(
 	ctx context.Context,
-	u identity.Identity,
 	groupID domain.GroupID,
 	reqAccs domain.GroupUsrAccess,
 ) (bool, error) {
+	u, err := identity.Get(ctx)
+	if err != nil {
+		return false, err
+	}
+
 	if u.Role == domain.SuperUsrRole {
 		return true, nil
 	}
 
-	accs, err := ac.groupUsr.GetGroupAccess(ctx, u.ID, groupID)
+	accs, err := ac.groupUsrs.GetGroupAccess(ctx, u.ID, groupID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNoAccess) {
 			return false, nil

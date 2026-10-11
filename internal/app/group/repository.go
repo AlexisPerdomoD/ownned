@@ -6,17 +6,6 @@ import (
 	"ownned/internal/domain"
 )
 
-type UpsertGroupUsr struct {
-	GroupID domain.GroupID
-	UsrID   domain.UsrID
-	Access  domain.GroupUsrAccess
-}
-
-type UpsertGroupNode struct {
-	GroupID domain.GroupID
-	NodeID  domain.NodeID
-}
-
 type GroupPaginateParam struct {
 	UsrID *domain.UsrID
 	pagination.PaginationParam
@@ -56,10 +45,10 @@ type GroupUsrRepository interface {
 	GetByUsr(ctx context.Context, usrID domain.UsrID) ([]domain.GroupUsr, error)
 	// Upsert access to a groups for a users
 	// Returns an error if nil data is provided
-	Upsert(ctx context.Context, d *UpsertGroupUsr) error
+	Upsert(ctx context.Context, d *domain.GroupUsr) error
 	// Upsert access to a groups for a users
 	// Returns an error if nil data is provided
-	UpsertAll(ctx context.Context, d []UpsertGroupUsr) error
+	UpsertAll(ctx context.Context, d []domain.GroupUsr) error
 	// Delete removes a user from a group if it exists on it
 	Delete(ctx context.Context, g domain.GroupID, u domain.UsrID) error
 }
@@ -70,10 +59,10 @@ type GroupNodeRepository interface {
 	GetByNode(ctx context.Context, nodeID domain.NodeID) ([]domain.GroupNode, error)
 	// Upsert attach a node to a group, does nothing if node is already attached
 	// Returns an error if nil data is provided
-	Upsert(ctx context.Context, d *UpsertGroupNode) error
+	Upsert(ctx context.Context, d *domain.GroupNode) error
 	// Upsert attach to nodes to groups
 	// Returns an error if nil data is provide
-	UpsertAll(ctx context.Context, d []UpsertGroupNode) error
+	UpsertAll(ctx context.Context, d []domain.GroupNode) error
 	// Delete removes a node from a group if it exist on it
 	Delete(ctx context.Context, g domain.GroupID, n domain.NodeID) error
 }

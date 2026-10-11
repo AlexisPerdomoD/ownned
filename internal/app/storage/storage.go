@@ -42,9 +42,9 @@ type DownloadCmd struct {
 	Limit  uint64
 }
 
-// StorageManager is the interface for the storage manager responsabilities.
+// Storage is the interface for the storage manager responsabilities.
 // It is responsible for uploading and downloading files from the storage.
-type StorageManager interface {
+type Storage interface {
 	// Get returns the file for the given key command.
 	// If the file is not found, returns ErrFileNotFound.
 	Download(ctx context.Context, key DownloadCmd) (io.ReadCloser, error)

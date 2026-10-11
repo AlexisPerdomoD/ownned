@@ -19,8 +19,8 @@ type UsrRepository interface {
 	// GetByUsername returns the Usr entity with the given username. If no entity is found, it returns nil, nil.
 	GetByUsername(ctx context.Context, username string) (*domain.Usr, error)
 
-	// GetByGroup returns the Usr entity with the given group ID.
-	GetByGroup(ctx context.Context, groupID domain.GroupID) ([]domain.UsrGroupAccess, error)
+	// GetByGroupID returns the Usr entity with the given group ID.
+	GetByGroupID(ctx context.Context, groupID domain.GroupID) ([]domain.UsrGroupAccess, error)
 
 	// Paginate returns a list of Usr entities that match the given pagination parameters.
 	// param.Role is optional and filters the list of Usr entities by their role.

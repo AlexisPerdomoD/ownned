@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -94,6 +95,10 @@ type Usr struct {
 	Username  string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+func (u *Usr) Fullname() string {
+	return fmt.Sprintf("%s %s", u.Firstname, u.Lastname)
 }
 
 type UsrGroupAccess struct {

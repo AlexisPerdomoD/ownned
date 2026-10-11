@@ -1,0 +1,100 @@
+package node
+
+import (
+	"context"
+	"fmt"
+	"ownned/internal/app/apperror"
+	"ownned/internal/app/group"
+	"ownned/internal/app/identity"
+	"ownned/internal/domain"
+
+	"github.com/google/uuid"
+)
+
+type CreateNodeFolderDTO struct {
+	// NOTE: evaluate if we could need to get back to this aproach
+	// ParentID    string `json:"parent_id" validate:"required,uuid"`
+	ParentID    domain.NodeID `json:"parent_id" validate:"required"`
+	Name        string        `json:"name" validate:"required,min=1,max=255,excludes=\\/"`
+	Description string        `json:"description" validate:"max=255"`
+}
+
+type CreateNodeFolderUseCase struct {
+	group.AccessChecker
+	nodes NodeRepository
+}
+
+func NewCreateNodeFolderUseCase(
+	ac group.AccessChecker,
+	nodes NodeRepository,
+) *CreateNodeFolderUseCase {
+	return &CreateNodeFolderUseCase{ac, nodes}
+}
+
+func (uc *CreateNodeFolderUseCase) Execute(
+	ctx context.Context,
+	dto CreateNodeFolderDTO) (*domain.Node, error) {
+	usr, err := identity.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if !usr.Role.CanCreateNode() {
+		detail := make(map[string]string)
+		detail["reason"] = "Usr can not do this action"
+		return nil, apperror.ErrForbidden(detail)
+	}
+
+	parent, err := uc.nodes.GetByID(ctx, dto.ParentID)
+	if err != nil {
+		return nil, err
+	}
+
+	if parent == nil {
+		detail := make(map[string]string)
+		detail["reason"] = "parent node was not found"
+		return nil, apperror.ErrNotFound(detail)
+	}
+
+	if parent.Type != domain.FolderNodeType {
+		detail := make(map[string]string)
+		detail["reason"] = "parent node is not a folder type"
+		return nil, apperror.ErrBadRequest(detail)
+	}
+
+	yes, err := uc.HasNodeAccessToFromPath(ctx, parent.Path, domain.GroupWriteAccess)
+	if err != nil {
+		return nil, err
+	}
+
+	if !yes {
+		detail := make(map[string]string)
+		detail["reason"] = fmt.Sprintf("User does not have access to write on specified parent node")
+		return nil, apperror.ErrForbidden(detail)
+	}
+
+	folderID, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
+
+	path, err := parent.Path.NewChildPath(folderID)
+	if err != nil {
+		return nil, err
+	}
+
+	folder := &domain.Node{
+		ID:          folderID,
+		UsrID:       usr.ID,
+		Name:        dto.Name,
+		Description: dto.Description,
+		Type:        domain.FolderNodeType,
+		Path:        path,
+	}
+
+	if err := uc.nodes.Create(ctx, folder); err != nil {
+		return nil, err
+	}
+
+	return folder, nil
+}

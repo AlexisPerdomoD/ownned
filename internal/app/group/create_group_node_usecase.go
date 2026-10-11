@@ -10,7 +10,7 @@ import (
 )
 
 type CreateGroupNodeUseCase struct {
-	AccessChecker
+	accessChecker
 	groupNodeRepository GroupNodeRepository
 }
 
@@ -19,7 +19,7 @@ func NewCreateGroupNodeUseCase(
 	groupUsr GroupUsrRepository,
 ) *CreateGroupNodeUseCase {
 	return &CreateGroupNodeUseCase{
-		AccessChecker:       AccessChecker{groupUsr},
+		accessChecker:       accessChecker{groupUsr},
 		groupNodeRepository: groupNode,
 	}
 }
@@ -40,7 +40,7 @@ func (uc *CreateGroupNodeUseCase) Execute(
 		return apperror.ErrForbidden(detail)
 	}
 
-	yes, err := uc.hasGroupAccessTo(ctx, usr, groupID, domain.GroupOwnerAccess)
+	yes, err := uc.HasGroupAccessTo(ctx, groupID, domain.GroupOwnerAccess)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func (uc *CreateGroupNodeUseCase) Execute(
 		return apperror.ErrForbidden(detail)
 	}
 
-	yes, err = uc.hasNodeAccessTo(ctx, nodeID, domain.GroupOwnerAccess)
+	yes, err = uc.HasNodeAccessTo(ctx, nodeID, domain.GroupOwnerAccess)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func (uc *CreateGroupNodeUseCase) Execute(
 		return apperror.ErrForbidden(detail)
 	}
 
-	return uc.groupNodeRepository.Upsert(ctx, &UpsertGroupNode{
+	return uc.groupNodeRepository.Upsert(ctx, &domain.GroupNode{
 		GroupID: groupID,
 		NodeID:  nodeID,
 	})

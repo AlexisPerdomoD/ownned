@@ -55,7 +55,7 @@ func (uc *CreateGroupUseCase) Execute(ctx context.Context, args CreateGroupDTO) 
 		Description: args.Description,
 	}
 
-	groupUsr := &UpsertGroupUsr{
+	groupUsr := &domain.GroupUsr{
 		GroupID: group.ID,
 		UsrID:   usr.ID,
 		Access:  domain.GroupOwnerAccess,

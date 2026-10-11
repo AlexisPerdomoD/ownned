@@ -1,20 +1,38 @@
-package usecase
+package group
 
 import (
 	"context"
 
-	"ownned/internal/application/dto"
+	"ownned/internal/app/apperror"
+	"ownned/internal/app/identity"
 	"ownned/internal/domain"
-	"ownned/pkg/apperror"
-	"ownned/pkg/helper"
 )
 
-type UpdateGroupUseCase struct {
-	groupRepository domain.GroupRepository
+type UpdateGroupDTO struct {
+	Name        *string `json:"name" validate:"min=1,max=255,excludes=\\/"`
+	Description *string `json:"description" validate:"max=1000"`
 }
 
-func (uc *UpdateGroupUseCase) Execute(ctx context.Context, groupID domain.GroupID, args *dto.UpdateGroupDTO) (*domain.Group, error) {
-	usr, err := getUsrIdentity(ctx)
+type UpdateGroupUseCase struct {
+	groupRepository GroupRepository
+}
+
+func NewUpdateGroupUseCase(group GroupRepository) *UpdateGroupUseCase {
+	return &UpdateGroupUseCase{group}
+}
+
+func (uc *UpdateGroupUseCase) Execute(
+	ctx context.Context,
+	groupID domain.GroupID,
+	args UpdateGroupDTO,
+) (*domain.Group, error) {
+	if args.Name == nil && args.Description == nil {
+		detail := make(map[string]string)
+		detail["reason"] = "At least one field must be provided."
+		return nil, apperror.ErrBadRequest(detail)
+	}
+
+	usr, err := identity.Get(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -49,9 +67,4 @@ func (uc *UpdateGroupUseCase) Execute(ctx context.Context, groupID domain.GroupI
 	}
 
 	return group, nil
-}
-
-func NewUpdateGroupUseCase(gr domain.GroupRepository) *UpdateGroupUseCase {
-	helper.NotNilOrPanic(gr, "GroupRepository")
-	return &UpdateGroupUseCase{gr}
 }
