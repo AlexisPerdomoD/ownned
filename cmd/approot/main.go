@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/google/uuid"
 
 	"ownned/internal/domain"
 	"ownned/internal/infrastructure/config"
