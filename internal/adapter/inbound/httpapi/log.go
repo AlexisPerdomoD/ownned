@@ -1,13 +1,14 @@
-package http_log
+package httpapi
 
 import (
 	"fmt"
-	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
 )
 
-func ChiRouterLog(r chi.Router) {
+func logRouter(r chi.Router) {
 	methodColors := map[string]string{
 		"GET":    "\033[32m", // verde
 		"POST":   "\033[34m", // azul
