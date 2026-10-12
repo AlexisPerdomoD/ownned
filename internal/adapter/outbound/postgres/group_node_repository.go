@@ -1,14 +1,13 @@
-package pg
+package postgres
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	"ownned/internal/domain"
-	"ownned/pkg/apperror"
-
 	"github.com/jmoiron/sqlx"
+	"ownned/internal/app/group"
+	"ownned/internal/domain"
 )
 
 const getGroupNodeQuery string = `
@@ -28,6 +27,8 @@ VALUES (
 	:node_id,
 	:assigned_at) 
 ON CONFLICT(group_id, node_id) DO NOTHING`
+
+const deleteGroupNodeQuery = `DELETE FROM fs.group_nodes`
 
 type groupNodeRow struct {
 	GroupID    domain.GroupID `db:"group_id"`
@@ -63,7 +64,7 @@ func (r *groupNodeRepository) GetByNode(ctx context.Context, nodeID domain.NodeI
 	return res, nil
 }
 
-func (r *groupNodeRepository) Upsert(ctx context.Context, d *domain.UpsertGroupNode) error {
+func (r *groupNodeRepository) Upsert(ctx context.Context, d *domain.GroupNode) error {
 	if d == nil {
 		return ErrInvalidArgument
 	}
@@ -75,11 +76,16 @@ func (r *groupNodeRepository) Upsert(ctx context.Context, d *domain.UpsertGroupN
 	}
 
 	_, err := sqlx.NamedExecContext(ctx, r.db, upsertGroupNodeQuery, row)
+	if err != nil {
+		return err
+	}
 
-	return err
+	d.AssignDate = row.AssignedAt
+
+	return nil
 }
 
-func (r *groupNodeRepository) UpsertAll(ctx context.Context, d []domain.UpsertGroupNode) error {
+func (r *groupNodeRepository) UpsertAll(ctx context.Context, d []domain.GroupNode) error {
 	if len(d) == 0 {
 		return ErrInvalidArgument
 	}
@@ -91,19 +97,28 @@ func (r *groupNodeRepository) UpsertAll(ctx context.Context, d []domain.UpsertGr
 		rows[i].AssignedAt = assignedAt
 	}
 
-	_, err := sqlx.NamedExecContext(ctx, r.db, upsertGroupNodeQuery, rows)
-
-	return err
-}
-
-func (r *groupNodeRepository) RemoveNode(ctx context.Context, g domain.GroupID, n domain.NodeID) error {
-	return apperror.ErrNotImplemented(nil)
-}
-
-func NewGroupNodeRepository(db sqlx.ExtContext) domain.GroupNodeRepository {
-	if db == nil {
-		panic("NewGroupNodeRepository received a nil db")
+	if _, err := sqlx.
+		NamedExecContext(ctx, r.db, upsertGroupNodeQuery, rows); err != nil {
+		return err
 	}
 
-	return &groupNodeRepository{db}
+	for i := range d {
+		d[i].AssignDate = assignedAt
+	}
+
+	return nil
+}
+
+func (r *groupNodeRepository) Delete(ctx context.Context, groupID domain.GroupID, nodeID domain.NodeID) error {
+	q := fmt.Sprintf("%s\nWHERE group_id=$1\nAND node_id=$2", deleteGroupNodeQuery)
+
+	if _, err := r.db.ExecContext(ctx, q, groupID, nodeID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func NewGroupNodeRepository(db sqlx.ExtContext) group.GroupNodeRepository {
+	return &groupNodeRepository{db: db}
 }

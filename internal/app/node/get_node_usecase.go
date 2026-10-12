@@ -32,7 +32,7 @@ func NewGetNodeByIDUseCase(
 	}
 }
 
-func (uc *GetNodeUseCase) Execute(ctx context.Context, nodeID domain.NodeID) (domain.NodeLike, error) {
+func (uc *GetNodeUseCase) Execute(ctx context.Context, nodeID domain.NodeID) (NodeLike, error) {
 	yes, err := uc.HasNodeAccessTo(ctx, nodeID, domain.GroupReadOnlyAccess)
 	if err != nil {
 		uc.log.WarnContext(ctx, "failed to check if user can access node", "nodeID", nodeID, "error", err)

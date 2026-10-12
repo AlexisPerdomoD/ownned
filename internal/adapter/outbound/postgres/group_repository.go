@@ -1,4 +1,4 @@
-package pg
+package postgres
 
 import (
 	"context"
@@ -8,9 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"ownned/internal/app/apperror"
+	"ownned/internal/app/group"
+	"ownned/internal/app/pagination"
 	"ownned/internal/domain"
-	"ownned/pkg/apperror"
-	"ownned/pkg/pagination"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -118,7 +119,7 @@ func (r *groupRepository) GetByIDs(ctx context.Context, ids []domain.GroupID) (m
 	return res, nil
 }
 
-func (r *groupRepository) GetByUsr(ctx context.Context, usrID domain.UsrID) ([]domain.Group, error) {
+func (r *groupRepository) GetByUsrID(ctx context.Context, usrID domain.UsrID) ([]domain.Group, error) {
 	q := fmt.Sprintf("%s\nWHERE g.usr_id=$1", getGroupQuery)
 	rows, err := r.db.QueryxContext(ctx, q, usrID)
 	if err != nil {
@@ -134,7 +135,7 @@ func (r *groupRepository) GetByUsr(ctx context.Context, usrID domain.UsrID) ([]d
 	return res, nil
 }
 
-func (r *groupRepository) GetByUsrAssigned(ctx context.Context, usrID domain.UsrID) ([]domain.Group, error) {
+func (r *groupRepository) GetByUsrAssignedID(ctx context.Context, usrID domain.UsrID) ([]domain.Group, error) {
 	q := fmt.Sprintf("%s\nINNER JOIN fs.group_usrs gu ON gu.group_id = g.id\nWHERE gu.usr_id=$1", getGroupQuery)
 	rows, err := r.db.QueryxContext(ctx, q, usrID)
 	if err != nil {
@@ -150,7 +151,10 @@ func (r *groupRepository) GetByUsrAssigned(ctx context.Context, usrID domain.Usr
 	return res, nil
 }
 
-func (r *groupRepository) Paginate(ctx context.Context, param domain.GroupPaginateParam) (*pagination.PaginationResult[domain.Group], error) {
+func (r *groupRepository) Paginate(
+	ctx context.Context,
+	param group.GroupPaginateParam,
+) (*pagination.PaginationResult[domain.Group], error) {
 	var where strings.Builder
 	params := make([]any, 0)
 	where.WriteString("\nWHERE 1=1")
@@ -265,6 +269,6 @@ func (r *groupRepository) Delete(ctx context.Context, id domain.GroupID) error {
 	return err
 }
 
-func NewGroupRepository(db sqlx.ExtContext) domain.GroupRepository {
+func NewGroupRepository(db sqlx.ExtContext) group.GroupRepository {
 	return &groupRepository{db}
 }

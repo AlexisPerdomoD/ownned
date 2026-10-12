@@ -1,11 +1,12 @@
-package pg
+package postgres
 
 import (
 	"context"
 	"database/sql"
 
+	"ownned/internal/app/apperror"
+	"ownned/internal/app/usr"
 	"ownned/internal/domain"
-	"ownned/pkg/apperror"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -51,6 +52,6 @@ func (r *usrPwdRepository) GetPwd(ctx context.Context, id domain.UsrID) ([]byte,
 	return pwd, nil
 }
 
-func NewUsrPwdRepository(db sqlx.ExtContext) domain.UsrPwdRepository {
+func NewUsrPwdRepository(db sqlx.ExtContext) usr.UsrPwdRepository {
 	return &usrPwdRepository{db}
 }

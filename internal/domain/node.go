@@ -50,14 +50,6 @@ const (
 	FileNodeType   NodeType = "file"
 )
 
-type NodeLike interface {
-	GetNode() *Node
-
-	IsFile() (isFile bool, doc *Doc)
-
-	IsFolder() (isFolder bool, chldr []Node)
-}
-
 type NodeID = uuid.UUID
 type Node struct {
 	ID          NodeID
@@ -70,7 +62,7 @@ type Node struct {
 	UpdatedAt   time.Time
 }
 
-func (n *Node) GetNode() *Node {
+func (n *Node) Get() *Node {
 	return n
 }
 

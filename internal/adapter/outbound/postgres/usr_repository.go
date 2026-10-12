@@ -1,4 +1,4 @@
-package pg
+package postgres
 
 import (
 	"context"
@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"ownned/internal/domain"
-	"ownned/pkg/apperror"
-	"ownned/pkg/pagination"
-
 	"github.com/jmoiron/sqlx"
+	"ownned/internal/app/apperror"
+	"ownned/internal/app/pagination"
+	"ownned/internal/app/usr"
+	"ownned/internal/domain"
 )
 
 const getUsrQuery string = `
@@ -60,7 +60,7 @@ UPDATE fs.usrs SET
 	firstname 	= $2,
 	lastname	= $3,
 	username	= $4
-WHERE id=5`
+WHERE id=$5`
 
 type usrRow struct {
 	ID        domain.UsrID   `db:"id"`
@@ -71,7 +71,6 @@ type usrRow struct {
 	CreatedAt time.Time      `db:"created_at"`
 	UpdatedAt time.Time      `db:"updated_at"`
 }
-
 
 func (r *usrRow) ToDomain() domain.Usr {
 	return domain.Usr{
@@ -141,7 +140,7 @@ func (r *usrRepository) GetByUsername(ctx context.Context, username string) (*do
 	return &res, nil
 }
 
-func (r *usrRepository) GetByGroup(ctx context.Context, groupID domain.GroupID) ([]domain.UsrGroupAccess, error) {
+func (r *usrRepository) GetByGroupID(ctx context.Context, groupID domain.GroupID) ([]domain.UsrGroupAccess, error) {
 	q := fmt.Sprintf("%s\nWHERE gu.group_id=$1", getUsrGroupAccessQuery)
 	rows, err := r.db.QueryxContext(ctx, q, groupID)
 	if err != nil {
@@ -166,9 +165,10 @@ func (r *usrRepository) GetByGroup(ctx context.Context, groupID domain.GroupID) 
 	return result, nil
 }
 
-func (r *usrRepository) Paginate(ctx context.Context, param domain.UsrPaginationParam) (
-	*pagination.PaginationResult[domain.Usr], error,
-) {
+func (r *usrRepository) Paginate(
+	ctx context.Context,
+	param usr.UsrPaginationParam,
+) (*pagination.PaginationResult[domain.Usr], error) {
 	var where strings.Builder
 	params := make([]any, 0)
 	where.WriteString("\nWHERE 1=1")
@@ -180,11 +180,11 @@ func (r *usrRepository) Paginate(ctx context.Context, param domain.UsrPagination
 
 	if param.Search != "" {
 		pos := len(params) + 1
-		statement := fmt.Sprintf("\nAND (u.username ILIKE $%d OR u.firstname ILIKE $%d OR u.lastname ILIKE $%d)",
+		statement := fmt.Sprintf(
+			"\nAND (u.username ILIKE $%d OR u.firstname ILIKE $%d OR u.lastname ILIKE $%d)",
 			pos,
 			pos,
-			pos,
-		)
+			pos)
 		where.WriteString(statement)
 		params = append(params, "%"+param.Search+"%")
 	}
@@ -202,7 +202,7 @@ func (r *usrRepository) Paginate(ctx context.Context, param domain.UsrPagination
 		return &pagination.PaginationResult[domain.Usr]{
 			Data:       make([]domain.Usr, 0),
 			Page:       param.Page,
-			Limit:  param.Limit,
+			Limit:      param.Limit,
 			TotalPages: 0,
 			TotalCount: 0,
 		}, nil
@@ -234,7 +234,7 @@ func (r *usrRepository) Paginate(ctx context.Context, param domain.UsrPagination
 	return &pagination.PaginationResult[domain.Usr]{
 		Data:       data,
 		Page:       page,
-		Limit:  pageCount,
+		Limit:      pageCount,
 		TotalPages: totalPages,
 		TotalCount: uint(totalCount),
 	}, nil
@@ -289,7 +289,7 @@ func (r *usrRepository) Update(ctx context.Context, usr *domain.Usr) error {
 		return apperror.ErrNotFound(nil)
 	}
 
-	usr.UpdatedAt = time.Now()
+	usr.UpdatedAt = time.Now().UTC()
 	return nil
 }
 
@@ -297,6 +297,6 @@ func (r *usrRepository) Delete(ctx context.Context, id domain.UsrID) error {
 	return apperror.ErrNotImplemented(nil)
 }
 
-func NewUsrRepository(db sqlx.ExtContext) domain.UsrRepository {
+func NewUsrRepository(db sqlx.ExtContext) usr.UsrRepository {
 	return &usrRepository{db}
 }

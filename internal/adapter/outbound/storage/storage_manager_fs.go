@@ -1,4 +1,4 @@
-package srv
+package storage
 
 import (
 	"context"
@@ -6,14 +6,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"ownned/internal/application/storage"
+	appstorage "ownned/internal/app/storage"
 )
 
 type storageManagerFS struct {
 	Dir string
 }
 
-func (stg *storageManagerFS) Put(ctx context.Context, c storage.UploadCmd) (uint64, error) {
+func (stg *storageManagerFS) Put(ctx context.Context, c appstorage.UploadCmd) (uint64, error) {
 	fname := filepath.Join(stg.Dir, c.Key.String())
 	f, err := os.OpenFile(fname, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
@@ -35,7 +35,6 @@ func (stg *storageManagerFS) Put(ctx context.Context, c storage.UploadCmd) (uint
 		if _, err = seeker.Seek(0, io.SeekStart); err != nil {
 			return 0, err
 		}
-
 	}
 
 	r := io.LimitReader(c.File, int64(c.MaxSizeBytes)+1)
@@ -45,7 +44,7 @@ func (stg *storageManagerFS) Put(ctx context.Context, c storage.UploadCmd) (uint
 	}
 
 	if n > int64(c.MaxSizeBytes) {
-		err = storage.ErrFileTooLarge
+		err = appstorage.ErrFileTooLarge
 	}
 
 	return uint64(n), err
@@ -53,13 +52,13 @@ func (stg *storageManagerFS) Put(ctx context.Context, c storage.UploadCmd) (uint
 
 func (stg *storageManagerFS) Download(
 	ctx context.Context,
-	c storage.DownloadCmd) (io.ReadCloser, error) {
-
+	c appstorage.DownloadCmd,
+) (io.ReadCloser, error) {
 	fname := filepath.Join(stg.Dir, c.Key.String())
 	f, err := os.Open(fname)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, storage.ErrFileNotFound
+			return nil, appstorage.ErrFileNotFound
 		}
 
 		return nil, err
@@ -85,7 +84,7 @@ func (stg *storageManagerFS) Download(
 	return f, nil
 }
 
-func (stg *storageManagerFS) Delete(ctx context.Context, k storage.FKey) error {
+func (stg *storageManagerFS) Delete(ctx context.Context, k appstorage.FKey) error {
 	fname := filepath.Join(stg.Dir, k.String())
 	if err := os.Remove(fname); err != nil && !os.IsNotExist(err) {
 		return err
@@ -94,7 +93,7 @@ func (stg *storageManagerFS) Delete(ctx context.Context, k storage.FKey) error {
 	return nil
 }
 
-func NewStorageManagerFS(dirpath string) storage.StorageManager {
+func NewStorageManagerFS(dirpath string) appstorage.Storage {
 	if err := os.MkdirAll(dirpath, 0o755); err != nil {
 		panic(err)
 	}

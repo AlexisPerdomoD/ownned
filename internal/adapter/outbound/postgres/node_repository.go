@@ -1,4 +1,4 @@
-package pg
+package postgres
 
 import (
 	"context"
@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"time"
 
+	"ownned/internal/app/apperror"
+	"ownned/internal/app/node"
 	"ownned/internal/domain"
-	"ownned/pkg/apperror"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -25,20 +26,6 @@ SELECT
 	n.created_at,
 	n.updated_at
 FROM fs.nodes n`
-
-const getNodeAttachQuery string = `
-SELECT
-	n.id,
-	n.usr_id,
-	n.name,
-	n.description,
-	n.path,
-	n.type,
-	n.created_at,
-	n.updated_at,
-	gn.assigned_at
-FROM fs.nodes n
-INNER JOIN fs.group_nodes gn ON n.id=gn.node_id`
 
 const insertNodeQuery string = `
 INSERT INTO fs.nodes (
@@ -81,13 +68,6 @@ func (r *nodeRow) ToDomain() domain.Node {
 type nodeAttachRow struct {
 	nodeRow
 	AssignedAt time.Time `db:"assigned_at"`
-}
-
-func (r *nodeAttachRow) ToDomain() domain.NodeGroupAttach {
-	return domain.NodeGroupAttach{
-		Node:       r.nodeRow.ToDomain(),
-		AssignDate: r.AssignedAt,
-	}
 }
 
 type nodeRepository struct {
@@ -143,7 +123,7 @@ func (r *nodeRepository) GetRoot(ctx context.Context) ([]domain.Node, error) {
 func (r *nodeRepository) GetRootByGroups(ctx context.Context, groups []domain.GroupID) ([]domain.Node, error) {
 	if len(groups) == 0 {
 		detail := make(map[string]string)
-		detail["invalid_argument"] = "no groups provided for getting root nodes"
+		detail["reason"] = "no groups provided for getting root nodes"
 		return nil, apperror.ErrIlegalDBState(detail)
 	}
 
@@ -173,14 +153,14 @@ func (r *nodeRepository) GetRootByGroups(ctx context.Context, groups []domain.Gr
 	return nodes, nil
 }
 
-func (r *nodeRepository) GetByGroup(ctx context.Context, groupID domain.GroupID) ([]domain.NodeGroupAttach, error) {
-	q := fmt.Sprintf("%s\nWHERE gn.group_id=$1", getNodeAttachQuery)
+func (r *nodeRepository) GetByGroupID(ctx context.Context, groupID domain.GroupID) ([]domain.Node, error) {
+	q := fmt.Sprintf("%s\nJOIN fs.group_nodes gn on gn.node_id=n.id\nWHERE gn.group_id=$1", getNodeQuery)
 	rows, err := r.db.QueryxContext(ctx, q, groupID)
 	if err != nil {
 		return nil, err
 	}
 	defer safeClose(ctx, rows)
-	nodes, err := readSlice[domain.NodeGroupAttach, nodeAttachRow](rows)
+	nodes, err := readSlice[domain.Node, nodeRow](rows)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +170,8 @@ func (r *nodeRepository) GetByGroup(ctx context.Context, groupID domain.GroupID)
 
 func (r *nodeRepository) Create(ctx context.Context, n *domain.Node) error {
 	if n == nil {
-		return apperror.ErrIlegalDBState(map[string]string{"invalid_argument": "node argument was provided as nil"})
+		detail := map[string]string{"reason": "node argument was provided as nil"}
+		return apperror.ErrIlegalDBState(detail)
 	}
 
 	createdAt := time.Now().UTC()
@@ -219,11 +200,11 @@ func (r *nodeRepository) Update(ctx context.Context, n *domain.Node) error {
 	return apperror.ErrNotImplemented(nil)
 }
 
-func (r *nodeRepository) Delete(ctx context.Context, id domain.NodeID) error {
-	_, err := r.db.ExecContext(ctx, deleteNodeQuery, id)
+func (r *nodeRepository) Delete(ctx context.Context, nodeID domain.NodeID) error {
+	_, err := r.db.ExecContext(ctx, deleteNodeQuery, nodeID)
 	return err
 }
 
-func NewNodeRepository(db sqlx.ExtContext) domain.NodeRepository {
-	return &nodeRepository{db}
+func NewNodeRepository(db sqlx.ExtContext) node.NodeRepository {
+	return &nodeRepository{db: db}
 }

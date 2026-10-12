@@ -36,5 +36,5 @@ func (uc *GetNodeCommentsUseCase) Execute(ctx context.Context, nodeID domain.Nod
 		return nil, apperror.ErrForbidden(detail)
 	}
 
-	return uc.nodeComments.GetByNode(ctx, nodeID)
+	return uc.nodeComments.GetByNodeID(ctx, nodeID)
 }

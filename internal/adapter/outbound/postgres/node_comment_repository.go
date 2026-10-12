@@ -1,4 +1,4 @@
-package pg
+package postgres
 
 import (
 	"context"
@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"time"
 
+	"ownned/internal/app/apperror"
+	"ownned/internal/app/node"
 	"ownned/internal/domain"
-	"ownned/pkg/apperror"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -32,8 +33,7 @@ INSERT INTO fs.node_comments(
 	updated_at
 ) VALUES ($1, $2, $3, $4, $5)`
 
-const updateNodeCommentQuery string = `
-UPDATE fs.node_comments SET content = $1 WHERE id = $2`
+const updateNodeCommentQuery string = `UPDATE fs.node_comments SET content = $1 WHERE id = $2`
 
 const deleteNodeCommentQuery string = `DELETE FROM node_comments WHERE id = $1`
 
@@ -77,7 +77,7 @@ func (r *nodeCommentRepository) GetByID(ctx context.Context, id domain.NodeComme
 	return &d, nil
 }
 
-func (r *nodeCommentRepository) GetByNode(ctx context.Context, nodeID domain.NodeID) ([]domain.NodeComment, error) {
+func (r *nodeCommentRepository) GetByNodeID(ctx context.Context, nodeID domain.NodeID) ([]domain.NodeComment, error) {
 	q := fmt.Sprintf("%s\nWHERE nc.node_id=$1 ORDER BY nc.created_at DESC", getNodeCommentQuery)
 	rows, err := r.db.QueryxContext(ctx, q, nodeID)
 	if err != nil {
@@ -95,7 +95,7 @@ func (r *nodeCommentRepository) GetByNode(ctx context.Context, nodeID domain.Nod
 func (r *nodeCommentRepository) Create(ctx context.Context, c *domain.NodeComment) error {
 	if c == nil {
 		detail := make(map[string]string)
-		detail["invalid_argument"] = "node comment argument was provided as nil"
+		detail["reason"] = "node comment argument was provided as nil"
 		return apperror.ErrIlegalDBState(detail)
 	}
 
@@ -120,7 +120,7 @@ func (r *nodeCommentRepository) Create(ctx context.Context, c *domain.NodeCommen
 func (r *nodeCommentRepository) Update(ctx context.Context, c *domain.NodeComment) error {
 	if c == nil {
 		detail := make(map[string]string)
-		detail["invalid_argument"] = "node comment argument was provided as nil"
+		detail["reason"] = "node comment argument was provided as nil"
 		return apperror.ErrIlegalDBState(detail)
 	}
 
@@ -149,6 +149,6 @@ func (r *nodeCommentRepository) Delete(ctx context.Context, id domain.NodeCommen
 	return err
 }
 
-func NewNodeCommentRepository(db sqlx.ExtContext) domain.NodeCommentRepository {
-	return &nodeCommentRepository{db}
+func NewNodeCommentRepository(db sqlx.ExtContext) node.NodeCommentRepository {
+	return &nodeCommentRepository{db: db}
 }

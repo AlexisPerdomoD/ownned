@@ -1,5 +1,5 @@
-// Package pg provides the implementation of the database layer using PostgreSQL (sqlx).
-package pg
+// package postgres provides the implementation of the database layer using PostgreSQL (sqlx).
+package postgres
 
 import (
 	"database/sql"
@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
-	postgresql "github.com/golang-migrate/migrate/v4/database/postgres"
+	migrationPg "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -51,7 +51,7 @@ func NewDB(
 
 func MigrateUp(db *sql.DB) error {
 	timeout := 1 * time.Second
-	driver, err := postgresql.WithInstance(db, &postgresql.Config{StatementTimeout: timeout})
+	driver, err := migrationPg.WithInstance(db, &migrationPg.Config{StatementTimeout: timeout})
 	if err != nil {
 		return err
 	}
@@ -61,11 +61,7 @@ func MigrateUp(db *sql.DB) error {
 		return err
 	}
 
-	path := "file://" + filepath.Join(
-		wd,
-		"internal/infrastructure/db/migrations/postgres",
-	)
-
+	path := "file://" + filepath.Join(wd, "internal/outbound/postgres/migrations")
 	m, err := migrate.NewWithDatabaseInstance(path, "postgres", driver)
 	if err != nil {
 		return err

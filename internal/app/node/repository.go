@@ -40,8 +40,8 @@ type NodeRepository interface {
 
 // NodeCommentRepository is the interface for the repository of the NodeComment entity.
 type NodeCommentRepository interface {
-	// GetByNode returns all comments attached to a node OrderBy createdAt DESC.
-	GetByNode(ctx context.Context, nodeID domain.NodeID) ([]domain.NodeComment, error)
+	// GetByNodeID returns all comments attached to a node OrderBy createdAt DESC.
+	GetByNodeID(ctx context.Context, nodeID domain.NodeID) ([]domain.NodeComment, error)
 
 	// GetByID returns a comment by its identifier, if no comment is found it returns nil, nil.
 	GetByID(ctx context.Context, id domain.NodeCommentID) (*domain.NodeComment, error)

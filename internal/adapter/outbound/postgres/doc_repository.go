@@ -1,4 +1,4 @@
-package pg
+package postgres
 
 import (
 	"context"
@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jmoiron/sqlx"
+	"ownned/internal/app/apperror"
+	"ownned/internal/app/node"
 	"ownned/internal/domain"
-	"ownned/pkg/apperror"
+
+	"github.com/jmoiron/sqlx"
 )
 
 const getDocQuery string = `
@@ -116,7 +118,8 @@ func (r *docRepository) GetAllFromPath(ctx context.Context, path domain.NodePath
 
 func (r *docRepository) Create(ctx context.Context, d *domain.Doc) error {
 	if d == nil {
-		return apperror.ErrIlegalDBState(map[string]string{"invalid_argument": "doc argument was provided as nil"})
+		detail := map[string]string{"reason": "doc argument was provided as nil"}
+		return apperror.ErrIlegalDBState(detail)
 	}
 	createdAt := time.Now().UTC()
 	updatedAt := createdAt
@@ -145,6 +148,6 @@ func (r *docRepository) Update(ctx context.Context, d *domain.Doc) error {
 	return apperror.ErrNotImplemented(nil)
 }
 
-func NewDocRepository(db sqlx.ExtContext) domain.DocRepository {
-	return &docRepository{db}
+func NewDocRepository(db sqlx.ExtContext) node.DocRepository {
+	return &docRepository{db: db}
 }

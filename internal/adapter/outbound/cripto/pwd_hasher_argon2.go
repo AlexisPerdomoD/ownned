@@ -1,4 +1,4 @@
-package srv
+package cripto
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"ownned/internal/application/auth"
+	appauth "ownned/internal/app/auth"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -44,24 +44,24 @@ func (h *pwdHasherArgon2) parseHash(hashedPassword []byte) (*parsedHash, error) 
 	parts := bytes.Split(hashedPassword, []byte{'$'})
 	if len(parts) != 6 ||
 		!bytes.Equal(parts[1], []byte("argon2id")) {
-		return nil, auth.ErrInvalidHash
+		return nil, appauth.ErrInvalidHash
 	}
 	var version int
 	_, err := fmt.Sscanf(string(parts[2]), "v=%d", &version)
 	if err != nil {
-		return nil, auth.ErrInvalidHash
+		return nil, appauth.ErrInvalidHash
 	}
 	var mem, time uint32
 	var threads uint8
 	_, err = fmt.Sscanf(string(parts[3]), "m=%d,t=%d,p=%d", &mem, &time, &threads)
 	if err != nil {
-		return nil, auth.ErrInvalidHash
+		return nil, appauth.ErrInvalidHash
 	}
 
 	salt := make([]byte, base64.RawStdEncoding.DecodedLen(len(parts[4])))
 	n, err := base64.RawStdEncoding.Decode(salt, parts[4])
 	if err != nil {
-		return nil, auth.ErrInvalidHash
+		return nil, appauth.ErrInvalidHash
 	}
 
 	salt = salt[:n]
@@ -69,7 +69,7 @@ func (h *pwdHasherArgon2) parseHash(hashedPassword []byte) (*parsedHash, error) 
 	hash := make([]byte, base64.RawStdEncoding.DecodedLen(len(parts[5])))
 	n, err = base64.RawStdEncoding.Decode(hash, parts[5])
 	if err != nil {
-		return nil, auth.ErrInvalidHash
+		return nil, appauth.ErrInvalidHash
 	}
 
 	hash = hash[:n]
@@ -117,7 +117,7 @@ func (h *pwdHasherArgon2) Compare(hashedPassword, password []byte) error {
 	}
 
 	if parsed.version != argon2.Version {
-		return auth.ErrExpiredHashVersion
+		return appauth.ErrExpiredHashVersion
 	}
 
 	computed := argon2.IDKey(
@@ -129,7 +129,7 @@ func (h *pwdHasherArgon2) Compare(hashedPassword, password []byte) error {
 		uint32(len(parsed.hash)))
 
 	if subtle.ConstantTimeCompare(computed, parsed.hash) != 1 {
-		return auth.ErrInvalidPwd
+		return appauth.ErrInvalidPwd
 	}
 
 	return nil
@@ -165,7 +165,7 @@ func NewPwdHasherArgon2(
 	threads uint8,
 	keyLen uint32,
 	saltLen uint32,
-) auth.PwdHasher {
+) appauth.PwdHasher {
 	if time < 1 {
 		panic("time must be greater than 0")
 	}

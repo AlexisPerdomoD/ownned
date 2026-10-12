@@ -1,11 +1,11 @@
-package srv
+package cripto
 
 import (
 	"bytes"
 	"fmt"
 	"testing"
 
-	"ownned/internal/application/auth"
+	appauth "ownned/internal/app/auth"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -82,7 +82,7 @@ func TestPwdHasherArgon2_Compare(t *testing.T) {
 		hash, _ := hasher.Hash(password)
 
 		err := hasher.Compare(hash, []byte("wrongPassword"))
-		if err != auth.ErrInvalidPwd {
+		if err != appauth.ErrInvalidPwd {
 			t.Errorf("expected ErrInvalidPwd, got %v", err)
 		}
 	})
@@ -91,7 +91,7 @@ func TestPwdHasherArgon2_Compare(t *testing.T) {
 		invalidHash := []byte("invalid_hash_format")
 
 		err := hasher.Compare(invalidHash, []byte("password"))
-		if err != auth.ErrInvalidHash {
+		if err != appauth.ErrInvalidHash {
 			t.Errorf("expected ErrInvalidHash, got %v", err)
 		}
 	})
@@ -100,7 +100,7 @@ func TestPwdHasherArgon2_Compare(t *testing.T) {
 		invalidHash := []byte("$argon2id$v=19")
 
 		err := hasher.Compare(invalidHash, []byte("password"))
-		if err != auth.ErrInvalidHash {
+		if err != appauth.ErrInvalidHash {
 			t.Errorf("expected ErrInvalidHash, got %v", err)
 		}
 	})
@@ -109,7 +109,7 @@ func TestPwdHasherArgon2_Compare(t *testing.T) {
 		invalidHash := []byte("$argon2id$v=19$m=65536,t=3,p=4$!!!invalid$hash")
 
 		err := hasher.Compare(invalidHash, []byte("password"))
-		if err != auth.ErrInvalidHash {
+		if err != appauth.ErrInvalidHash {
 			t.Errorf("expected ErrInvalidHash, got %v", err)
 		}
 	})
@@ -119,7 +119,7 @@ func TestPwdHasherArgon2_Compare(t *testing.T) {
 		modifiedHash := bytes.Replace(hash, []byte("v=19"), []byte("v=16"), 1)
 
 		err := hasher.Compare(modifiedHash, []byte("password"))
-		if err != auth.ErrExpiredHashVersion {
+		if err != appauth.ErrExpiredHashVersion {
 			t.Errorf("expected ErrExpiredHashVersion, got %v", err)
 		}
 	})
@@ -128,14 +128,14 @@ func TestPwdHasherArgon2_Compare(t *testing.T) {
 		invalidHash := []byte("$argon2i$v=19$m=65536,t=3,p=4$YWJjZGVmZ2hpamts$bXlIaGFzaA==")
 
 		err := hasher.Compare(invalidHash, []byte("password"))
-		if err != auth.ErrInvalidHash {
+		if err != appauth.ErrInvalidHash {
 			t.Errorf("expected ErrInvalidHash, got %v", err)
 		}
 	})
 
 	t.Run("returns error for empty password hash", func(t *testing.T) {
 		err := hasher.Compare([]byte{}, []byte("password"))
-		if err != auth.ErrInvalidHash {
+		if err != appauth.ErrInvalidHash {
 			t.Errorf("expected ErrInvalidHash, got %v", err)
 		}
 	})
@@ -274,7 +274,7 @@ func TestNewPwdHasherArgon2_Panics(t *testing.T) {
 }
 
 func TestPwdHasherArgon2_ImplementsInterface(t *testing.T) {
-	var _ auth.PwdHasher = (*pwdHasherArgon2)(nil)
+	var _ appauth.PwdHasher = (*pwdHasherArgon2)(nil)
 }
 
 func TestPwdHasherArgon2_Integration(t *testing.T) {

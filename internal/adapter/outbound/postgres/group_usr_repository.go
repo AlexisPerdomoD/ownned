@@ -1,4 +1,4 @@
-package pg
+package postgres
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"ownned/internal/app/group"
 	"ownned/internal/domain"
-	"ownned/pkg/apperror"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -45,6 +45,32 @@ SELECT EXISTS (
 			WHEN 'write_access' THEN 2
 			WHEN 'read_only_access' THEN 1
 			ELSE 4 -- invalid parameter case
+		END
+	)
+);`
+
+const getNodeAccessByIDQuery string = `
+SELECT EXISTS (
+	SELECT 1
+	FROM fs.group_usrs gu
+	JOIN fs.group_nodes gn ON gn.group_id = gu.group_id
+	JOIN fs.nodes n_grant ON n_grant.id = gn.node_id
+	JOIN fs.nodes n_target ON n_target.id = $2
+	WHERE gu.usr_id = $1
+	AND n_grant.path @> n_target.path
+	AND (
+		CASE gu.access
+			WHEN 'owner_access' THEN 3
+			WHEN 'write_access' THEN 2
+			WHEN 'read_only_access' THEN 1
+			ELSE 0
+		END
+		>=
+		CASE $3
+			WHEN 'owner_access' THEN 3
+			WHEN 'write_access' THEN 2
+			WHEN 'read_only_access' THEN 1
+			ELSE 4
 		END
 	)
 );`
@@ -103,7 +129,7 @@ func (r *groupUsrRepository) GetGroupAccess(
 	return access, nil
 }
 
-func (r *groupUsrRepository) HasAccess(
+func (r *groupUsrRepository) HasAccessFromPath(
 	ctx context.Context,
 	id domain.UsrID,
 	pth domain.NodePath,
@@ -115,6 +141,29 @@ func (r *groupUsrRepository) HasAccess(
 		return err
 	}
 
+	if !hasAccess {
+		return domain.ErrNoAccess
+	}
+
+	return nil
+}
+
+func (r *groupUsrRepository) HasAccess(
+	ctx context.Context,
+	usrID domain.UsrID,
+	nodeID domain.NodeID,
+	access domain.GroupUsrAccess,
+) error {
+	var hasAccess bool
+	if err := r.db.QueryRowxContext(
+		ctx,
+		getNodeAccessByIDQuery,
+		usrID,
+		nodeID,
+		access).
+		Scan(&hasAccess); err != nil {
+		return err
+	}
 	if !hasAccess {
 		return domain.ErrNoAccess
 	}
@@ -139,7 +188,7 @@ func (r *groupUsrRepository) GetByUsr(ctx context.Context, usrID domain.UsrID) (
 	return res, nil
 }
 
-func (r *groupUsrRepository) Upsert(ctx context.Context, d *domain.UpsertGroupUsr) error {
+func (r *groupUsrRepository) Upsert(ctx context.Context, d *domain.GroupUsr) error {
 	if d == nil {
 		return ErrInvalidArgument
 	}
@@ -156,15 +205,17 @@ func (r *groupUsrRepository) Upsert(ctx context.Context, d *domain.UpsertGroupUs
 		return err
 	}
 
+	d.AssignDate = assignedAt
+
 	return nil
 }
 
-func (r *groupUsrRepository) UpsertAll(ctx context.Context, d []domain.UpsertGroupUsr) error {
+func (r *groupUsrRepository) UpsertAll(ctx context.Context, d []domain.GroupUsr) error {
 	if len(d) == 0 {
 		return ErrInvalidArgument
 	}
 
-	rows := make([]groupUsrRow, len(d))
+	rows := make([]groupUsrRow, len(d), len(d))
 	assignedAt := time.Now().UTC()
 	for i, gu := range d {
 		row := &rows[i]
@@ -179,17 +230,19 @@ func (r *groupUsrRepository) UpsertAll(ctx context.Context, d []domain.UpsertGro
 		return err
 	}
 
+	for i := range d {
+		d[i].AssignDate = assignedAt
+	}
+
 	return nil
 }
 
-func (r *groupUsrRepository) RemoveUsr(ctx context.Context, g domain.GroupID, u domain.UsrID) error {
-	return apperror.ErrNotImplemented(nil)
+func (r *groupUsrRepository) Delete(ctx context.Context, g domain.GroupID, u domain.UsrID) error {
+	const q = `DELETE FROM fs.group_usrs WHERE group_id = $1 AND usr_id = $2`
+	_, err := r.db.ExecContext(ctx, q, g, u)
+	return err
 }
 
-func NewGroupUsrRepository(db sqlx.ExtContext) domain.GroupUsrRepository {
-	if db == nil {
-		panic("NewGroupUsrRepository received a nil db")
-	}
-
-	return &groupUsrRepository{db}
+func NewGroupUsrRepository(db sqlx.ExtContext) group.GroupUsrRepository {
+	return &groupUsrRepository{db: db}
 }
