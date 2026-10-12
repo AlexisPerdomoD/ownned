@@ -3,13 +3,13 @@ package cripto
 import (
 	"errors"
 	"time"
+	"uuid"
 
 	appauth "ownned/internal/app/auth"
 	"ownned/internal/app/identity"
 	"ownned/internal/domain"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 )
 
 type jwtManagerST struct {

@@ -2,13 +2,12 @@ package group
 
 import (
 	"context"
+	"uuid"
 
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/identity"
 	"ownned/internal/app/tx"
 	"ownned/internal/domain"
-
-	"github.com/google/uuid"
 )
 
 type CreateGroupDTO struct {
@@ -43,10 +42,7 @@ func (uc *CreateGroupUseCase) Execute(ctx context.Context, args CreateGroupDTO) 
 		return nil, apperror.ErrForbidden(detail)
 	}
 
-	groupID, err := uuid.NewV7()
-	if err != nil {
-		return nil, err
-	}
+	groupID := uuid.NewV7()
 
 	group := &domain.Group{
 		ID:          groupID,
@@ -62,7 +58,6 @@ func (uc *CreateGroupUseCase) Execute(ctx context.Context, args CreateGroupDTO) 
 	}
 
 	if err := uc.txFactory.Do(ctx, func(t CreateGroupNodeTx) error {
-
 		if err := t.GroupRepository().Create(t.Ctx(), group); err != nil {
 			return err
 		}

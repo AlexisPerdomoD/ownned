@@ -3,12 +3,12 @@ package node
 import (
 	"context"
 	"fmt"
+	"uuid"
+
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/group"
 	"ownned/internal/app/identity"
 	"ownned/internal/domain"
-
-	"github.com/google/uuid"
 )
 
 type CreateNodeFolderDTO struct {
@@ -33,7 +33,8 @@ func NewCreateNodeFolderUseCase(
 
 func (uc *CreateNodeFolderUseCase) Execute(
 	ctx context.Context,
-	dto CreateNodeFolderDTO) (*domain.Node, error) {
+	dto CreateNodeFolderDTO,
+) (*domain.Node, error) {
 	usr, err := identity.Get(ctx)
 	if err != nil {
 		return nil, err
@@ -73,10 +74,7 @@ func (uc *CreateNodeFolderUseCase) Execute(
 		return nil, apperror.ErrForbidden(detail)
 	}
 
-	folderID, err := uuid.NewV7()
-	if err != nil {
-		return nil, err
-	}
+	folderID := uuid.NewV7()
 
 	path, err := parent.Path.NewChildPath(folderID)
 	if err != nil {

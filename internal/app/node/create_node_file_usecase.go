@@ -5,8 +5,8 @@ import (
 	"io"
 	"log/slog"
 	"path/filepath"
+	"uuid"
 
-	"github.com/google/uuid"
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/group"
 	"ownned/internal/app/identity"
@@ -15,7 +15,7 @@ import (
 	"ownned/internal/domain"
 )
 
-type CreateDocDTO struct {
+type CreateNodeFileDTO struct {
 	ParentID     domain.NodeID `json:"parentID" validate:"required"`
 	Filename     string        `json:"filename" validate:"required,min=1"`
 	Description  string        `json:"description" validate:"max=255"`
@@ -24,17 +24,17 @@ type CreateDocDTO struct {
 	File         io.ReadCloser `json:"file" validate:"required"` // TODO: revisar ciclo de vida de File como argumento
 }
 
-type CreateDocTx interface {
+type CreateNodeFileTx interface {
 	tx.TxCtx
 	NodeRepository() NodeRepository
 	DocRepository() DocRepository
 }
 
-type CreateDocUseCase struct {
+type CreateNodeFileUseCase struct {
 	group.AccessChecker
 	docs      DocRepository
 	nodes     NodeRepository
-	txFactory tx.TxFactory[CreateDocTx]
+	txFactory tx.TxFactory[CreateNodeFileTx]
 	storage   storage.Storage
 	logger    *slog.Logger
 }
@@ -43,12 +43,12 @@ func NewCreateDocUseCase(
 	docs DocRepository,
 	nodes NodeRepository,
 	access_checker group.AccessChecker,
-	txFactory tx.TxFactory[CreateDocTx],
+	txFactory tx.TxFactory[CreateNodeFileTx],
 	storage storage.Storage,
 	mainLogger *slog.Logger,
-) *CreateDocUseCase {
-	logger := mainLogger.With("usecase", "CreateDocUseCase")
-	return &CreateDocUseCase{
+) *CreateNodeFileUseCase {
+	logger := mainLogger.With("usecase", "CreateNodeFileUseCase")
+	return &CreateNodeFileUseCase{
 		AccessChecker: access_checker,
 		docs:          docs,
 		nodes:         nodes,
@@ -58,7 +58,7 @@ func NewCreateDocUseCase(
 	}
 }
 
-func (uc *CreateDocUseCase) Execute(ctx context.Context, dto CreateDocDTO) (*domain.Node, *domain.Doc, error) {
+func (uc *CreateNodeFileUseCase) Execute(ctx context.Context, dto CreateNodeFileDTO) (*domain.Node, *domain.Doc, error) {
 	usr, err := identity.Get(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -98,15 +98,9 @@ func (uc *CreateDocUseCase) Execute(ctx context.Context, dto CreateDocDTO) (*dom
 		return nil, nil, apperror.ErrForbidden(detail)
 	}
 
-	nodeID, err := uuid.NewV7()
-	if err != nil {
-		return nil, nil, err
-	}
+	nodeID := uuid.NewV7()
 
-	docID, err := uuid.NewV7()
-	if err != nil {
-		return nil, nil, err
-	}
+	docID := uuid.NewV7()
 
 	path, err := folder.Path.NewChildPath(nodeID)
 	if err != nil {
@@ -151,8 +145,8 @@ func (uc *CreateDocUseCase) Execute(ctx context.Context, dto CreateDocDTO) (*dom
 	return node, doc, nil
 }
 
-func (uc *CreateDocUseCase) persist(ctx context.Context, node *domain.Node, doc *domain.Doc) error {
-	err := uc.txFactory.Do(ctx, func(t CreateDocTx) error {
+func (uc *CreateNodeFileUseCase) persist(ctx context.Context, node *domain.Node, doc *domain.Doc) error {
+	err := uc.txFactory.Do(ctx, func(t CreateNodeFileTx) error {
 		if err := t.NodeRepository().Create(t.Ctx(), node); err != nil {
 			return err
 		}

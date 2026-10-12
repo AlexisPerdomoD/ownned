@@ -7,13 +7,13 @@ import (
 	"math"
 	"strings"
 	"time"
+	"uuid"
 
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/group"
 	"ownned/internal/app/pagination"
 	"ownned/internal/domain"
 
-	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 

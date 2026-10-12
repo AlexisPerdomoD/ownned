@@ -4,8 +4,7 @@ import (
 	"errors"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
+	"uuid"
 )
 
 type NodePath string
@@ -19,11 +18,11 @@ const NodePathSeparator = "."
 var ErrNodePathInvalid = errors.New("invalid node path")
 
 func (p NodePath) NewChildPath(nodeID uuid.UUID) (NodePath, error) {
-	if nodeID == uuid.Nil {
+	if nodeID == uuid.Nil() {
 		return NodePath(""), ErrNodePathInvalid
 	}
-
-	return NodePath(string(p) + NodePathSeparator + strings.ReplaceAll(nodeID.String(), "-", "_")), nil
+	rawPath := string(p) + NodePathSeparator + strings.ReplaceAll(nodeID.String(), "-", "_")
+	return NodePath(rawPath), nil
 }
 
 func (p NodePath) String() string {
@@ -51,6 +50,7 @@ const (
 )
 
 type NodeID = uuid.UUID
+
 type Node struct {
 	ID          NodeID
 	UsrID       UsrID

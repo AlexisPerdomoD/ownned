@@ -4,13 +4,12 @@ import (
 	"context"
 	"log/slog"
 	"strings"
+	"uuid"
 
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/group"
 	"ownned/internal/app/identity"
 	"ownned/internal/domain"
-
-	"github.com/google/uuid"
 )
 
 type CreateNodeCommentUseCase struct {
@@ -79,12 +78,8 @@ func (uc *CreateNodeCommentUseCase) Execute(
 		return nil, apperror.ErrIlegalDBState(nil)
 	}
 
-	commentID, err := uuid.NewV7()
-	if err != nil {
-		return nil, err
-	}
 	comment := &domain.NodeComment{
-		ID:      commentID,
+		ID:      uuid.NewV7(),
 		NodeID:  node.ID,
 		UsrID:   usr.ID,
 		Content: content,

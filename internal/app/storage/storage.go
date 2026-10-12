@@ -4,8 +4,8 @@ package storage
 import (
 	"context"
 	"errors"
-	"github.com/google/uuid"
 	"io"
+	"uuid"
 )
 
 type FKey = uuid.UUID

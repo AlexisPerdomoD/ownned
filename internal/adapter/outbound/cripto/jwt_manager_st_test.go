@@ -4,13 +4,13 @@ import (
 	"errors"
 	"testing"
 	"time"
+	"uuid"
 
 	appauth "ownned/internal/app/auth"
 	"ownned/internal/app/identity"
 	"ownned/internal/domain"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 )
 
 func newTestJWTManager() *jwtManagerST {
@@ -80,7 +80,7 @@ func TestJWTManagerST_ValidateAccessToken_Invalid(t *testing.T) {
 	}
 
 	wrongSigningMethodToken, err := jwt.NewWithClaims(jwt.SigningMethodHS384, &accessClaims{
-		UsrID: uuid.NewString(),
+		UsrID: uuid.NewV7().String(),
 		Role:  string(domain.NormalUsrRole),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),

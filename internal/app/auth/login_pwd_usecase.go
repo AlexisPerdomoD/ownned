@@ -11,39 +11,39 @@ import (
 	"ownned/internal/domain"
 )
 
-type LoginUsrDTO struct {
+type LoginPwdDTO struct {
 	Username string `json:"username" validate:"required,email"`
 	Pwd      string `json:"password" validate:"required,min=8,max=255"`
 }
 
-func (dto LoginUsrDTO) normalize() LoginUsrDTO {
+func (dto LoginPwdDTO) normalize() LoginPwdDTO {
 	dto.Username = strings.ToLower(strings.TrimSpace(dto.Username))
 	return dto
 }
 
-type LoginUsrUseCase struct {
+type LoginPwdUseCase struct {
 	usrs      usr.UsrRepository
 	usrPwds   usr.UsrPwdRepository
 	pwdHasher PwdHasher
 	jwt       JWTManager
 }
 
-func NewLoginUsrUseCase(
+func NewLoginPwdUseCase(
 	usrs usr.UsrRepository,
 	usrPwds usr.UsrPwdRepository,
 	pwdHasher PwdHasher,
 	jwt JWTManager,
-) *LoginUsrUseCase {
-	return &LoginUsrUseCase{
+) *LoginPwdUseCase {
+	return &LoginPwdUseCase{
 		usrs:      usrs,
 		usrPwds:   usrPwds,
 		pwdHasher: pwdHasher,
 		jwt:       jwt}
 }
 
-func (uc *LoginUsrUseCase) Execute(
+func (uc *LoginPwdUseCase) Execute(
 	ctx context.Context,
-	dto LoginUsrDTO,
+	dto LoginPwdDTO,
 ) (string, *domain.Usr, error) {
 	dto = dto.normalize()
 	usr, err := uc.usrs.GetByUsername(ctx, dto.Username)

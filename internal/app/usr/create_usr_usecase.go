@@ -7,20 +7,18 @@ import (
 	"runtime/debug"
 	"strings"
 	"unicode"
+	"uuid"
 
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/identity"
 	"ownned/internal/app/tx"
 	"ownned/internal/domain"
-
-	"github.com/google/uuid"
 )
 
 type CreateUsrTx interface {
 	tx.TxCtx
 	UsrRepository() UsrRepository
 	UsrPwdRepository() UsrPwdRepository
-
 	NodeRepository() NodeCreator
 	GroupRepository() GroupCreator
 	GroupUsrRepository() GroupUsrUpsertor
@@ -108,20 +106,9 @@ func (uc *CreateUsrUseCase) Execute(
 		}
 	}()
 
-	usrID, err := uuid.NewV7()
-	if err != nil {
-		return nil, err
-	}
-
-	rootGroupID, err := uuid.NewV7()
-	if err != nil {
-		return nil, err
-	}
-
-	rootFolderID, err := uuid.NewV7()
-	if err != nil {
-		return nil, err
-	}
+	usrID := uuid.NewV7()
+	rootGroupID := uuid.NewV7()
+	rootFolderID := uuid.NewV7()
 
 	rootFolderPath, err := domain.NodePathUsrRoot.NewChildPath(rootFolderID)
 	if err != nil {

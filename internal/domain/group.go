@@ -3,8 +3,7 @@ package domain
 import (
 	"errors"
 	"time"
-
-	"github.com/google/uuid"
+	"uuid"
 )
 
 var ErrNoAccess = errors.New("no access")
