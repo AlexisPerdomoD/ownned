@@ -1,417 +1,241 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
-	"ownned/internal/application/usecase"
-	"ownned/internal/infrastructure/config"
-	"ownned/internal/infrastructure/db/pg"
-	"ownned/internal/infrastructure/srv"
-	"ownned/internal/infrastructure/transport/http/handler"
-	"ownned/internal/infrastructure/transport/http/middleware"
-	"ownned/pkg/http_log"
+	"ownned/internal/adapter/inbound/httpapi"
+	"ownned/internal/adapter/outbound/cripto"
+	"ownned/internal/adapter/outbound/postgres"
+	storageadapter "ownned/internal/adapter/outbound/storage"
+	appauth "ownned/internal/app/auth"
+	"ownned/internal/app/group"
+	"ownned/internal/app/node"
+	"ownned/internal/app/tx"
+	"ownned/internal/app/usr"
+	"ownned/internal/config"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 )
 
-// START POINT BABY
+type typedTxFactory[T tx.TxCtx] struct {
+	inner tx.TxFactory[*postgres.TxRunner]
+	adapt func(*postgres.TxRunner) T
+}
+
+func (f typedTxFactory[T]) Do(ctx context.Context, fn func(T) error) error {
+	return f.inner.Do(ctx, func(runner *postgres.TxRunner) error {
+		return fn(f.adapt(runner))
+	})
+}
+
+type createUsrTxAdapter struct {
+	*postgres.TxRunner
+}
+
+func (t createUsrTxAdapter) NodeRepository() usr.NodeCreator {
+	return t.TxRunner.NodeRepository()
+}
+
+func (t createUsrTxAdapter) GroupRepository() usr.GroupCreator {
+	return t.TxRunner.GroupRepository()
+}
+
+func (t createUsrTxAdapter) GroupUsrRepository() usr.GroupUsrUpsertor {
+	return t.TxRunner.GroupUsrRepository()
+}
+
+func (t createUsrTxAdapter) GroupNodeRepository() usr.GroupNodeUpsertor {
+	return t.TxRunner.GroupNodeRepository()
+}
+
 func main() {
-	// =========================================================================
-	// CONFIG
-	// =========================================================================
-
 	cfg := config.LoadEnvConfig()
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
-	// =========================================================================
-	// DB
-	// =========================================================================
-
-	db, err := pg.
-		NewDB(
-			cfg.PgDB,
-			cfg.PgHost,
-			cfg.PgPort,
-			cfg.PgUser,
-			cfg.PgPassword,
-			cfg.PgSsl)
+	db, err := postgres.NewDB(cfg.PgDB, cfg.PgHost, cfg.PgPort, cfg.PgUser, cfg.PgPassword, cfg.PgSsl)
 	if err != nil {
-		panic(err)
+		logger.Error("failed to connect to database", "err", err)
+		os.Exit(1)
 	}
-	if err := pg.MigrateUp(db.DB); err != nil {
-		panic(err)
+	defer func() { _ = db.Close() }()
+	if err := postgres.MigrateUp(db.DB); err != nil {
+		logger.Error("failed to migrate database", "err", err)
+		os.Exit(1)
 	}
-	// =========================================================================
-	// SERVICES
-	// =========================================================================
 
-	lg := slog.New(slog.
-		NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	jwtManager := srv.
-		NewJWTManagerST(
-			[]byte(cfg.SessionSecret),
-			time.Hour,
-			"ownned")
-	pwdHasher := srv.
-		NewPwdHasherArgon2(
-			cfg.PwdTime,
-			cfg.PwdMemKiB,
-			cfg.PwdThreads,
-			cfg.PwdHashLen,
-			cfg.PwdSaltLen)
-	storage := srv.
-		NewStorageManagerFS(cfg.LocalStorageDir)
+	jwtManager := cripto.NewJWTManagerST([]byte(cfg.SessionSecret), time.Hour, "ownned")
+	pwdHasher := cripto.NewPwdHasherArgon2(
+		cfg.PwdTime,
+		cfg.PwdMemKiB,
+		cfg.PwdThreads,
+		cfg.PwdHashLen,
+		cfg.PwdSaltLen,
+	)
+	fileStorage := storageadapter.NewStorageManagerFS(cfg.LocalStorageDir)
 
-	// =========================================================================
-	// REPOSITORIES
-	// =========================================================================
+	usrRepository := postgres.NewUsrRepository(db)
+	usrPwdRepository := postgres.NewUsrPwdRepository(db)
+	nodeRepository := postgres.NewNodeRepository(db)
+	nodeCommentRepository := postgres.NewNodeCommentRepository(db)
+	groupRepository := postgres.NewGroupRepository(db)
+	groupNodeRepository := postgres.NewGroupNodeRepository(db)
+	groupUsrRepository := postgres.NewGroupUsrRepository(db)
+	docRepository := postgres.NewDocRepository(db)
+	baseTxFactory := postgres.NewUnitOfWorkFactory(db, logger, 30*time.Second)
 
-	usrRepository := pg.
-		NewUsrRepository(db)
-	usrPwdRepository := pg.
-		NewUsrPwdRepository(db)
-	nodeRepository := pg.
-		NewNodeRepository(db)
-	nodeCommentRepository := pg.
-		NewNodeCommentRepository(db)
-	groupRepository := pg.
-		NewGroupRepository(db)
-	groupNodeRepository := pg.
-		NewGroupNodeRepository(db)
-	groupUsrRepository := pg.
-		NewGroupUsrRepository(db)
-	docRepository := pg.
-		NewDocRepository(db)
-	unitOfWorkFactory := pg.
-		NewUnitOfWorkFactory(db, lg, time.Second*30)
+	usrTxFactory := typedTxFactory[usr.CreateUsrTx]{
+		inner: baseTxFactory,
+		adapt: func(runner *postgres.TxRunner) usr.CreateUsrTx {
+			return createUsrTxAdapter{TxRunner: runner}
+		},
+	}
+	groupTxFactory := typedTxFactory[group.CreateGroupNodeTx]{
+		inner: baseTxFactory,
+		adapt: func(runner *postgres.TxRunner) group.CreateGroupNodeTx { return runner },
+	}
+	nodeFileTxFactory := typedTxFactory[node.CreateNodeFileTx]{
+		inner: baseTxFactory,
+		adapt: func(runner *postgres.TxRunner) node.CreateNodeFileTx { return runner },
+	}
 
-	// =========================================================================
-	// MIDLEWARES
-	// =========================================================================
+	authMiddleware := httpapi.NewAuthMiddleware(jwtManager)
 
-	authM := middleware.
-		NewAuthMiddleware(jwtManager)
+	// Group use cases and routes.
+	getGroup := group.NewGetGroupUseCase(groupRepository, groupUsrRepository, usrRepository, nodeRepository)
+	paginateGroup := group.NewPaginateGroupUseCase(groupRepository)
+	createGroup := group.NewCreateGroupUseCase(groupTxFactory)
+	updateGroup := group.NewUpdateGroupUseCase(groupRepository)
+	deleteGroup := group.NewDeleteGroupUseCase(groupRepository, groupUsrRepository)
+	createGroupNode := group.NewCreateGroupNodeUseCase(groupNodeRepository, groupUsrRepository)
+	deleteGroupNode := group.NewDeleteGroupNodeUseCase(groupNodeRepository, groupUsrRepository)
+	upsertGroupUsr := group.NewUpsertGroupUsrUseCase(groupUsrRepository, usrRepository)
+	deleteGroupUsr := group.NewDeleteGroupUsrUseCase(groupUsrRepository)
+	groupHandler := httpapi.NewGroupHandler(
+		getGroup,
+		paginateGroup,
+		createGroup,
+		updateGroup,
+		deleteGroup,
+		createGroupNode,
+		deleteGroupNode,
+		upsertGroupUsr,
+		deleteGroupUsr,
+	)
+	groupRouter := chi.NewRouter()
+	groupRouter.Post("/", authMiddleware.IsAuthenticated(groupHandler.CreateGroupHandler))
+	groupRouter.Get("/{groupID}", authMiddleware.IsAuthenticated(groupHandler.GetGroupHandler))
+	groupRouter.Patch("/{groupID}", authMiddleware.IsAuthenticated(groupHandler.UpdateGroupHandler))
+	groupRouter.Get("/paginate", authMiddleware.IsAuthenticated(groupHandler.PaginateGroupHandler))
+	groupRouter.Delete("/{groupID}", authMiddleware.IsAuthenticated(groupHandler.DeleteGroupHandler))
+	groupRouter.Post("/{groupID}/nodes", authMiddleware.IsAuthenticated(groupHandler.CreateGroupNodeHandler))
+	groupRouter.Delete("/{groupID}/nodes/{nodeID}", authMiddleware.IsAuthenticated(groupHandler.DeleteGroupNodeHandler))
+	groupRouter.Post("/{groupID}/users", authMiddleware.IsAuthenticated(groupHandler.UpsertGroupUsrHandler))
+	groupRouter.Delete("/{groupID}/users/{usrID}", authMiddleware.IsAuthenticated(groupHandler.DeleteGroupUsrHandler))
 
-	// =========================================================================
-	// GROUPS ROUTES
-	// =========================================================================
+	// User and authentication use cases and routes.
+	createUsr := usr.NewCreateUsrUseCase(usrRepository, usrTxFactory, pwdHasher, logger)
+	getUsr := usr.NewGetUsrUseCase(usrRepository)
+	getMe := usr.NewGetMeUseCase(usrRepository)
+	paginateUsr := usr.NewPaginateUsrUseCase(usrRepository)
+	loginPwd := appauth.NewLoginPwdUseCase(usrRepository, usrPwdRepository, pwdHasher, jwtManager)
 
-	getGroup := usecase.
-		NewGetGroupUseCase(
-			usrRepository,
-			nodeRepository,
-			groupRepository,
-			groupUsrRepository)
-	paginateGroup := usecase.
-		NewPaginateGroupUseCase(groupRepository)
-	updateGroup := usecase.
-		// TODO: add swagger doc here
-		NewUpdateGroupUseCase(groupRepository)
-	createGroup := usecase.
-		NewCreateGroupUseCase(unitOfWorkFactory)
-	deleteGroup := usecase.
-		NewDeleteGroupUseCase(
-			groupRepository,
-			groupUsrRepository)
-	createGroupNode := usecase.
-		NewCreateGroupNodeUseCase(
-			groupRepository,
-			groupNodeRepository,
-			groupUsrRepository,
-			nodeRepository)
-	deleteGroupNode := usecase.
-		NewDeleteGroupNodeUseCase(
-			groupRepository,
-			groupNodeRepository,
-			groupUsrRepository)
-	upsertGroupUsr := usecase.
-		NewUpsertGroupUsrUseCase(
-			usrRepository,
-			groupUsrRepository)
-	deleteGroupUsr := usecase.
-		NewDeleteGroupUsrUseCase(
-			groupUsrRepository)
-
-	// ROUTES
-	groupH := handler.
-		NewGroupHandler(
-			getGroup,
-			paginateGroup,
-			createGroup,
-			updateGroup,
-			deleteGroup,
-			createGroupNode,
-			deleteGroupNode,
-			upsertGroupUsr,
-			deleteGroupUsr)
-	groupR := chi.NewRouter()
-
-	groupR.Post("/", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(groupH.CreateGroupHandler))
-
-	groupR.Get("/{groupID}", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(groupH.GetGroupHandler))
-
-	groupR.Patch("/{groupID}", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(groupH.UpdateGroupHandler))
-
-	groupR.Get("/paginate", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(groupH.PaginateGroupHandler))
-
-	groupR.Delete("/{groupID}", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(groupH.DeleteGroupHandler))
-
-	groupR.Post("/{groupID}/nodes", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(groupH.CreateGroupNodeHandler))
-
-	groupR.Delete("/{groupID}/nodes/{nodeID}", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(groupH.DeleteGroupNodeHandler))
-
-	groupR.Post("/{groupID}/users", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(groupH.UpsertGroupUsrHandler))
-
-	groupR.Delete("/{groupID}/users/{usrID}", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(groupH.DeleteGroupUsrHandler))
-
-	// =========================================================================
-	// USERS ROUTES
-	// =========================================================================
-
-	createUsr := usecase.
-		NewCreateUsrUseCase(
-			usrRepository,
-			unitOfWorkFactory,
-			pwdHasher,
-			lg)
-	getUsr := usecase.
-		NewGetUsrUseCase(usrRepository)
-	getMe := usecase.
-		NewGetMeUseCase(usrRepository)
-	paginateUsr := usecase.
-		NewPaginateUsrUseCase(usrRepository)
-	loginUsr := usecase.
-		NewLoginUsrUseCase(
-			usrRepository,
-			usrPwdRepository,
-			pwdHasher,
-			jwtManager)
-
-	// ROUTES
 	secure := cfg.Mode != "local"
 	sameSite := http.SameSiteStrictMode
 	if cfg.Mode == "local" {
 		sameSite = http.SameSiteLaxMode
 	}
-	usrH := handler.
-		NewUsrHandler(
-			loginUsr,
-			createUsr,
-			getMe,
-			getUsr,
-			paginateUsr,
-			handler.UsrHandlerConfig{
-				Secure:   secure,
-				SameSite: sameSite,
-			})
-	usrR := chi.NewRouter()
-	usrR.Get("/me", authM.
-		IsAuthenticated(usrH.GetMeHandler))
-	usrR.Get("/{usrID}", authM.
-		IsAuthenticated(usrH.GetUsrHandler))
-	usrR.Get("/paginate", authM.
-		IsAuthenticated(usrH.PaginateUsrHandler))
-	usrR.Post("/", authM.
-		IsSuperUsr(usrH.CreateUsrHandler))
-	usrR.Post("/login", usrH.LoginUsrHandler)
-	usrR.Delete("/logout", usrH.LogoutUsrHandler)
+	usrHandler := httpapi.NewUsrHandler(createUsr, getMe, getUsr, paginateUsr)
+	authHandler := httpapi.NewAuthHandler(loginPwd, httpapi.AuthHandlerConfig{Secure: secure, SameSite: sameSite})
+	usrRouter := chi.NewRouter()
+	usrRouter.Get("/me", authMiddleware.IsAuthenticated(usrHandler.GetMeHandler))
+	usrRouter.Get("/{usrID}", authMiddleware.IsAuthenticated(usrHandler.GetUsrHandler))
+	usrRouter.Get("/paginate", authMiddleware.IsAuthenticated(usrHandler.PaginateUsrHandler))
+	usrRouter.Post("/", authMiddleware.IsSuperUsr(usrHandler.CreateUsrHandler))
+	usrRouter.Post("/login", authHandler.LoginPwdHandler)
+	usrRouter.Delete("/logout", authHandler.LogoutUsrHandler)
 
-	// =========================================================================
-	// NODES ROUTES
-	// =========================================================================
+	// Node, document and comment use cases. Their HTTP handlers share NodeHandler.
+	accessChecker := group.NewAccessChecker(groupUsrRepository)
+	getRoot := node.NewGetRootNodesUseCase(nodeRepository, groupRepository, logger)
+	getNode := node.NewGetNodeByIDUseCase(accessChecker, nodeRepository, docRepository, logger)
+	createNodeFolder := node.NewCreateNodeFolderUseCase(accessChecker, nodeRepository)
+	createNodeFile := node.NewCreateDocUseCase(
+		docRepository,
+		nodeRepository,
+		accessChecker,
+		nodeFileTxFactory,
+		fileStorage,
+		logger,
+	)
+	deleteNode := node.NewDeleteNodeUseCase(accessChecker, nodeRepository, docRepository, fileStorage, logger)
+	deleteNodeFile := node.NewDeleteDocUseCase(accessChecker, fileStorage, docRepository, nodeRepository, logger)
+	downloadNodeFile := node.NewDownloadDocUseCase(accessChecker, nodeRepository, docRepository, fileStorage)
+	getNodeComments := node.NewGetNodeCommentsUseCase(accessChecker, nodeRepository, nodeCommentRepository)
+	createNodeComment := node.NewCreateNodeCommentUseCase(accessChecker, nodeRepository, nodeCommentRepository, logger)
+	updateNodeComment := node.NewUpdateNodeCommentUseCase(nodeCommentRepository)
+	deleteNodeComment := node.NewDeleteNodeCommentUseCase(accessChecker, nodeRepository, nodeCommentRepository)
+	nodeHandler := httpapi.NewNodeHandler(
+		getRoot,
+		getNode,
+		downloadNodeFile,
+		createNodeFolder,
+		createNodeFile,
+		deleteNode,
+		deleteNodeFile,
+		getNodeComments,
+		createNodeComment,
+		updateNodeComment,
+		deleteNodeComment,
+	)
+	nodeRouter := chi.NewRouter()
+	nodeRouter.Get("/", authMiddleware.IsAuthenticated(nodeHandler.GetRootHandler))
+	nodeRouter.Post("/", authMiddleware.IsAuthenticated(nodeHandler.CreateFolderHandler))
+	nodeRouter.Get("/{nodeID}", authMiddleware.IsAuthenticated(nodeHandler.GetNodeHandler))
+	nodeRouter.Get("/{nodeID}/comments", authMiddleware.IsAuthenticated(nodeHandler.GetNodeCommentsHandler))
+	nodeRouter.Post("/{nodeID}/comments", authMiddleware.IsAuthenticated(nodeHandler.CreateNodeCommentHandler))
 
-	getRoot := usecase.
-		NewGetRootNodesUseCase(
-			nodeRepository,
-			groupRepository,
-			lg)
-	createFolder := usecase.
-		NewCreateFolderUseCase(
-			nodeRepository,
-			groupUsrRepository)
-	getNode := usecase.
-		NewGetNodeByIDUseCase(
-			nodeRepository,
-			docRepository,
-			groupUsrRepository,
-			lg)
+	commentRouter := chi.NewRouter()
+	commentRouter.Patch("/{nodeCommentID}", authMiddleware.IsAuthenticated(nodeHandler.UpdateNodeCommentHandler))
+	commentRouter.Delete("/{nodeCommentID}", authMiddleware.IsAuthenticated(nodeHandler.DeleteNodeCommentHandler))
 
-	// NODES
-	nodeH := handler.
-		NewNodeHandler(
-			getRoot,
-			createFolder,
-			getNode)
-	nodeR := chi.NewRouter()
-	nodeR.Get("/", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(nodeH.GetRootHandler))
-	nodeR.Post("/", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(nodeH.CreateFolderHandler))
-	nodeR.Get("/{nodeID}", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(nodeH.GetNodeHandler))
+	docRouter := chi.NewRouter()
+	docRouter.Post("/", authMiddleware.IsAuthenticated(nodeHandler.CreateNodeFileHandler))
+	docRouter.Delete("/{docID}", authMiddleware.IsAuthenticated(nodeHandler.DeleteDocHandler))
+	docRouter.Get("/{docID}/download", authMiddleware.IsAuthenticated(nodeHandler.DownloadNodeFileHandler))
 
-	// =========================================================================
-	// NODE COMMENTS
-	// =========================================================================
-
-	getNodeComments := usecase.
-		NewGetNodeCommentsUseCase(
-			nodeRepository,
-			nodeCommentRepository,
-			groupUsrRepository)
-	createNodeComment := usecase.
-		NewCreateNodeCommentUseCase(
-			nodeRepository,
-			nodeCommentRepository,
-			groupUsrRepository,
-			lg)
-	updateNodeComment := usecase.
-		NewUpdateNodeCommentUseCase(
-			nodeCommentRepository)
-	deleteNodeComment := usecase.
-		NewDeleteNodeCommentUseCase(
-			nodeRepository,
-			nodeCommentRepository,
-			groupUsrRepository)
-	// ROUTES
-	nodeCommentH := handler.
-		NewNodeCommentHandler(
-			getNodeComments,
-			createNodeComment,
-			updateNodeComment,
-			deleteNodeComment)
-	nodeCommentR := chi.NewRouter()
-	nodeR.Get("/{nodeID}/comments", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(nodeCommentH.GetNodeCommentsHandler))
-	nodeR.Post("/{nodeID}/comments", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(nodeCommentH.CreateNodeCommentHandler))
-	nodeCommentR.Patch("/{nodeCommentID}", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(nodeCommentH.UpdateNodeCommentHandler))
-	nodeCommentR.Delete("/{nodeCommentID}", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(nodeCommentH.DeleteNodeCommentHandler))
-
-	// =========================================================================
-	// DOCS ROUTES
-	// =========================================================================
-
-	createDoc := usecase.
-		NewCreateDocUseCase(
-			docRepository,
-			nodeRepository,
-			groupUsrRepository,
-			unitOfWorkFactory,
-			storage,
-			lg)
-	deleteDoc := usecase.
-		NewDeleteDocUseCase(
-			storage,
-			docRepository,
-			nodeRepository,
-			groupUsrRepository,
-			lg)
-	downloadDoc := usecase.
-		NewDownloadDocUseCase(
-			nodeRepository,
-			docRepository,
-			groupUsrRepository,
-			storage)
-
-	// ROUTES
-	docH := handler.
-		NewDocHandler(
-			createDoc,
-			deleteDoc,
-			downloadDoc)
-	docR := chi.NewRouter()
-	docR.Post("/", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(docH.CreateDocHandler))
-	docR.Delete("/{docID}", authM.
-		// TODO: Add swagger doc here
-		IsAuthenticated(docH.DeleteDocHandler))
-	docR.Get("/{docID}/download", authM.
-		// TODO: add swagger doc here
-		IsAuthenticated(docH.DownloadDocHandler))
-
-	// =========================================================================
-	// SERVER START POINT
-	// =========================================================================
-
-	r := chi.NewRouter()
+	router := chi.NewRouter()
 	if cfg.Mode == "local" {
-		// Basic CORS
-		// for more ideas, see: https://developer.github.com/v3/#cross-origin-resource-sharing
-		r.Use(cors.Handler(cors.Options{
-			// AllowedOrigins:   []string{"https://foo.com"}, // Use this to allow specific origin hosts
-			AllowedOrigins: []string{"http://localhost:5173"},
-			// AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
-			AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-			AllowedHeaders: []string{"Accept", "Content-Type"},
-			// ExposedHeaders:   []string{"Link"},
+		router.Use(cors.Handler(cors.Options{
+			AllowedOrigins:   []string{"http://localhost:5173"},
+			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+			AllowedHeaders:   []string{"Accept", "Content-Type"},
 			AllowCredentials: true,
-			MaxAge:           300, // Maximum value not ignored by any of major browsers
+			MaxAge:           300,
 		}))
 	}
 
-	// TODO: Add swagger doc here
-	r.Mount("/api/v1/groups", groupR)
-	// TODO: Add swagger doc here
-	r.Mount("/api/v1/usrs", usrR)
-	// TODO: Add swagger doc here
-	r.Mount("/api/v1/nodes", nodeR)
-	// TODO: Add swagger doc here
-	r.Mount("/api/v1/comments", nodeCommentR)
-	// TODO: Add swagger doc here
-	r.Mount("/api/v1/docs", docR)
+	router.Mount("/api/v1/groups", groupRouter)
+	router.Mount("/api/v1/usrs", usrRouter)
+	router.Mount("/api/v1/nodes", nodeRouter)
+	router.Mount("/api/v1/comments", commentRouter)
+	router.Mount("/api/v1/docs", docRouter)
 
-	// =========================================================================
-	// SERVE WEB APP
-	// =========================================================================
 	if cfg.ServeWebApp {
-		// Static assets
-		// TODO: make this path a config option maybe
-		r.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/dist/assets"))))
-
-		// SPA fallback
-		// TODO: make this path a config option maybe
-		r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/dist/assets"))))
+		router.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, "web/dist/index.html")
 		}))
 	}
 
-	http_log.ChiRouterLog(r)
-	lg.Info("server starting at:",
-		"Mode", cfg.Mode,
-		"port", cfg.Port,
-		"ServeWebApp", cfg.ServeWebApp)
-	_ = http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), r)
+	logger.Info("server starting", "mode", cfg.Mode, "port", cfg.Port, "serveWebApp", cfg.ServeWebApp)
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), router); err != nil {
+		logger.Error("server stopped", "err", err)
+		os.Exit(1)
+	}
 }
