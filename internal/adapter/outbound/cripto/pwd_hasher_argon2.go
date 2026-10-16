@@ -7,7 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	appauth "ownned/internal/app/auth"
+	"ownned/internal/app/auth"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -40,28 +40,75 @@ type pwdHasherArgon2 struct {
 	saltLen uint32
 }
 
+// NewPwdHasherArgon2 returns a instance of pwdHasherArgon2
+//
+// - time is the number of passes over the memory. The recommended value is 3.
+//
+// - mem is the size of the memory in KiB. The recommended value is 64*1024.
+//
+// - threads is the number of threads to use. The recommended value is 4.
+//
+// - keyLen is the length of the resulting key in bytes. The recommended value is 32.
+//
+// - saltLen is the length of the salt in bytes. The recommended value is 16.
+func NewPwdHasherArgon2(
+	time uint32,
+	memKiB uint32,
+	threads uint8,
+	keyLen uint32,
+	saltLen uint32,
+) auth.PwdHasher {
+	if time < 1 {
+		panic("time must be greater than 0")
+	}
+
+	if memKiB < 2*1024 {
+		panic("mem must be greater than 2MB")
+	}
+
+	if threads < 1 {
+		panic("threads must be greater than 0")
+	}
+
+	if keyLen < 16 {
+		panic("keyLen must be greater than 16")
+	}
+
+	if saltLen < 16 {
+		panic("saltLen must be greater than 16")
+	}
+
+	return &pwdHasherArgon2{
+		time:    time,
+		mem:     memKiB,
+		threads: threads,
+		keyLen:  keyLen,
+		saltLen: saltLen,
+	}
+}
+
 func (h *pwdHasherArgon2) parseHash(hashedPassword []byte) (*parsedHash, error) {
 	parts := bytes.Split(hashedPassword, []byte{'$'})
 	if len(parts) != 6 ||
 		!bytes.Equal(parts[1], []byte("argon2id")) {
-		return nil, appauth.ErrInvalidHash
+		return nil, auth.ErrInvalidHash
 	}
 	var version int
 	_, err := fmt.Sscanf(string(parts[2]), "v=%d", &version)
 	if err != nil {
-		return nil, appauth.ErrInvalidHash
+		return nil, auth.ErrInvalidHash
 	}
 	var mem, time uint32
 	var threads uint8
 	_, err = fmt.Sscanf(string(parts[3]), "m=%d,t=%d,p=%d", &mem, &time, &threads)
 	if err != nil {
-		return nil, appauth.ErrInvalidHash
+		return nil, auth.ErrInvalidHash
 	}
 
 	salt := make([]byte, base64.RawStdEncoding.DecodedLen(len(parts[4])))
 	n, err := base64.RawStdEncoding.Decode(salt, parts[4])
 	if err != nil {
-		return nil, appauth.ErrInvalidHash
+		return nil, auth.ErrInvalidHash
 	}
 
 	salt = salt[:n]
@@ -69,7 +116,7 @@ func (h *pwdHasherArgon2) parseHash(hashedPassword []byte) (*parsedHash, error) 
 	hash := make([]byte, base64.RawStdEncoding.DecodedLen(len(parts[5])))
 	n, err = base64.RawStdEncoding.Decode(hash, parts[5])
 	if err != nil {
-		return nil, appauth.ErrInvalidHash
+		return nil, auth.ErrInvalidHash
 	}
 
 	hash = hash[:n]
@@ -117,7 +164,7 @@ func (h *pwdHasherArgon2) Compare(hashedPassword, password []byte) error {
 	}
 
 	if parsed.version != argon2.Version {
-		return appauth.ErrExpiredHashVersion
+		return auth.ErrExpiredHashVersion
 	}
 
 	computed := argon2.IDKey(
@@ -129,7 +176,7 @@ func (h *pwdHasherArgon2) Compare(hashedPassword, password []byte) error {
 		uint32(len(parsed.hash)))
 
 	if subtle.ConstantTimeCompare(computed, parsed.hash) != 1 {
-		return appauth.ErrInvalidPwd
+		return auth.ErrInvalidPwd
 	}
 
 	return nil
@@ -146,51 +193,4 @@ func (h *pwdHasherArgon2) RequiredReHash(hashedPassword []byte) bool {
 	}
 
 	return parsed.mem != h.mem || parsed.time != h.time || parsed.threads != h.threads
-}
-
-// NewPwdHasherArgon2 returns a instance of pwdHasherArgon2
-//
-// - time is the number of passes over the memory. The recommended value is 3.
-//
-// - mem is the size of the memory in KiB. The recommended value is 64*1024.
-//
-// - threads is the number of threads to use. The recommended value is 4.
-//
-// - keyLen is the length of the resulting key in bytes. The recommended value is 32.
-//
-// - saltLen is the length of the salt in bytes. The recommended value is 16.
-func NewPwdHasherArgon2(
-	time uint32,
-	memKiB uint32,
-	threads uint8,
-	keyLen uint32,
-	saltLen uint32,
-) appauth.PwdHasher {
-	if time < 1 {
-		panic("time must be greater than 0")
-	}
-
-	if memKiB < 2*1024 {
-		panic("mem must be greater than 2MB")
-	}
-
-	if threads < 1 {
-		panic("threads must be greater than 0")
-	}
-
-	if keyLen < 16 {
-		panic("keyLen must be greater than 16")
-	}
-
-	if saltLen < 16 {
-		panic("saltLen must be greater than 16")
-	}
-
-	return &pwdHasherArgon2{
-		time:    time,
-		mem:     memKiB,
-		threads: threads,
-		keyLen:  keyLen,
-		saltLen: saltLen,
-	}
 }
