@@ -61,7 +61,7 @@ func MigrateUp(db *sql.DB) error {
 		return err
 	}
 
-	path := "file://" + filepath.Join(wd, "internal/outbound/postgres/migrations")
+	path := "file://" + filepath.Join(wd, "internal/adapter/outbound/postgres/migration")
 	m, err := migrate.NewWithDatabaseInstance(path, "postgres", driver)
 	if err != nil {
 		return err

@@ -6,7 +6,7 @@ DOCKER_COMPOSE := docker compose
 DOCKER := docker
 
 # ENVS
-PG_MIGRATION_DIR := ./internal/infrastructure/db/migrations/postgres
+PG_MIGRATION_DIR := ./internal/adapter/outbound/postgres/migration
 PG_DB_URL := postgresql://$(PG_USER):$(PG_PASSWORD)@$(PG_HOST):$(PG_PORT)/$(PG_DB)?sslmode=$(PG_SSL)
 TEST_PG_DB_URL := postgresql://$(TEST_PG_USER):$(TEST_PG_PASSWORD)@$(TEST_PG_HOST):$(TEST_PG_PORT)/$(TEST_PG_DB)?sslmode=$(TEST_PG_SSL)
 # FILES
@@ -87,11 +87,13 @@ build-web:
 	@echo "Web properly build!"
 
 build-http:
+	@mkdir -p $(dir $(HTTP_SERVER_BINARY))
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
 	go build -ldflags="-s -w" -o $(HTTP_SERVER_BINARY) ./cmd/server
 	@echo "Bin properly compiled!"
 
 build-http-lite:
+	@mkdir -p $(dir $(HTTP_SERVER_BINARY))
 	go build -o $(HTTP_SERVER_BINARY) ./cmd/server
 
 start-http: build-http 
