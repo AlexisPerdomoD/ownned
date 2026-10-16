@@ -100,6 +100,8 @@ Types: `feat`, `refactor`, `fix`, `docs`, `test`, `chore`, `videcode`
 
 Commits must be atomic — each commit compiles independently and represents a single logical change.
 
+Prefer atomic commits, but do not promote hunk-based staging (for example, `git add -p`) to split changes within a file; it is error-prone and can silently omit user work. Make the best effort to group whole files by concern. If a file contains changes for multiple concerns and separating them safely would require hunk staging or source edits solely to manufacture commit boundaries, keep those changes together in the smallest coherent commit instead. Never discard or rewrite source changes silently to force a more atomic split; explain the trade-off when needed.
+
 ### Body / context description
 
 Add a body when it adds context (why, trade-offs, references). Keep it
