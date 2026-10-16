@@ -7,6 +7,6 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-var eLog = slog.With("error handler")
+var elog = slog.With("error handler")
 
 var validate = validator.New()

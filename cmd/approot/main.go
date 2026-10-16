@@ -101,9 +101,9 @@ func main() {
 		NodeID:  rootNodeSharedID,
 	}
 
-	uowFactory := postgres.NewUnitOfWorkFactory(db, slog.Default(), 30*time.Second)
+	uowFactory := postgres.NewFullTxFactory(db, slog.Default(), 30*time.Second)
 	ctx := context.Background()
-	err = uowFactory.Do(ctx, func(tx *postgres.TxRunner) error {
+	err = uowFactory.Do(ctx, func(tx *postgres.FullTx) error {
 		if err := tx.NodeRepository().Create(tx.Ctx(), &rootNodeUsr); err != nil {
 			return err
 		}

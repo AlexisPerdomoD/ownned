@@ -18,6 +18,7 @@ type UsrHandler struct {
 	getMe       *usr.GetMeUseCase
 	getUsr      *usr.GetUsrUseCase
 	paginateUsr *usr.PaginateUsrUseCase
+	am          *AuthMiddleware
 }
 
 func NewUsrHandler(
@@ -25,12 +26,14 @@ func NewUsrHandler(
 	getMe *usr.GetMeUseCase,
 	getUsr *usr.GetUsrUseCase,
 	paginateUsr *usr.PaginateUsrUseCase,
+	am *AuthMiddleware,
 ) *UsrHandler {
 	return &UsrHandler{
 		createUsr:   createUsr,
 		getMe:       getMe,
 		getUsr:      getUsr,
 		paginateUsr: paginateUsr,
+		am:          am,
 	}
 }
 
@@ -121,4 +124,20 @@ func (c *UsrHandler) CreateUsrHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, UsrViewFromDomain(usr))
+}
+
+// MountV1 mounts the UsrHandler to the given parent chi.Router .
+// The path is /api/v1/usrs
+func (c *UsrHandler) MountV1(p chi.Router) {
+	r := chi.NewRouter()
+
+	r.With(c.am.IsAuthenticated).Get("/me", c.GetMeHandler)
+
+	r.With(c.am.IsAuthenticated).Get("/{usrID}", c.GetUsrHandler)
+
+	r.With(c.am.IsAuthenticated).Get("/paginate", c.PaginateUsrHandler)
+
+	r.With(c.am.IsSuperUsr).Post("/", c.CreateUsrHandler)
+
+	p.Mount("/api/v1/usrs", r)
 }

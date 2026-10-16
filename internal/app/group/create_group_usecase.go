@@ -15,7 +15,7 @@ type CreateGroupDTO struct {
 	Description string `json:"description" validate:"max=1000"`
 }
 
-type CreateGroupNodeTx interface {
+type CreateGroupTx interface {
 	tx.TxCtx
 
 	GroupRepository() GroupRepository
@@ -23,10 +23,10 @@ type CreateGroupNodeTx interface {
 }
 
 type CreateGroupUseCase struct {
-	txFactory tx.TxFactory[CreateGroupNodeTx]
+	txFactory tx.TxFactory[CreateGroupTx]
 }
 
-func NewCreateGroupUseCase(txFactory tx.TxFactory[CreateGroupNodeTx]) *CreateGroupUseCase {
+func NewCreateGroupUseCase(txFactory tx.TxFactory[CreateGroupTx]) *CreateGroupUseCase {
 	return &CreateGroupUseCase{txFactory}
 }
 
@@ -57,7 +57,7 @@ func (uc *CreateGroupUseCase) Execute(ctx context.Context, args CreateGroupDTO) 
 		Access:  domain.GroupOwnerAccess,
 	}
 
-	if err := uc.txFactory.Do(ctx, func(t CreateGroupNodeTx) error {
+	if err := uc.txFactory.Do(ctx, func(t CreateGroupTx) error {
 		if err := t.GroupRepository().Create(t.Ctx(), group); err != nil {
 			return err
 		}

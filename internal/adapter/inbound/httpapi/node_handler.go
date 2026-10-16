@@ -25,6 +25,7 @@ type NodeHandler struct {
 	createNodeComment *node.CreateNodeCommentUseCase
 	updateNodeComment *node.UpdateNodeCommentUseCase
 	deleteNodeComment *node.DeleteNodeCommentUseCase
+	am                *AuthMiddleware
 }
 
 func NewNodeHandler(
@@ -39,6 +40,7 @@ func NewNodeHandler(
 	createNodeComment *node.CreateNodeCommentUseCase,
 	updateNodeComment *node.UpdateNodeCommentUseCase,
 	deleteNodeComment *node.DeleteNodeCommentUseCase,
+	am *AuthMiddleware,
 ) *NodeHandler {
 	return &NodeHandler{
 		getRoot:           getRoot,
@@ -52,6 +54,7 @@ func NewNodeHandler(
 		createNodeComment: createNodeComment,
 		updateNodeComment: updateNodeComment,
 		deleteNodeComment: deleteNodeComment,
+		am:                am,
 	}
 }
 
@@ -106,6 +109,25 @@ func (c *NodeHandler) GetNodeHandler(w http.ResponseWriter, r *http.Request) {
 	detail["reason"] = "internal server state error occurred, please try again later"
 	resp := errView(apperror.ErrInternal(detail))
 	writeJSON(w, resp.Code, resp)
+}
+
+func (h *NodeHandler) DeleteNodeHandler(w http.ResponseWriter, r *http.Request) {
+	nodeID, err := uuid.Parse(chi.URLParam(r, "nodeID"))
+	if err != nil {
+		detail := make(map[string]string)
+		detail["reason"] = "invalid uuid provided"
+		resp := errView(apperror.ErrBadRequest(detail))
+		writeJSON(w, resp.Code, resp)
+		return
+	}
+
+	if err := h.deleteNode.Execute(r.Context(), nodeID); err != nil {
+		resp := errView(err)
+		writeJSON(w, resp.Code, resp)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *NodeHandler) DownloadNodeFileHandler(w http.ResponseWriter, r *http.Request) {
@@ -335,4 +357,35 @@ func (h *NodeHandler) DeleteNodeCommentHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 	writeJSON(w, http.StatusOK, NodeCommentViewFromDomain(comment))
+}
+
+// MountV1 mounts the NodeHandler to the given parent chi.Router .
+// The path is /api/v1/nodes
+func (h *NodeHandler) MountV1(p chi.Router) {
+	r := chi.NewRouter()
+	r.Use(h.am.IsAuthenticated)
+
+	r.Get("/", h.GetRootHandler)
+
+	r.Post("/", h.CreateFolderHandler)
+
+	r.Get("/{nodeID}", h.GetNodeHandler)
+
+	r.Delete("/{nodeID}", h.DeleteNodeHandler)
+
+	r.Get("/{nodeID}/comments", h.GetNodeCommentsHandler)
+
+	r.Post("/{nodeID}/comments", h.CreateNodeCommentHandler)
+
+	r.Patch("/comments/{nodeCommentID}", h.UpdateNodeCommentHandler)
+
+	r.Delete("/comments/{nodeCommentID}", h.DeleteNodeCommentHandler)
+
+	r.Post("/docs", h.CreateNodeFileHandler)
+
+	r.Get("/docs/{docID}/download", h.DownloadNodeFileHandler)
+
+	r.Delete("/docs/{docID}", h.DeleteDocHandler)
+
+	p.Mount("/api/v1/nodes", r)
 }

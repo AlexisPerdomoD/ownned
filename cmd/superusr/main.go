@@ -11,43 +11,12 @@ import (
 	"ownned/internal/adapter/outbound/cripto"
 	"ownned/internal/adapter/outbound/postgres"
 	"ownned/internal/app/identity"
-	"ownned/internal/app/tx"
 	"ownned/internal/app/usr"
 	"ownned/internal/config"
 	"ownned/internal/domain"
 
 	"github.com/go-playground/validator/v10"
 )
-
-type createUsrTxAdapter struct {
-	*postgres.TxRunner
-}
-
-func (t createUsrTxAdapter) NodeRepository() usr.NodeCreator {
-	return t.TxRunner.NodeRepository()
-}
-
-func (t createUsrTxAdapter) GroupRepository() usr.GroupCreator {
-	return t.TxRunner.GroupRepository()
-}
-
-func (t createUsrTxAdapter) GroupUsrRepository() usr.GroupUsrUpsertor {
-	return t.TxRunner.GroupUsrRepository()
-}
-
-func (t createUsrTxAdapter) GroupNodeRepository() usr.GroupNodeUpsertor {
-	return t.TxRunner.GroupNodeRepository()
-}
-
-type createUsrTxFactory struct {
-	inner tx.TxFactory[*postgres.TxRunner]
-}
-
-func (f createUsrTxFactory) Do(ctx context.Context, fn func(usr.CreateUsrTx) error) error {
-	return f.inner.Do(ctx, func(runner *postgres.TxRunner) error {
-		return fn(createUsrTxAdapter{TxRunner: runner})
-	})
-}
 
 func main() {
 	cfg := config.LoadEnvConfig()
@@ -105,8 +74,7 @@ func main() {
 	}
 
 	logger := slog.Default()
-	innerFactory := postgres.NewUnitOfWorkFactory(db, logger, 30*time.Second)
-	factory := createUsrTxFactory{inner: innerFactory}
+	factory := postgres.NewCreateUsrTxFactory(db, logger, 30*time.Second)
 	useCase := usr.NewCreateUsrUseCase(
 		postgres.NewUsrRepository(db),
 		factory,

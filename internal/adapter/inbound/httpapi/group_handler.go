@@ -24,6 +24,7 @@ type GroupHandler struct {
 	deleteGroupNode *group.DeleteGroupNodeUseCase
 	upsertGroupUsr  *group.UpsertGroupUsrUseCase
 	deleteGroupUsr  *group.DeleteGroupUsrUseCase
+	am              *AuthMiddleware
 }
 
 func NewGroupHandler(
@@ -36,6 +37,7 @@ func NewGroupHandler(
 	deleteGroupNode *group.DeleteGroupNodeUseCase,
 	upsertGroupUsr *group.UpsertGroupUsrUseCase,
 	deleteGroupUsr *group.DeleteGroupUsrUseCase,
+	am *AuthMiddleware,
 ) *GroupHandler {
 	return &GroupHandler{
 		getGroup:        getGroup,
@@ -47,6 +49,7 @@ func NewGroupHandler(
 		deleteGroupNode: deleteGroupNode,
 		upsertGroupUsr:  upsertGroupUsr,
 		deleteGroupUsr:  deleteGroupUsr,
+		am:              am,
 	}
 }
 
@@ -292,4 +295,31 @@ func (h *GroupHandler) DeleteGroupUsrHandler(w http.ResponseWriter, r *http.Requ
 	resp := make(map[string]string)
 	resp["message"] = "deleted group user successfully"
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// MountV1 mounts the GroupHandler to the given parent chi.Router .
+// The path is /api/v1/groups
+func (h *GroupHandler) MountV1(p chi.Router) {
+	r := chi.NewRouter()
+	r.Use(h.am.IsAuthenticated)
+
+	r.Post("/", h.CreateGroupHandler)
+
+	r.Get("/{groupID}", h.GetGroupHandler)
+
+	r.Patch("/{groupID}", h.UpdateGroupHandler)
+
+	r.Delete("/{groupID}", h.DeleteGroupHandler)
+
+	r.Get("/paginate", h.PaginateGroupHandler)
+
+	r.Post("/{groupID}/nodes", h.CreateGroupNodeHandler)
+
+	r.Delete("/{groupID}/nodes/{nodeID}", h.DeleteGroupNodeHandler)
+
+	r.Post("/{groupID}/users", h.UpsertGroupUsrHandler)
+
+	r.Delete("/{groupID}/users/{usrID}", h.DeleteGroupUsrHandler)
+
+	p.Mount("/api/v1/groups", r)
 }

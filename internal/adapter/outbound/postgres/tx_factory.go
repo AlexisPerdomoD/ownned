@@ -13,94 +13,102 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type TxRunner struct {
-	db                    *sqlx.Tx
-	ctx                   context.Context
-	usrRepository         usr.UsrRepository
-	usrPwdRepository      usr.UsrPwdRepository
-	nodeRepository        node.NodeRepository
-	nodeCommentRepository node.NodeCommentRepository
-	docRepository         node.DocRepository
-	groupRepository       group.GroupRepository
-	groupUsrRepository    group.GroupUsrRepository
-	groupNodeRepository   group.GroupNodeRepository
+type txDB struct {
+	db func() *sqlx.Tx
 }
 
-func (u *TxRunner) Ctx() context.Context {
-	return u.ctx
+type txUsr struct {
+	*txDB
+	usrs    usr.UsrRepository
+	usrPwds usr.UsrPwdRepository
 }
 
-func (u *TxRunner) NodeRepository() node.NodeRepository {
-	if u.nodeRepository == nil {
-		u.nodeRepository = NewNodeRepository(u.db)
+func (u *txUsr) UsrRepository() usr.UsrRepository {
+	if u.usrs == nil {
+		u.usrs = NewUsrRepository(u.db())
 	}
 
-	return u.nodeRepository
+	return u.usrs
 }
 
-func (u *TxRunner) NodeCommentRepository() node.NodeCommentRepository {
-	if u.nodeCommentRepository == nil {
-		u.nodeCommentRepository = NewNodeCommentRepository(u.db)
+func (u *txUsr) UsrPwdRepository() usr.UsrPwdRepository {
+	if u.usrPwds == nil {
+		u.usrPwds = NewUsrPwdRepository(u.db())
 	}
 
-	return u.nodeCommentRepository
+	return u.usrPwds
 }
 
-func (u *TxRunner) DocRepository() node.DocRepository {
-	if u.docRepository == nil {
-		u.docRepository = NewDocRepository(u.db)
+type txNode struct {
+	*txDB
+	nodes        node.NodeRepository
+	nodeComments node.NodeCommentRepository
+	docs         node.DocRepository
+}
+
+func (u *txNode) NodeRepository() node.NodeRepository {
+	if u.nodes == nil {
+		u.nodes = NewNodeRepository(u.db())
 	}
 
-	return u.docRepository
+	return u.nodes
 }
 
-func (u *TxRunner) UsrRepository() usr.UsrRepository {
-	if u.usrRepository == nil {
-		u.usrRepository = NewUsrRepository(u.db)
+func (u *txNode) NodeCommentRepository() node.NodeCommentRepository {
+	if u.nodeComments == nil {
+		u.nodeComments = NewNodeCommentRepository(u.db())
 	}
 
-	return u.usrRepository
+	return u.nodeComments
 }
 
-func (u *TxRunner) UsrPwdRepository() usr.UsrPwdRepository {
-	if u.usrPwdRepository == nil {
-		u.usrPwdRepository = NewUsrPwdRepository(u.db)
+func (u *txNode) DocRepository() node.DocRepository {
+	if u.docs == nil {
+		u.docs = NewDocRepository(u.db())
 	}
 
-	return u.usrPwdRepository
+	return u.docs
 }
 
-func (u *TxRunner) GroupRepository() group.GroupRepository {
-	if u.groupRepository == nil {
-		u.groupRepository = NewGroupRepository(u.db)
+type txGroup struct {
+	*txDB
+	groups     group.GroupRepository
+	groupUsrs  group.GroupUsrRepository
+	groupNodes group.GroupNodeRepository
+}
+
+func (u *txGroup) GroupRepository() group.GroupRepository {
+	if u.groups == nil {
+		u.groups = NewGroupRepository(u.db())
 	}
 
-	return u.groupRepository
+	return u.groups
 }
 
-func (u *TxRunner) GroupUsrRepository() group.GroupUsrRepository {
-	if u.groupUsrRepository == nil {
-		u.groupUsrRepository = NewGroupUsrRepository(u.db)
+func (u *txGroup) GroupUsrRepository() group.GroupUsrRepository {
+	if u.groupUsrs == nil {
+		u.groupUsrs = NewGroupUsrRepository(u.db())
 	}
 
-	return u.groupUsrRepository
+	return u.groupUsrs
 }
 
-func (u *TxRunner) GroupNodeRepository() group.GroupNodeRepository {
-	if u.groupNodeRepository == nil {
-		u.groupNodeRepository = NewGroupNodeRepository(u.db)
+func (u *txGroup) GroupNodeRepository() group.GroupNodeRepository {
+	if u.groupNodes == nil {
+		u.groupNodes = NewGroupNodeRepository(u.db())
 	}
 
-	return u.groupNodeRepository
+	return u.groupNodes
 }
 
-type txFactory struct {
+type txFactory[T tx.TxCtx] struct {
 	db      *sqlx.DB
 	log     *slog.Logger
 	timeout time.Duration
+	adapter func(ctx context.Context, db *txDB) T
 }
 
-func (f *txFactory) Do(ctx context.Context, op func(t *TxRunner) error) error {
+func (f *txFactory[T]) Do(ctx context.Context, op func(t T) error) error {
 	txCtx, cancel := context.WithTimeout(ctx, f.timeout)
 	defer cancel()
 
@@ -118,7 +126,16 @@ func (f *txFactory) Do(ctx context.Context, op func(t *TxRunner) error) error {
 			f.log.WarnContext(ctx, "Rollback failed", slog.String("err", rbErr.Error()))
 		}
 	}()
-	if err = op(&TxRunner{db: tx, ctx: txCtx}); err != nil {
+
+	db := func() *sqlx.Tx {
+		return tx
+	}
+
+	t := f.adapter(txCtx, &txDB{
+		db: db,
+	})
+
+	if err = op(t); err != nil {
 		f.log.DebugContext(txCtx, "error happened while executing unit of work", "err", err)
 		return err
 	}
@@ -127,6 +144,144 @@ func (f *txFactory) Do(ctx context.Context, op func(t *TxRunner) error) error {
 	return err
 }
 
-func NewUnitOfWorkFactory(db *sqlx.DB, log *slog.Logger, timeout time.Duration) tx.TxFactory[*TxRunner] {
-	return &txFactory{db, log, timeout}
+type innerCtx struct {
+	ctx context.Context
+}
+
+func (u *innerCtx) Ctx() context.Context {
+	return u.ctx
+}
+
+type FullTx struct {
+	txUsr
+	txNode
+	txGroup
+	innerCtx
+}
+
+func fullTxAdapter(ctx context.Context, txDB *txDB) *FullTx {
+	return &FullTx{
+		ctx:     ctx,
+		txNode:  txNode{txDB: txDB},
+		txUsr:   txUsr{txDB: txDB},
+		txGroup: txGroup{txDB: txDB},
+	}
+}
+
+func NewFullTxFactory(db *sqlx.DB, log *slog.Logger, timeout time.Duration) tx.TxFactory[*FullTx] {
+	adapter := func(ctx context.Context, txDB *txDB) *FullTx {
+		return &FullTx{
+			ctx:     ctx,
+			txNode:  txNode{txDB: txDB},
+			txUsr:   txUsr{txDB: txDB},
+			txGroup: txGroup{txDB: txDB},
+		}
+	}
+
+	return &txFactory[*FullTx]{
+		db:      db,
+		log:     log,
+		timeout: timeout,
+		adapter: adapter,
+	}
+}
+
+type createUsrTx struct {
+	innerCtx
+	txUsr
+
+	nodes      usr.NodeCreator
+	groups     usr.GroupCreator
+	groupUsrs  usr.GroupUsrUpsertor
+	groupNodes usr.GroupNodeUpsertor
+}
+
+func (u *createUsrTx) NodeCreator() usr.NodeCreator {
+	if u.nodes == nil {
+		u.nodes = NewNodeRepository(u.db())
+	}
+
+	return u.nodes
+}
+
+func (u *createUsrTx) GroupCreator() usr.GroupCreator {
+	if u.groups == nil {
+		u.groups = NewGroupRepository(u.db())
+	}
+
+	return u.groups
+}
+
+func (u *createUsrTx) GroupUsrUpsertor() usr.GroupUsrUpsertor {
+	if u.groupUsrs == nil {
+		u.groupUsrs = NewGroupUsrRepository(u.db())
+	}
+
+	return u.groupUsrs
+}
+
+func (u *createUsrTx) GroupNodeUpsertor() usr.GroupNodeUpsertor {
+	if u.groupNodes == nil {
+		u.groupNodes = NewGroupNodeRepository(u.db())
+	}
+
+	return u.groupNodes
+}
+
+func NewCreateUsrTxFactory(db *sqlx.DB, log *slog.Logger, timeout time.Duration) tx.TxFactory[usr.CreateUsrTx] {
+	adapter := func(ctx context.Context, txDB *txDB) usr.CreateUsrTx {
+		return &createUsrTx{
+			ctx:  ctx,
+			txDB: txDB,
+		}
+	}
+
+	return &txFactory[usr.CreateUsrTx]{
+		db:      db,
+		log:     log,
+		timeout: timeout,
+		adapter: adapter,
+	}
+}
+
+type createGroupTx struct {
+	innerCtx
+	txGroup
+}
+
+func NewCreateGroupTxFactory(db *sqlx.DB, log *slog.Logger, timeout time.Duration) tx.TxFactory[group.CreateGroupTx] {
+	adapter := func(ctx context.Context, txDB *txDB) group.CreateGroupTx {
+		return &createGroupTx{
+			ctx:  ctx,
+			txDB: txDB,
+		}
+	}
+
+	return &txFactory[group.CreateGroupTx]{
+		db:      db,
+		log:     log,
+		timeout: timeout,
+		adapter: adapter,
+	}
+}
+
+type createNodeFolderTx struct {
+	innerCtx
+	txNode
+}
+
+func NewCreateNodeFileTxFactory(db *sqlx.DB, log *slog.Logger, timeout time.Duration) tx.TxFactory[node.CreateNodeFileTx] {
+	adapter := func(ctx context.Context, txDB *txDB) node.CreateNodeFileTx {
+		return &createNodeFolderTx{
+			ctx:  ctx,
+			txDB: txDB,
+		}
+	}
+
+	return &txFactory[node.CreateNodeFileTx]{
+		db:      db,
+		log:     log,
+		timeout: timeout,
+		adapter: adapter,
+	}
 }

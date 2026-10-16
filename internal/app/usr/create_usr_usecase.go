@@ -19,10 +19,10 @@ type CreateUsrTx interface {
 	tx.TxCtx
 	UsrRepository() UsrRepository
 	UsrPwdRepository() UsrPwdRepository
-	NodeRepository() NodeCreator
-	GroupRepository() GroupCreator
-	GroupUsrRepository() GroupUsrUpsertor
-	GroupNodeRepository() GroupNodeUpsertor
+	NodeCreator() NodeCreator
+	GroupCreator() GroupCreator
+	GroupUsrUpsertor() GroupUsrUpsertor
+	GroupNodeUpsertor() GroupNodeUpsertor
 }
 
 type CreateUsrDTO struct {
@@ -73,13 +73,13 @@ func (uc *CreateUsrUseCase) Execute(
 
 	if !usr.Role.CanCreateUsr() {
 		detail := make(map[string]string)
-		detail["reason"] = fmt.Sprintf("not enought privileges to do this action")
+		detail["reason"] = "not enought privileges to do this action"
 		return nil, apperror.ErrForbidden(detail)
 	}
 
 	if !isValidPwd(dto.Pwd) {
 		detail := make(map[string]string)
-		detail["reason"] = fmt.Sprintf("Password must contain at least one letter, one digit and one symbol")
+		detail["reason"] = "Password must contain at least one letter, one digit and one symbol"
 		return nil, apperror.ErrBadRequest(detail)
 	}
 
@@ -161,22 +161,22 @@ func (uc *CreateUsrUseCase) Execute(
 			return err
 		}
 
-		if err := t.NodeRepository().Create(t.Ctx(), rootFolder); err != nil {
+		if err := t.NodeCreator().Create(t.Ctx(), rootFolder); err != nil {
 			uc.log.DebugContext(t.Ctx(), "error creating usr node", "err", err, "stack", debug.Stack())
 			return err
 		}
 
-		if err := t.GroupRepository().Create(t.Ctx(), rootGroup); err != nil {
+		if err := t.GroupCreator().Create(t.Ctx(), rootGroup); err != nil {
 			uc.log.DebugContext(t.Ctx(), "error creating usr group", "err", err, "stack", debug.Stack())
 			return err
 		}
 
-		if err := t.GroupNodeRepository().Upsert(t.Ctx(), rootGroupNode); err != nil {
+		if err := t.GroupNodeUpsertor().Upsert(t.Ctx(), rootGroupNode); err != nil {
 			uc.log.WarnContext(t.Ctx(), "error creating usr group node", "err", err, "stack", debug.Stack())
 			return err
 		}
 
-		if err := t.GroupUsrRepository().Upsert(t.Ctx(), rootGroupUsr); err != nil {
+		if err := t.GroupUsrUpsertor().Upsert(t.Ctx(), rootGroupUsr); err != nil {
 			uc.log.DebugContext(t.Ctx(), "error creating usr group usr", "err", err, "stack", debug.Stack())
 			return err
 		}

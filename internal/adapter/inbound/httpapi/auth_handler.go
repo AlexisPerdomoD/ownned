@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"ownned/internal/app/auth"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type AuthHandlerConfig struct {
@@ -69,4 +71,16 @@ func (c *AuthHandler) LogoutUsrHandler(w http.ResponseWriter, r *http.Request) {
 	resp := make(map[string]string)
 	resp["message"] = "logged out properly"
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// MountV1 mounts the AuthHandler to the given parent chi.Router .
+// The path is /api/v1/auth
+func (c *AuthHandler) MountV1(p chi.Router) {
+	r := chi.NewRouter()
+
+	r.Post("/login", c.LoginPwdHandler)
+
+	r.Delete("/logout", c.LogoutUsrHandler)
+
+	p.Mount("/api/v1/auth", r)
 }

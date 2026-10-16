@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -15,44 +14,12 @@ import (
 	appauth "ownned/internal/app/auth"
 	"ownned/internal/app/group"
 	"ownned/internal/app/node"
-	"ownned/internal/app/tx"
 	"ownned/internal/app/usr"
 	"ownned/internal/config"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 )
-
-type typedTxFactory[T tx.TxCtx] struct {
-	inner tx.TxFactory[*postgres.TxRunner]
-	adapt func(*postgres.TxRunner) T
-}
-
-func (f typedTxFactory[T]) Do(ctx context.Context, fn func(T) error) error {
-	return f.inner.Do(ctx, func(runner *postgres.TxRunner) error {
-		return fn(f.adapt(runner))
-	})
-}
-
-type createUsrTxAdapter struct {
-	*postgres.TxRunner
-}
-
-func (t createUsrTxAdapter) NodeRepository() usr.NodeCreator {
-	return t.TxRunner.NodeRepository()
-}
-
-func (t createUsrTxAdapter) GroupRepository() usr.GroupCreator {
-	return t.TxRunner.GroupRepository()
-}
-
-func (t createUsrTxAdapter) GroupUsrRepository() usr.GroupUsrUpsertor {
-	return t.TxRunner.GroupUsrRepository()
-}
-
-func (t createUsrTxAdapter) GroupNodeRepository() usr.GroupNodeUpsertor {
-	return t.TxRunner.GroupNodeRepository()
-}
 
 func main() {
 	cfg := config.LoadEnvConfig()
@@ -63,13 +30,15 @@ func main() {
 		logger.Error("failed to connect to database", "err", err)
 		os.Exit(1)
 	}
+
 	defer func() { _ = db.Close() }()
 	if err := postgres.MigrateUp(db.DB); err != nil {
 		logger.Error("failed to migrate database", "err", err)
 		os.Exit(1)
 	}
 
-	jwtManager := cripto.NewJWTManagerST([]byte(cfg.SessionSecret), time.Hour, "ownned")
+	jwt := cripto.NewJWTManagerST([]byte(cfg.SessionSecret), time.Hour, "ownned")
+
 	pwdHasher := cripto.NewPwdHasherArgon2(
 		cfg.PwdTime,
 		cfg.PwdMemKiB,
@@ -77,45 +46,47 @@ func main() {
 		cfg.PwdHashLen,
 		cfg.PwdSaltLen,
 	)
+
 	fileStorage := storageadapter.NewStorageManagerFS(cfg.LocalStorageDir)
 
-	usrRepository := postgres.NewUsrRepository(db)
-	usrPwdRepository := postgres.NewUsrPwdRepository(db)
-	nodeRepository := postgres.NewNodeRepository(db)
-	nodeCommentRepository := postgres.NewNodeCommentRepository(db)
-	groupRepository := postgres.NewGroupRepository(db)
-	groupNodeRepository := postgres.NewGroupNodeRepository(db)
-	groupUsrRepository := postgres.NewGroupUsrRepository(db)
-	docRepository := postgres.NewDocRepository(db)
-	baseTxFactory := postgres.NewUnitOfWorkFactory(db, logger, 30*time.Second)
+	usrs := postgres.NewUsrRepository(db)
+	usrPwds := postgres.NewUsrPwdRepository(db)
+	nodes := postgres.NewNodeRepository(db)
+	nodeComments := postgres.NewNodeCommentRepository(db)
+	docs := postgres.NewDocRepository(db)
+	groups := postgres.NewGroupRepository(db)
+	groupNodes := postgres.NewGroupNodeRepository(db)
+	groupUsrs := postgres.NewGroupUsrRepository(db)
 
-	usrTxFactory := typedTxFactory[usr.CreateUsrTx]{
-		inner: baseTxFactory,
-		adapt: func(runner *postgres.TxRunner) usr.CreateUsrTx {
-			return createUsrTxAdapter{TxRunner: runner}
-		},
-	}
-	groupTxFactory := typedTxFactory[group.CreateGroupNodeTx]{
-		inner: baseTxFactory,
-		adapt: func(runner *postgres.TxRunner) group.CreateGroupNodeTx { return runner },
-	}
-	nodeFileTxFactory := typedTxFactory[node.CreateNodeFileTx]{
-		inner: baseTxFactory,
-		adapt: func(runner *postgres.TxRunner) node.CreateNodeFileTx { return runner },
-	}
+	txTimeout := time.Duration(30 * time.Second)
+	createGroupTx := postgres.NewCreateGroupTxFactory(db, logger, txTimeout)
+	createUsrTx := postgres.NewCreateUsrTxFactory(db, logger, txTimeout)
+	createNodeFileTx := postgres.NewCreateNodeFileTxFactory(db, logger, txTimeout)
 
-	authMiddleware := httpapi.NewAuthMiddleware(jwtManager)
+	// AUTH USECASES
+	loginPwd := appauth.NewLoginPwdUseCase(usrs, usrPwds, pwdHasher, jwt)
 
-	// Group use cases and routes.
-	getGroup := group.NewGetGroupUseCase(groupRepository, groupUsrRepository, usrRepository, nodeRepository)
-	paginateGroup := group.NewPaginateGroupUseCase(groupRepository)
-	createGroup := group.NewCreateGroupUseCase(groupTxFactory)
-	updateGroup := group.NewUpdateGroupUseCase(groupRepository)
-	deleteGroup := group.NewDeleteGroupUseCase(groupRepository, groupUsrRepository)
-	createGroupNode := group.NewCreateGroupNodeUseCase(groupNodeRepository, groupUsrRepository)
-	deleteGroupNode := group.NewDeleteGroupNodeUseCase(groupNodeRepository, groupUsrRepository)
-	upsertGroupUsr := group.NewUpsertGroupUsrUseCase(groupUsrRepository, usrRepository)
-	deleteGroupUsr := group.NewDeleteGroupUsrUseCase(groupUsrRepository)
+	secure := cfg.Mode != "local"
+	sameSite := http.SameSiteStrictMode
+	if cfg.Mode == "local" {
+		sameSite = http.SameSiteLaxMode
+	}
+	authhHandler := httpapi.NewAuthHandler(loginPwd, httpapi.AuthHandlerConfig{Secure: secure, SameSite: sameSite})
+
+	am := httpapi.NewAuthMiddleware(jwt)
+
+	// GROUP USECASES
+	getGroup := group.NewGetGroupUseCase(groups, groupUsrs, usrs, nodes)
+	paginateGroup := group.NewPaginateGroupUseCase(groups)
+
+	createGroup := group.NewCreateGroupUseCase(createGroupTx)
+	updateGroup := group.NewUpdateGroupUseCase(groups)
+	deleteGroup := group.NewDeleteGroupUseCase(groups, groupUsrs)
+	createGroupNode := group.NewCreateGroupNodeUseCase(groupNodes, groupUsrs)
+	deleteGroupNode := group.NewDeleteGroupNodeUseCase(groupNodes, groupUsrs)
+	upsertGroupUsr := group.NewUpsertGroupUsrUseCase(groupUsrs, usrs)
+	deleteGroupUsr := group.NewDeleteGroupUsrUseCase(groupUsrs)
+
 	groupHandler := httpapi.NewGroupHandler(
 		getGroup,
 		paginateGroup,
@@ -126,60 +97,38 @@ func main() {
 		deleteGroupNode,
 		upsertGroupUsr,
 		deleteGroupUsr,
+		am,
 	)
-	groupRouter := chi.NewRouter()
-	groupRouter.Post("/", authMiddleware.IsAuthenticated(groupHandler.CreateGroupHandler))
-	groupRouter.Get("/{groupID}", authMiddleware.IsAuthenticated(groupHandler.GetGroupHandler))
-	groupRouter.Patch("/{groupID}", authMiddleware.IsAuthenticated(groupHandler.UpdateGroupHandler))
-	groupRouter.Get("/paginate", authMiddleware.IsAuthenticated(groupHandler.PaginateGroupHandler))
-	groupRouter.Delete("/{groupID}", authMiddleware.IsAuthenticated(groupHandler.DeleteGroupHandler))
-	groupRouter.Post("/{groupID}/nodes", authMiddleware.IsAuthenticated(groupHandler.CreateGroupNodeHandler))
-	groupRouter.Delete("/{groupID}/nodes/{nodeID}", authMiddleware.IsAuthenticated(groupHandler.DeleteGroupNodeHandler))
-	groupRouter.Post("/{groupID}/users", authMiddleware.IsAuthenticated(groupHandler.UpsertGroupUsrHandler))
-	groupRouter.Delete("/{groupID}/users/{usrID}", authMiddleware.IsAuthenticated(groupHandler.DeleteGroupUsrHandler))
 
-	// User and authentication use cases and routes.
-	createUsr := usr.NewCreateUsrUseCase(usrRepository, usrTxFactory, pwdHasher, logger)
-	getUsr := usr.NewGetUsrUseCase(usrRepository)
-	getMe := usr.NewGetMeUseCase(usrRepository)
-	paginateUsr := usr.NewPaginateUsrUseCase(usrRepository)
-	loginPwd := appauth.NewLoginPwdUseCase(usrRepository, usrPwdRepository, pwdHasher, jwtManager)
+	// USER USECASES
+	createUsr := usr.NewCreateUsrUseCase(usrs, createUsrTx, pwdHasher, logger)
+	getUsr := usr.NewGetUsrUseCase(usrs)
+	getMe := usr.NewGetMeUseCase(usrs)
+	paginateUsr := usr.NewPaginateUsrUseCase(usrs)
 
-	secure := cfg.Mode != "local"
-	sameSite := http.SameSiteStrictMode
-	if cfg.Mode == "local" {
-		sameSite = http.SameSiteLaxMode
-	}
-	usrHandler := httpapi.NewUsrHandler(createUsr, getMe, getUsr, paginateUsr)
-	authHandler := httpapi.NewAuthHandler(loginPwd, httpapi.AuthHandlerConfig{Secure: secure, SameSite: sameSite})
-	usrRouter := chi.NewRouter()
-	usrRouter.Get("/me", authMiddleware.IsAuthenticated(usrHandler.GetMeHandler))
-	usrRouter.Get("/{usrID}", authMiddleware.IsAuthenticated(usrHandler.GetUsrHandler))
-	usrRouter.Get("/paginate", authMiddleware.IsAuthenticated(usrHandler.PaginateUsrHandler))
-	usrRouter.Post("/", authMiddleware.IsSuperUsr(usrHandler.CreateUsrHandler))
-	usrRouter.Post("/login", authHandler.LoginPwdHandler)
-	usrRouter.Delete("/logout", authHandler.LogoutUsrHandler)
+	usrHandler := httpapi.NewUsrHandler(createUsr, getMe, getUsr, paginateUsr, am)
 
-	// Node, document and comment use cases. Their HTTP handlers share NodeHandler.
-	accessChecker := group.NewAccessChecker(groupUsrRepository)
-	getRoot := node.NewGetRootNodesUseCase(nodeRepository, groupRepository, logger)
-	getNode := node.NewGetNodeByIDUseCase(accessChecker, nodeRepository, docRepository, logger)
-	createNodeFolder := node.NewCreateNodeFolderUseCase(accessChecker, nodeRepository)
+	// NODE USECASES
+
+	accessChecker := group.NewAccessChecker(groupUsrs)
+	getRoot := node.NewGetRootNodesUseCase(nodes, groups, logger)
+	getNode := node.NewGetNodeByIDUseCase(accessChecker, nodes, docs, logger)
+	createNodeFolder := node.NewCreateNodeFolderUseCase(accessChecker, nodes)
 	createNodeFile := node.NewCreateDocUseCase(
-		docRepository,
-		nodeRepository,
+		docs,
+		nodes,
 		accessChecker,
-		nodeFileTxFactory,
+		createNodeFileTx,
 		fileStorage,
 		logger,
 	)
-	deleteNode := node.NewDeleteNodeUseCase(accessChecker, nodeRepository, docRepository, fileStorage, logger)
-	deleteNodeFile := node.NewDeleteDocUseCase(accessChecker, fileStorage, docRepository, nodeRepository, logger)
-	downloadNodeFile := node.NewDownloadDocUseCase(accessChecker, nodeRepository, docRepository, fileStorage)
-	getNodeComments := node.NewGetNodeCommentsUseCase(accessChecker, nodeRepository, nodeCommentRepository)
-	createNodeComment := node.NewCreateNodeCommentUseCase(accessChecker, nodeRepository, nodeCommentRepository, logger)
-	updateNodeComment := node.NewUpdateNodeCommentUseCase(nodeCommentRepository)
-	deleteNodeComment := node.NewDeleteNodeCommentUseCase(accessChecker, nodeRepository, nodeCommentRepository)
+	deleteNode := node.NewDeleteNodeUseCase(accessChecker, nodes, docs, fileStorage, logger)
+	deleteNodeFile := node.NewDeleteDocUseCase(accessChecker, fileStorage, docs, nodes, logger)
+	downloadNodeFile := node.NewDownloadDocUseCase(accessChecker, nodes, docs, fileStorage)
+	getNodeComments := node.NewGetNodeCommentsUseCase(accessChecker, nodes, nodeComments)
+	createNodeComment := node.NewCreateNodeCommentUseCase(accessChecker, nodes, nodeComments, logger)
+	updateNodeComment := node.NewUpdateNodeCommentUseCase(nodeComments)
+	deleteNodeComment := node.NewDeleteNodeCommentUseCase(accessChecker, nodes, nodeComments)
 	nodeHandler := httpapi.NewNodeHandler(
 		getRoot,
 		getNode,
@@ -192,26 +141,14 @@ func main() {
 		createNodeComment,
 		updateNodeComment,
 		deleteNodeComment,
+		am,
 	)
-	nodeRouter := chi.NewRouter()
-	nodeRouter.Get("/", authMiddleware.IsAuthenticated(nodeHandler.GetRootHandler))
-	nodeRouter.Post("/", authMiddleware.IsAuthenticated(nodeHandler.CreateFolderHandler))
-	nodeRouter.Get("/{nodeID}", authMiddleware.IsAuthenticated(nodeHandler.GetNodeHandler))
-	nodeRouter.Get("/{nodeID}/comments", authMiddleware.IsAuthenticated(nodeHandler.GetNodeCommentsHandler))
-	nodeRouter.Post("/{nodeID}/comments", authMiddleware.IsAuthenticated(nodeHandler.CreateNodeCommentHandler))
 
-	commentRouter := chi.NewRouter()
-	commentRouter.Patch("/{nodeCommentID}", authMiddleware.IsAuthenticated(nodeHandler.UpdateNodeCommentHandler))
-	commentRouter.Delete("/{nodeCommentID}", authMiddleware.IsAuthenticated(nodeHandler.DeleteNodeCommentHandler))
+	// MAIN ROUTER
 
-	docRouter := chi.NewRouter()
-	docRouter.Post("/", authMiddleware.IsAuthenticated(nodeHandler.CreateNodeFileHandler))
-	docRouter.Delete("/{docID}", authMiddleware.IsAuthenticated(nodeHandler.DeleteDocHandler))
-	docRouter.Get("/{docID}/download", authMiddleware.IsAuthenticated(nodeHandler.DownloadNodeFileHandler))
-
-	router := chi.NewRouter()
+	r := chi.NewRouter()
 	if cfg.Mode == "local" {
-		router.Use(cors.Handler(cors.Options{
+		r.Use(cors.Handler(cors.Options{
 			AllowedOrigins:   []string{"http://localhost:5173"},
 			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 			AllowedHeaders:   []string{"Accept", "Content-Type"},
@@ -220,21 +157,20 @@ func main() {
 		}))
 	}
 
-	router.Mount("/api/v1/groups", groupRouter)
-	router.Mount("/api/v1/usrs", usrRouter)
-	router.Mount("/api/v1/nodes", nodeRouter)
-	router.Mount("/api/v1/comments", commentRouter)
-	router.Mount("/api/v1/docs", docRouter)
+	authhHandler.MountV1(r)
+	groupHandler.MountV1(r)
+	usrHandler.MountV1(r)
+	nodeHandler.MountV1(r)
 
 	if cfg.ServeWebApp {
-		router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/dist/assets"))))
-		router.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/dist/assets"))))
+		r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, "web/dist/index.html")
 		}))
 	}
 
 	logger.Info("server starting", "mode", cfg.Mode, "port", cfg.Port, "serveWebApp", cfg.ServeWebApp)
-	if err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), router); err != nil {
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), r); err != nil {
 		logger.Error("server stopped", "err", err)
 		os.Exit(1)
 	}

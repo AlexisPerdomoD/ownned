@@ -105,7 +105,7 @@ func AppError(err *apperror.AppError) *ErrView {
 
 func errView(err error) *ErrView {
 	if err == nil {
-		eLog.Warn("empty error provided", "stack", debug.Stack())
+		elog.Warn("empty error provided", "stack", debug.Stack())
 		return &ErrView{}
 	}
 
@@ -123,7 +123,7 @@ func errView(err error) *ErrView {
 	if errors.As(err, &appErr) {
 		view := AppError(appErr)
 		if view.Code >= 500 {
-			eLog.Error("error happened", "err", err, "stack", debug.Stack())
+			elog.Error("error happened", "err", err, "stack", debug.Stack())
 		}
 		return view
 	}
@@ -133,7 +133,7 @@ func errView(err error) *ErrView {
 		return ValidationError(validationErrors)
 	}
 
-	eLog.Error("unexpected error happened", "err", err, "stack", debug.Stack())
+	elog.Error("unexpected error happened", "err", err, "stack", debug.Stack())
 
 	return &ErrView{
 		Code:    http.StatusInternalServerError,

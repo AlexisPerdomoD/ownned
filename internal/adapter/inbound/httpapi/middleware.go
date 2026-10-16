@@ -43,7 +43,7 @@ func (m *AuthMiddleware) getSessionFromBearer(r *http.Request) (*identity.Identi
 	return session, nil
 }
 
-func (m *AuthMiddleware) IsAuthenticated(next http.HandlerFunc) http.HandlerFunc {
+func (m *AuthMiddleware) IsAuthenticated(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		session, err := m.getSessionFromBearer(r)
 		if err != nil {
@@ -53,11 +53,11 @@ func (m *AuthMiddleware) IsAuthenticated(next http.HandlerFunc) http.HandlerFunc
 		}
 
 		ctx := identity.Set(r.Context(), *session)
-		next(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func (m *AuthMiddleware) IsSuperUsr(next http.HandlerFunc) http.HandlerFunc {
+func (m *AuthMiddleware) IsSuperUsr(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		session, err := m.getSessionFromBearer(r)
 		if err != nil {
@@ -74,11 +74,11 @@ func (m *AuthMiddleware) IsSuperUsr(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		ctx := identity.Set(r.Context(), *session)
-		next(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func (m *AuthMiddleware) IsNotLimitedUsr(next http.HandlerFunc) http.HandlerFunc {
+func (m *AuthMiddleware) IsNotLimitedUsr(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		session, err := m.getSessionFromBearer(r)
 		if err != nil {
@@ -96,7 +96,7 @@ func (m *AuthMiddleware) IsNotLimitedUsr(next http.HandlerFunc) http.HandlerFunc
 		}
 
 		ctx := identity.Set(r.Context(), *session)
-		next(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

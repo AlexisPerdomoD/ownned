@@ -10,6 +10,6 @@ func writeJSON(w http.ResponseWriter, code int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	if err := json.NewEncoder(w).Encode(body); err != nil {
-
+		elog.Error("failed to write json response", "err", err)
 	}
 }
