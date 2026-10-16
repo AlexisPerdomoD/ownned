@@ -58,7 +58,7 @@ func NewNodeHandler(
 	}
 }
 
-func (c *NodeHandler) GetRootHandler(w http.ResponseWriter, r *http.Request) {
+func (c *NodeHandler) getRootHandler(w http.ResponseWriter, r *http.Request) {
 	nodes, err := c.getRoot.Execute(r.Context())
 	if err != nil {
 		resp := errView(err)
@@ -68,19 +68,19 @@ func (c *NodeHandler) GetRootHandler(w http.ResponseWriter, r *http.Request) {
 
 	views := make([]NodeView, len(nodes))
 	for i := range nodes {
-		views[i] = FolderViewFromDomain(&nodes[i], nil)
+		views[i] = nodeFolderViewFromDomain(&nodes[i], nil)
 	}
 
 	writeJSON(w, http.StatusOK, views)
 }
 
-func (c *NodeHandler) PaginateNodeHandler(w http.ResponseWriter, r *http.Request) {
+func (c *NodeHandler) paginateNodeHandler(w http.ResponseWriter, r *http.Request) {
 	err := apperror.ErrNotImplemented(nil)
 	resp := errView(err)
 	writeJSON(w, resp.Code, resp)
 }
 
-func (c *NodeHandler) GetNodeHandler(w http.ResponseWriter, r *http.Request) {
+func (c *NodeHandler) getNodeHandler(w http.ResponseWriter, r *http.Request) {
 	nodeID, err := uuid.Parse(chi.URLParam(r, "nodeID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -99,14 +99,14 @@ func (c *NodeHandler) GetNodeHandler(w http.ResponseWriter, r *http.Request) {
 
 	if isFolder, children := node.Folder(); isFolder {
 		writeJSON(w, http.StatusOK,
-			FolderViewFromDomain(node.Get(), children),
+			nodeFolderViewFromDomain(node.Get(), children),
 		)
 		return
 	}
 
 	if isFile, doc := node.File(); isFile {
 		writeJSON(w, http.StatusOK,
-			FileViewFromDomain(node.Get(), doc),
+			nodeFileViewFromDomain(node.Get(), doc),
 		)
 		return
 	}
@@ -117,19 +117,19 @@ func (c *NodeHandler) GetNodeHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, resp.Code, resp)
 }
 
-func (h *NodeHandler) DownloadNodeFolderHandler(w http.ResponseWriter, r *http.Request) {
+func (h *NodeHandler) downloadNodeFolderHandler(w http.ResponseWriter, r *http.Request) {
 	err := apperror.ErrNotImplemented(nil)
 	resp := errView(err)
 	writeJSON(w, resp.Code, resp)
 }
 
-func (h *NodeHandler) PaginateDocHandler(w http.ResponseWriter, r *http.Request) {
+func (h *NodeHandler) paginateDocHandler(w http.ResponseWriter, r *http.Request) {
 	err := apperror.ErrNotImplemented(nil)
 	resp := errView(err)
 	writeJSON(w, resp.Code, resp)
 }
 
-func (c *NodeHandler) CreateFolderHandler(w http.ResponseWriter, r *http.Request) {
+func (c *NodeHandler) createFolderHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = r.Body.Close() }()
 
 	body, err := parseJSON[node.CreateNodeFolderDTO](r.Body, validationStruct)
@@ -146,10 +146,10 @@ func (c *NodeHandler) CreateFolderHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, FolderViewFromDomain(folder, nil))
+	writeJSON(w, http.StatusCreated, nodeFolderViewFromDomain(folder, nil))
 }
 
-func (h *NodeHandler) CreateNodeFileHandler(w http.ResponseWriter, r *http.Request) {
+func (h *NodeHandler) createNodeFileHandler(w http.ResponseWriter, r *http.Request) {
 	dto, err := parseCreateNodeFileDTOMultipart(r)
 	if err != nil {
 		resp := errView(err)
@@ -168,17 +168,17 @@ func (h *NodeHandler) CreateNodeFileHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	resp := FileViewFromDomain(node, doc)
+	resp := nodeFileViewFromDomain(node, doc)
 	writeJSON(w, http.StatusCreated, resp)
 }
 
-func (h *NodeHandler) UpdateNodeHandler(w http.ResponseWriter, r *http.Request) {
+func (h *NodeHandler) updateNodeHandler(w http.ResponseWriter, r *http.Request) {
 	err := apperror.ErrNotImplemented(nil)
 	resp := errView(err)
 	writeJSON(w, resp.Code, resp)
 }
 
-func (h *NodeHandler) DeleteNodeHandler(w http.ResponseWriter, r *http.Request) {
+func (h *NodeHandler) deleteNodeHandler(w http.ResponseWriter, r *http.Request) {
 	nodeID, err := uuid.Parse(chi.URLParam(r, "nodeID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -197,7 +197,7 @@ func (h *NodeHandler) DeleteNodeHandler(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *NodeHandler) DownloadNodeFileHandler(w http.ResponseWriter, r *http.Request) {
+func (h *NodeHandler) downloadNodeFileHandler(w http.ResponseWriter, r *http.Request) {
 	docID, err := uuid.Parse(chi.URLParam(r, "docID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -260,7 +260,7 @@ func (h *NodeHandler) DownloadNodeFileHandler(w http.ResponseWriter, r *http.Req
 	_, _ = io.Copy(w, file)
 }
 
-func (h *NodeHandler) DeleteDocHandler(w http.ResponseWriter, r *http.Request) {
+func (h *NodeHandler) deleteDocHandler(w http.ResponseWriter, r *http.Request) {
 	docID, err := uuid.Parse(chi.URLParam(r, "docID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -278,10 +278,10 @@ func (h *NodeHandler) DeleteDocHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK,
-		FileViewFromDomain(node, doc))
+		nodeFileViewFromDomain(node, doc))
 }
 
-func (h *NodeHandler) GetNodeCommentsHandler(w http.ResponseWriter, r *http.Request) {
+func (h *NodeHandler) getNodeCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	nodeID, err := uuid.Parse(chi.URLParam(r, "nodeID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -300,13 +300,13 @@ func (h *NodeHandler) GetNodeCommentsHandler(w http.ResponseWriter, r *http.Requ
 
 	views := make([]NodeCommentView, len(comments))
 	for i, c := range comments {
-		views[i] = NodeCommentViewFromDomain(&c)
+		views[i] = nodeCommentViewFromDomain(&c)
 	}
 
 	writeJSON(w, http.StatusOK, views)
 }
 
-func (h *NodeHandler) CreateNodeCommentHandler(w http.ResponseWriter, r *http.Request) {
+func (h *NodeHandler) createNodeCommentHandler(w http.ResponseWriter, r *http.Request) {
 	nodeID, err := uuid.Parse(chi.URLParam(r, "nodeID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -332,10 +332,10 @@ func (h *NodeHandler) CreateNodeCommentHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, NodeCommentViewFromDomain(comment))
+	writeJSON(w, http.StatusCreated, nodeCommentViewFromDomain(comment))
 }
 
-func (h *NodeHandler) UpdateNodeCommentHandler(w http.ResponseWriter, r *http.Request) {
+func (h *NodeHandler) updateNodeCommentHandler(w http.ResponseWriter, r *http.Request) {
 	nodeCommentID, err := uuid.Parse(chi.URLParam(r, "nodeCommentID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -361,10 +361,10 @@ func (h *NodeHandler) UpdateNodeCommentHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	writeJSON(w, http.StatusOK, NodeCommentViewFromDomain(comment))
+	writeJSON(w, http.StatusOK, nodeCommentViewFromDomain(comment))
 }
 
-func (h *NodeHandler) DeleteNodeCommentHandler(w http.ResponseWriter, r *http.Request) {
+func (h *NodeHandler) deleteNodeCommentHandler(w http.ResponseWriter, r *http.Request) {
 	nodeCommentID, err := uuid.Parse(chi.URLParam(r, "nodeCommentID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -380,7 +380,7 @@ func (h *NodeHandler) DeleteNodeCommentHandler(w http.ResponseWriter, r *http.Re
 		writeJSON(w, resp.Code, resp)
 		return
 	}
-	writeJSON(w, http.StatusOK, NodeCommentViewFromDomain(comment))
+	writeJSON(w, http.StatusOK, nodeCommentViewFromDomain(comment))
 }
 
 // MountV1 mounts the NodeHandler to the given parent chi.Router .
@@ -389,35 +389,35 @@ func (h *NodeHandler) MountV1(p chi.Router) {
 	r := chi.NewRouter()
 	r.Use(h.am.IsAuthenticated)
 
-	r.Get("/", h.GetRootHandler)
+	r.Get("/", h.getRootHandler)
 
-	r.Post("/", h.CreateFolderHandler)
+	r.Post("/", h.createFolderHandler)
 
-	r.Get("/{nodeID}", h.GetNodeHandler)
+	r.Get("/{nodeID}", h.getNodeHandler)
 
-	r.Put("/{nodeID}", h.UpdateNodeHandler)
+	r.Put("/{nodeID}", h.updateNodeHandler)
 
-	r.Delete("/{nodeID}", h.DeleteNodeHandler)
+	r.Delete("/{nodeID}", h.deleteNodeHandler)
 
-	r.Get("/{nodeID}/download", h.DownloadNodeFolderHandler)
+	r.Get("/{nodeID}/download", h.downloadNodeFolderHandler)
 
-	r.Get("/paginate", h.PaginateNodeHandler)
+	r.Get("/paginate", h.paginateNodeHandler)
 
-	r.Get("/{nodeID}/comments", h.GetNodeCommentsHandler)
+	r.Get("/{nodeID}/comments", h.getNodeCommentsHandler)
 
-	r.Post("/{nodeID}/comments", h.CreateNodeCommentHandler)
+	r.Post("/{nodeID}/comments", h.createNodeCommentHandler)
 
-	r.Patch("/comments/{nodeCommentID}", h.UpdateNodeCommentHandler)
+	r.Patch("/comments/{nodeCommentID}", h.updateNodeCommentHandler)
 
-	r.Delete("/comments/{nodeCommentID}", h.DeleteNodeCommentHandler)
+	r.Delete("/comments/{nodeCommentID}", h.deleteNodeCommentHandler)
 
-	r.Post("/docs", h.CreateNodeFileHandler)
+	r.Post("/docs", h.createNodeFileHandler)
 
-	r.Get("/docs/{docID}/download", h.DownloadNodeFileHandler)
+	r.Get("/docs/{docID}/download", h.downloadNodeFileHandler)
 
-	r.Delete("/docs/{docID}", h.DeleteDocHandler)
+	r.Delete("/docs/{docID}", h.deleteDocHandler)
 
-	r.Get("/docs/paginate", h.PaginateDocHandler)
+	r.Get("/docs/paginate", h.paginateDocHandler)
 
 	p.Mount("/api/v1/nodes", r)
 }

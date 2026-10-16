@@ -37,7 +37,7 @@ func NewUsrHandler(
 	}
 }
 
-func (c *UsrHandler) GetMeHandler(w http.ResponseWriter, r *http.Request) {
+func (c *UsrHandler) getMeHandler(w http.ResponseWriter, r *http.Request) {
 	usr, err := c.getMe.Execute(r.Context())
 	if err != nil {
 		resp := errView(err)
@@ -45,10 +45,10 @@ func (c *UsrHandler) GetMeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, UsrViewFromDomain(usr))
+	writeJSON(w, http.StatusOK, usrViewFromDomain(usr))
 }
 
-func (c *UsrHandler) GetUsrHandler(w http.ResponseWriter, r *http.Request) {
+func (c *UsrHandler) getUsrHandler(w http.ResponseWriter, r *http.Request) {
 	usrID, err := uuid.Parse(chi.URLParam(r, "usrID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -65,10 +65,10 @@ func (c *UsrHandler) GetUsrHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, UsrViewFromDomain(usr))
+	writeJSON(w, http.StatusOK, usrViewFromDomain(usr))
 }
 
-func (c *UsrHandler) PaginateUsrHandler(w http.ResponseWriter, r *http.Request) {
+func (c *UsrHandler) paginateUsrHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
 	var page, limit uint
@@ -100,13 +100,10 @@ func (c *UsrHandler) PaginateUsrHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// resp := res.Map(UsrViewFromDomain)
-	writeJSON(w,
-		http.StatusOK,
-		paginationMap(res, UsrViewFromDomain))
+	writeJSON(w, http.StatusOK, res.Map(usrViewFromDomain))
 }
 
-func (c *UsrHandler) CreateUsrHandler(w http.ResponseWriter, r *http.Request) {
+func (c *UsrHandler) createUsrHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = r.Body.Close() }()
 
 	body, err := parseJSON[usr.CreateUsrDTO](r.Body, validationStruct)
@@ -123,7 +120,7 @@ func (c *UsrHandler) CreateUsrHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, UsrViewFromDomain(usr))
+	writeJSON(w, http.StatusCreated, usrViewFromDomain(usr))
 }
 
 // MountV1 mounts the UsrHandler to the given parent chi.Router .
@@ -131,13 +128,13 @@ func (c *UsrHandler) CreateUsrHandler(w http.ResponseWriter, r *http.Request) {
 func (c *UsrHandler) MountV1(p chi.Router) {
 	r := chi.NewRouter()
 
-	r.With(c.am.IsAuthenticated).Get("/me", c.GetMeHandler)
+	r.With(c.am.IsAuthenticated).Get("/me", c.getMeHandler)
 
-	r.With(c.am.IsAuthenticated).Get("/{usrID}", c.GetUsrHandler)
+	r.With(c.am.IsAuthenticated).Get("/{usrID}", c.getUsrHandler)
 
-	r.With(c.am.IsAuthenticated).Get("/paginate", c.PaginateUsrHandler)
+	r.With(c.am.IsAuthenticated).Get("/paginate", c.paginateUsrHandler)
 
-	r.With(c.am.IsSuperUsr).Post("/", c.CreateUsrHandler)
+	r.With(c.am.IsSuperUsr).Post("/", c.createUsrHandler)
 
 	p.Mount("/api/v1/usrs", r)
 }

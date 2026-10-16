@@ -41,10 +41,10 @@ type PaginationResult[T any] struct {
 	TotalCount uint `json:"total_count"`
 }
 
-func (r *PaginationResult[T]) Map[V any](mapper func(*T) V) PaginationResult[V] {
+func (r *PaginationResult[T]) Map[V any](m func(*T) V) PaginationResult[V] {
 	data := make([]V, 0, len(r.Data))
 	for i := range r.Data {
-		data = append(data, mapper(&r.Data[i]))
+		data = append(data, m(&r.Data[i]))
 	}
 
 	return PaginationResult[V]{

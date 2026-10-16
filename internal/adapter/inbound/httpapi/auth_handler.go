@@ -53,7 +53,7 @@ func (c *AuthHandler) LoginPwdHandler(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   3600,
 	})
 
-	writeJSON(w, http.StatusCreated, UsrViewFromDomain(usr))
+	writeJSON(w, http.StatusCreated, usrViewFromDomain(usr))
 }
 
 func (c *AuthHandler) LogoutUsrHandler(w http.ResponseWriter, r *http.Request) {

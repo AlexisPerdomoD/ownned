@@ -11,7 +11,6 @@ import (
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/auth"
 	"ownned/internal/app/group"
-	"ownned/internal/app/pagination"
 	"ownned/internal/domain"
 
 	"github.com/go-playground/validator/v10"
@@ -23,8 +22,10 @@ type ErrView struct {
 	Detail  map[string]string `json:"detail"`
 }
 
-func ValidationError(err validator.ValidationErrors) *ErrView {
+func validationError(err validator.ValidationErrors) *ErrView {
 	detail := make(map[string]string)
+
+	detail["reason"] = "Some fields were invalid on validation process"
 
 	for _, fe := range err {
 		detail[fe.Field()] = fmt.Sprintf("failed on %s, %s", fe.Tag(), fe.Error())
@@ -37,7 +38,7 @@ func ValidationError(err validator.ValidationErrors) *ErrView {
 	}
 }
 
-func AppError(err *apperror.AppError) *ErrView {
+func appError(err *apperror.AppError) *ErrView {
 	switch err.Kind {
 	case apperror.ErrNotFoundInstance:
 		return &ErrView{
@@ -88,6 +89,11 @@ func AppError(err *apperror.AppError) *ErrView {
 			Detail:  err.Detail,
 		}
 	case apperror.ErrNotImplementedInstance:
+		if err.Detail == nil {
+			err.Detail = make(map[string]string)
+			err.Detail["reason"] = "This resource is not implemented yet"
+		}
+
 		return &ErrView{
 			Code:    http.StatusNotImplemented,
 			Message: "not implemented yet :(",
@@ -95,6 +101,12 @@ func AppError(err *apperror.AppError) *ErrView {
 		}
 
 	default:
+
+		if err.Detail == nil {
+			err.Detail = make(map[string]string)
+			err.Detail["reason"] = "Some unknown error has happend, please report it."
+		}
+
 		return &ErrView{
 			Code:    http.StatusInternalServerError,
 			Message: "unknown error",
@@ -119,18 +131,16 @@ func errView(err error) *ErrView {
 		}
 	}
 
-	var appErr *apperror.AppError
-	if errors.As(err, &appErr) {
-		view := AppError(appErr)
+	if appErr, ok := errors.AsType[*apperror.AppError](err); ok {
+		view := appError(appErr)
 		if view.Code >= 500 {
 			elog.Error("error happened", "err", err, "stack", debug.Stack())
 		}
 		return view
 	}
 
-	var validationErrors validator.ValidationErrors
-	if errors.As(err, &validationErrors) {
-		return ValidationError(validationErrors)
+	if validationErrors, ok := errors.AsType[validator.ValidationErrors](err); ok {
+		return validationError(validationErrors)
 	}
 
 	elog.Error("unexpected error happened", "err", err, "stack", debug.Stack())
@@ -159,7 +169,7 @@ type UsrGroupAccessView struct {
 	AssignDate  time.Time             `json:"assign_date"`
 }
 
-func UsrViewFromDomain(usr *domain.Usr) UsrView {
+func usrViewFromDomain(usr *domain.Usr) UsrView {
 	if usr == nil {
 		return UsrView{}
 	}
@@ -175,13 +185,13 @@ func UsrViewFromDomain(usr *domain.Usr) UsrView {
 	}
 }
 
-func UsrGroupAccessViewFromDomain(usr *domain.UsrGroupAccess) UsrGroupAccessView {
+func usrGroupAccessViewFromDomain(usr *domain.UsrGroupAccess) UsrGroupAccessView {
 	if usr == nil {
 		return UsrGroupAccessView{}
 	}
 
 	return UsrGroupAccessView{
-		UsrView:     UsrViewFromDomain(&usr.Usr),
+		UsrView:     usrViewFromDomain(&usr.Usr),
 		Access:      usr.Access,
 		AccessTitle: usr.Access.String(),
 		AssignDate:  usr.AssignDate,
@@ -200,7 +210,7 @@ type DocView struct {
 	UpdatedAt   time.Time     `json:"updated_at"`
 }
 
-func DocViewFromDomain(d *domain.Doc) DocView {
+func docViewFromDomain(d *domain.Doc) DocView {
 	if d == nil {
 		return DocView{}
 	}
@@ -231,7 +241,7 @@ type NodeView struct {
 	Doc         *DocView        `json:"doc,omitempty"`
 }
 
-func NodeViewFromDomain(n *domain.Node) NodeView {
+func nodeViewFromDomain(n *domain.Node) NodeView {
 	if n == nil {
 		return NodeView{}
 	}
@@ -247,14 +257,14 @@ func NodeViewFromDomain(n *domain.Node) NodeView {
 	}
 }
 
-func FolderViewFromDomain(n *domain.Node, chldr []domain.Node) NodeView {
+func nodeFolderViewFromDomain(n *domain.Node, chldr []domain.Node) NodeView {
 	if n == nil {
 		return NodeView{}
 	}
 
 	chldrView := make([]NodeView, len(chldr))
 	for i, c := range chldr {
-		chldrView[i] = FolderViewFromDomain(&c, nil)
+		chldrView[i] = nodeFolderViewFromDomain(&c, nil)
 	}
 
 	return NodeView{
@@ -270,11 +280,11 @@ func FolderViewFromDomain(n *domain.Node, chldr []domain.Node) NodeView {
 	}
 }
 
-func FileViewFromDomain(n *domain.Node, doc *domain.Doc) NodeView {
+func nodeFileViewFromDomain(n *domain.Node, doc *domain.Doc) NodeView {
 	if n == nil {
 		return NodeView{}
 	}
-	docView := DocViewFromDomain(doc)
+	docView := docViewFromDomain(doc)
 	return NodeView{
 		ID:          n.ID,
 		UsrID:       n.UsrID,
@@ -297,7 +307,7 @@ type NodeCommentView struct {
 	UpdatedAt time.Time            `json:"updated_at"`
 }
 
-func NodeCommentViewFromDomain(c *domain.NodeComment) NodeCommentView {
+func nodeCommentViewFromDomain(c *domain.NodeComment) NodeCommentView {
 	if c == nil {
 		return NodeCommentView{}
 	}
@@ -326,7 +336,7 @@ type PopulateGroupView struct {
 	Usrs  []UsrGroupAccessView `json:"usrs"`
 }
 
-func GroupViewFromDomain(group *domain.Group) GroupView {
+func groupViewFromDomain(group *domain.Group) GroupView {
 	if group == nil {
 		return GroupView{}
 	}
@@ -341,42 +351,24 @@ func GroupViewFromDomain(group *domain.Group) GroupView {
 	}
 }
 
-func PopulateGroupViewFromDomain(p *group.PopulateGroup) PopulateGroupView {
+func populateGroupViewFromDomain(p *group.PopulateGroup) PopulateGroupView {
 	if p == nil {
 		return PopulateGroupView{}
 	}
 
 	nodesView := make([]NodeView, len(p.Nodes))
 	for i := range p.Nodes {
-		nodesView[i] = NodeViewFromDomain(&p.Nodes[i])
+		nodesView[i] = nodeViewFromDomain(&p.Nodes[i])
 	}
 
 	usrsView := make([]UsrGroupAccessView, len(p.Usrs))
 	for i := range p.Usrs {
-		usrsView[i] = UsrGroupAccessViewFromDomain(&p.Usrs[i])
+		usrsView[i] = usrGroupAccessViewFromDomain(&p.Usrs[i])
 	}
 
 	return PopulateGroupView{
-		GroupView: GroupViewFromDomain(&p.Group),
+		GroupView: groupViewFromDomain(&p.Group),
 		Nodes:     nodesView,
 		Usrs:      usrsView,
-	}
-}
-
-func paginationMap[Source any, Target any](
-	res *pagination.PaginationResult[Source],
-	to func(*Source) Target,
-) pagination.PaginationResult[Target] {
-	views := make([]Target, 0, len(res.Data))
-	for _, t := range res.Data {
-		views = append(views, to(&t))
-	}
-
-	return pagination.PaginationResult[Target]{
-		Data:       views,
-		Page:       res.Page,
-		Limit:      res.Limit,
-		TotalPages: res.TotalPages,
-		TotalCount: res.TotalCount,
 	}
 }

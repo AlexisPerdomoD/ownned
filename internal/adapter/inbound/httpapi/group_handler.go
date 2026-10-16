@@ -53,7 +53,7 @@ func NewGroupHandler(
 	}
 }
 
-func (h *GroupHandler) GetGroupHandler(w http.ResponseWriter, r *http.Request) {
+func (h *GroupHandler) getGroupHandler(w http.ResponseWriter, r *http.Request) {
 	groupID, err := uuid.Parse(chi.URLParam(r, "groupID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -71,10 +71,10 @@ func (h *GroupHandler) GetGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, PopulateGroupViewFromDomain(group))
+	writeJSON(w, http.StatusOK, populateGroupViewFromDomain(group))
 }
 
-func (h *GroupHandler) PaginateGroupHandler(w http.ResponseWriter, r *http.Request) {
+func (h *GroupHandler) paginateGroupHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	var limit, page uint
 	search := q.Get("search")
@@ -104,10 +104,10 @@ func (h *GroupHandler) PaginateGroupHandler(w http.ResponseWriter, r *http.Reque
 
 	writeJSON(w,
 		http.StatusOK,
-		paginationMap(res, GroupViewFromDomain))
+		res.Map(groupViewFromDomain))
 }
 
-func (h *GroupHandler) CreateGroupHandler(w http.ResponseWriter, r *http.Request) {
+func (h *GroupHandler) createGroupHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = r.Body.Close() }()
 	body, err := parseJSON[group.CreateGroupDTO](r.Body, validationStruct)
 	if err != nil {
@@ -123,10 +123,10 @@ func (h *GroupHandler) CreateGroupHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, GroupViewFromDomain(group))
+	writeJSON(w, http.StatusCreated, groupViewFromDomain(group))
 }
 
-func (h *GroupHandler) UpdateGroupHandler(w http.ResponseWriter, r *http.Request) {
+func (h *GroupHandler) updateGroupHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = r.Body.Close() }()
 
 	groupID, err := uuid.Parse(chi.URLParam(r, "groupID"))
@@ -151,10 +151,10 @@ func (h *GroupHandler) UpdateGroupHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	writeJSON(w, http.StatusOK, GroupViewFromDomain(group))
+	writeJSON(w, http.StatusOK, groupViewFromDomain(group))
 }
 
-func (h *GroupHandler) DeleteGroupHandler(w http.ResponseWriter, r *http.Request) {
+func (h *GroupHandler) deleteGroupHandler(w http.ResponseWriter, r *http.Request) {
 	groupID, err := uuid.Parse(chi.URLParam(r, "groupID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -171,10 +171,10 @@ func (h *GroupHandler) DeleteGroupHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	writeJSON(w, http.StatusOK, GroupViewFromDomain(group))
+	writeJSON(w, http.StatusOK, groupViewFromDomain(group))
 }
 
-func (h *GroupHandler) CreateGroupNodeHandler(w http.ResponseWriter, r *http.Request) {
+func (h *GroupHandler) createGroupNodeHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = r.Body.Close() }()
 
 	groupID, err := uuid.Parse(chi.URLParam(r, "groupID"))
@@ -206,7 +206,7 @@ func (h *GroupHandler) CreateGroupNodeHandler(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusOK, resp)
 }
 
-func (h *GroupHandler) DeleteGroupNodeHandler(w http.ResponseWriter, r *http.Request) {
+func (h *GroupHandler) deleteGroupNodeHandler(w http.ResponseWriter, r *http.Request) {
 	groupID, err := uuid.Parse(chi.URLParam(r, "groupID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -236,7 +236,7 @@ func (h *GroupHandler) DeleteGroupNodeHandler(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusOK, resp)
 }
 
-func (h *GroupHandler) UpsertGroupUsrHandler(w http.ResponseWriter, r *http.Request) {
+func (h *GroupHandler) upsertGroupUsrHandler(w http.ResponseWriter, r *http.Request) {
 	groupID, err := uuid.Parse(chi.URLParam(r, "groupID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -267,7 +267,7 @@ func (h *GroupHandler) UpsertGroupUsrHandler(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, resp)
 }
 
-func (h *GroupHandler) DeleteGroupUsrHandler(w http.ResponseWriter, r *http.Request) {
+func (h *GroupHandler) deleteGroupUsrHandler(w http.ResponseWriter, r *http.Request) {
 	groupID, err := uuid.Parse(chi.URLParam(r, "groupID"))
 	if err != nil {
 		detail := make(map[string]string)
@@ -303,23 +303,23 @@ func (h *GroupHandler) MountV1(p chi.Router) {
 	r := chi.NewRouter()
 	r.Use(h.am.IsAuthenticated)
 
-	r.Post("/", h.CreateGroupHandler)
+	r.Post("/", h.createGroupHandler)
 
-	r.Get("/{groupID}", h.GetGroupHandler)
+	r.Get("/{groupID}", h.getGroupHandler)
 
-	r.Patch("/{groupID}", h.UpdateGroupHandler)
+	r.Patch("/{groupID}", h.updateGroupHandler)
 
-	r.Delete("/{groupID}", h.DeleteGroupHandler)
+	r.Delete("/{groupID}", h.deleteGroupHandler)
 
-	r.Get("/paginate", h.PaginateGroupHandler)
+	r.Get("/paginate", h.paginateGroupHandler)
 
-	r.Post("/{groupID}/nodes", h.CreateGroupNodeHandler)
+	r.Post("/{groupID}/nodes", h.createGroupNodeHandler)
 
-	r.Delete("/{groupID}/nodes/{nodeID}", h.DeleteGroupNodeHandler)
+	r.Delete("/{groupID}/nodes/{nodeID}", h.deleteGroupNodeHandler)
 
-	r.Post("/{groupID}/users", h.UpsertGroupUsrHandler)
+	r.Post("/{groupID}/users", h.upsertGroupUsrHandler)
 
-	r.Delete("/{groupID}/users/{usrID}", h.DeleteGroupUsrHandler)
+	r.Delete("/{groupID}/users/{usrID}", h.deleteGroupUsrHandler)
 
 	p.Mount("/api/v1/groups", r)
 }
