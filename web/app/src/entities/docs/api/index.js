@@ -48,7 +48,7 @@ export const buildCreateDocDTO = CreateDocDTO.build
  * @returns {Promise<import('@/entities/nodes').Doc>}
  */
 export async function apiDeleteDoc(docId) {
-    const res = await fetch(`/api/v1/docs/${docId}`, {
+    const res = await fetch(`/api/v1/nodes/docs/${docId}`, {
         method: 'DELETE',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' }
@@ -70,7 +70,7 @@ export async function apiDeleteDoc(docId) {
  * @param {string} filename
  */
 export async function apiDownloadDoc(docId, filename) {
-    const res = await fetch(`/api/v1/docs/${docId}/download`, {
+    const res = await fetch(`/api/v1/nodes/docs/${docId}/download`, {
         method: 'GET',
         credentials: 'same-origin'
     })

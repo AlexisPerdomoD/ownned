@@ -3,7 +3,7 @@
  * @returns {Promise<{message: string}>}
  */
 export async function apiLogout() {
-    const res = await fetch('/api/v1/usrs/logout', {
+    const res = await fetch('/api/v1/auth/logout', {
         method: 'DELETE',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' }

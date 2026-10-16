@@ -27,7 +27,7 @@ export function useCreateDoc(getParentId, onSuccess) {
             formData.append('file', file)
             formData.append('size', String(file.size))
 
-            const res = await fetch('/api/v1/docs', {
+            const res = await fetch('/api/v1/nodes/docs', {
                 method: 'POST',
                 credentials: 'same-origin',
                 body: formData

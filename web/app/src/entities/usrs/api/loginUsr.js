@@ -60,7 +60,7 @@ export const buildLoginPwdDTO = LoginPwdDTO.build
  *
  */
 export async function apiLogin(dto) {
-    return await reqJSON('/api/v1/usrs/login', {
+    return await reqJSON('/api/v1/auth/login', {
         method: 'POST',
         body: JSON.stringify(dto)
     })
