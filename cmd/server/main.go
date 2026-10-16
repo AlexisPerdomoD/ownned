@@ -66,13 +66,6 @@ func main() {
 	// AUTH USECASES
 	loginPwd := appauth.NewLoginPwdUseCase(usrs, usrPwds, pwdHasher, jwt)
 
-	secure := cfg.Mode != "local"
-	sameSite := http.SameSiteStrictMode
-	if cfg.Mode == "local" {
-		sameSite = http.SameSiteLaxMode
-	}
-	authhHandler := httpapi.NewAuthHandler(loginPwd, httpapi.AuthHandlerConfig{Secure: secure, SameSite: sameSite})
-
 	am := httpapi.NewAuthMiddleware(jwt)
 
 	// GROUP USECASES
@@ -87,29 +80,13 @@ func main() {
 	upsertGroupUsr := group.NewUpsertGroupUsrUseCase(groupUsrs, usrs)
 	deleteGroupUsr := group.NewDeleteGroupUsrUseCase(groupUsrs)
 
-	groupHandler := httpapi.NewGroupHandler(
-		getGroup,
-		paginateGroup,
-		createGroup,
-		updateGroup,
-		deleteGroup,
-		createGroupNode,
-		deleteGroupNode,
-		upsertGroupUsr,
-		deleteGroupUsr,
-		am,
-	)
-
 	// USER USECASES
 	createUsr := usr.NewCreateUsrUseCase(usrs, createUsrTx, pwdHasher, logger)
 	getUsr := usr.NewGetUsrUseCase(usrs)
 	getMe := usr.NewGetMeUseCase(usrs)
 	paginateUsr := usr.NewPaginateUsrUseCase(usrs)
 
-	usrHandler := httpapi.NewUsrHandler(createUsr, getMe, getUsr, paginateUsr, am)
-
 	// NODE USECASES
-
 	accessChecker := group.NewAccessChecker(groupUsrs)
 	getRoot := node.NewGetRootNodesUseCase(nodes, groups, logger)
 	getNode := node.NewGetNodeByIDUseCase(accessChecker, nodes, docs, logger)
@@ -129,7 +106,45 @@ func main() {
 	createNodeComment := node.NewCreateNodeCommentUseCase(accessChecker, nodes, nodeComments, logger)
 	updateNodeComment := node.NewUpdateNodeCommentUseCase(nodeComments)
 	deleteNodeComment := node.NewDeleteNodeCommentUseCase(accessChecker, nodes, nodeComments)
-	nodeHandler := httpapi.NewNodeHandler(
+
+	// MAIN ROUTER
+
+	r := chi.NewRouter()
+
+	if cfg.Mode == "local" {
+		r.Use(cors.Handler(cors.Options{
+			AllowedOrigins:   []string{"http://localhost:5173"},
+			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+			AllowedHeaders:   []string{"Accept", "Content-Type"},
+			AllowCredentials: true,
+			MaxAge:           300,
+		}))
+	}
+
+	secure := cfg.Mode != "local"
+	sameSite := http.SameSiteStrictMode
+	if cfg.Mode == "local" {
+		sameSite = http.SameSiteLaxMode
+	}
+
+	httpapi.NewAuthHandler(loginPwd, httpapi.AuthHandlerConfig{Secure: secure, SameSite: sameSite}).MountV1(r)
+
+	httpapi.NewGroupHandler(
+		getGroup,
+		paginateGroup,
+		createGroup,
+		updateGroup,
+		deleteGroup,
+		createGroupNode,
+		deleteGroupNode,
+		upsertGroupUsr,
+		deleteGroupUsr,
+		am,
+	).MountV1(r)
+
+	httpapi.NewUsrHandler(createUsr, getMe, getUsr, paginateUsr, am).MountV1(r)
+
+	httpapi.NewNodeHandler(
 		getRoot,
 		getNode,
 		downloadNodeFile,
@@ -142,25 +157,7 @@ func main() {
 		updateNodeComment,
 		deleteNodeComment,
 		am,
-	)
-
-	// MAIN ROUTER
-
-	r := chi.NewRouter()
-	if cfg.Mode == "local" {
-		r.Use(cors.Handler(cors.Options{
-			AllowedOrigins:   []string{"http://localhost:5173"},
-			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-			AllowedHeaders:   []string{"Accept", "Content-Type"},
-			AllowCredentials: true,
-			MaxAge:           300,
-		}))
-	}
-
-	authhHandler.MountV1(r)
-	groupHandler.MountV1(r)
-	usrHandler.MountV1(r)
-	nodeHandler.MountV1(r)
+	).MountV1(r)
 
 	if cfg.ServeWebApp {
 		r.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/dist/assets"))))
