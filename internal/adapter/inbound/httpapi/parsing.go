@@ -105,6 +105,7 @@ func parseCreateNodeFileDTOMultipart(r *http.Request) (*node.CreateNodeFileDTO, 
 
 	dto := &node.CreateNodeFileDTO{}
 
+parsing:
 	for {
 		part, err := form.NextPart()
 		if err == io.EOF {
@@ -116,11 +117,13 @@ func parseCreateNodeFileDTOMultipart(r *http.Request) (*node.CreateNodeFileDTO, 
 
 		switch part.FormName() {
 		case "file":
-			// dejamos el part directo como dto.File
+
 			dto.File = part
 			dto.Filename = part.FileName()
 			dto.Mimetype = part.Header.Get("Content-Type")
-			break
+
+			// LAST ELEMENT TO PARSE IS FILE
+			break parsing
 		default:
 			data, err := io.ReadAll(part)
 			if err != nil {
@@ -137,12 +140,12 @@ func parseCreateNodeFileDTOMultipart(r *http.Request) (*node.CreateNodeFileDTO, 
 			case "description":
 				dto.Description = string(data)
 			case "size":
-				size, err := strconv.ParseUint(string(data), 10, 64)
+				expectedSize, err := strconv.ParseUint(string(data), 10, 64)
 				if err != nil {
 					_ = part.Close()
 					return nil, fmt.Errorf("invalid size provided %w", err)
 				}
-				dto.ExpectedSize = size
+				dto.ExpectedSize = expectedSize
 			}
 		}
 	}

@@ -24,8 +24,8 @@ export function useCreateDoc(getParentId, onSuccess) {
             if (dto.description) {
                 formData.append('description', dto.description)
             }
-            formData.append('file', file)
             formData.append('size', String(file.size))
+            formData.append('file', file)
 
             const res = await fetch('/api/v1/nodes/docs', {
                 method: 'POST',
