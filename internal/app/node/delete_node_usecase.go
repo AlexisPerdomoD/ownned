@@ -100,11 +100,7 @@ func (uc *DeleteNodeUseCase) cleanStorage(docs []domain.Doc) {
 	var wg sync.WaitGroup
 
 	for range workers {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			for doc := range jobs {
 				ctx, cancel := context.WithTimeout(
 					context.Background(),
@@ -122,7 +118,7 @@ func (uc *DeleteNodeUseCase) cleanStorage(docs []domain.Doc) {
 
 				cancel()
 			}
-		}()
+		})
 	}
 
 	for _, doc := range docs {

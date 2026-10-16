@@ -2,7 +2,6 @@ package group
 
 import (
 	"context"
-	"fmt"
 
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/identity"
@@ -27,8 +26,8 @@ func NewCreateGroupNodeUseCase(
 func (uc *CreateGroupNodeUseCase) Execute(
 	ctx context.Context,
 	groupID domain.GroupID,
-	nodeID domain.NodeID) error {
-
+	nodeID domain.NodeID,
+) error {
 	usr, err := identity.Get(ctx)
 	if err != nil {
 		return err
@@ -47,7 +46,7 @@ func (uc *CreateGroupNodeUseCase) Execute(
 
 	if !yes {
 		detail := make(map[string]string)
-		detail["reason"] = fmt.Sprintf("User does not have access enough to group")
+		detail["reason"] = "User does not have access enough to group"
 		return apperror.ErrForbidden(detail)
 	}
 
@@ -58,7 +57,7 @@ func (uc *CreateGroupNodeUseCase) Execute(
 
 	if !yes {
 		detail := make(map[string]string)
-		detail["reason"] = fmt.Sprintf("User does not have access enough to node")
+		detail["reason"] = "User does not have access enough to node"
 		return apperror.ErrForbidden(detail)
 	}
 
