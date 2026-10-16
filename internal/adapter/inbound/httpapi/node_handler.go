@@ -74,6 +74,12 @@ func (c *NodeHandler) GetRootHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, views)
 }
 
+func (c *NodeHandler) PaginateNodeHandler(w http.ResponseWriter, r *http.Request) {
+	err := apperror.ErrNotImplemented(nil)
+	resp := errView(err)
+	writeJSON(w, resp.Code, resp)
+}
+
 func (c *NodeHandler) GetNodeHandler(w http.ResponseWriter, r *http.Request) {
 	nodeID, err := uuid.Parse(chi.URLParam(r, "nodeID"))
 	if err != nil {
@@ -108,6 +114,67 @@ func (c *NodeHandler) GetNodeHandler(w http.ResponseWriter, r *http.Request) {
 	detail := make(map[string]string)
 	detail["reason"] = "internal server state error occurred, please try again later"
 	resp := errView(apperror.ErrInternal(detail))
+	writeJSON(w, resp.Code, resp)
+}
+
+func (h *NodeHandler) DownloadNodeFolderHandler(w http.ResponseWriter, r *http.Request) {
+	err := apperror.ErrNotImplemented(nil)
+	resp := errView(err)
+	writeJSON(w, resp.Code, resp)
+}
+
+func (h *NodeHandler) PaginateDocHandler(w http.ResponseWriter, r *http.Request) {
+	err := apperror.ErrNotImplemented(nil)
+	resp := errView(err)
+	writeJSON(w, resp.Code, resp)
+}
+
+func (c *NodeHandler) CreateFolderHandler(w http.ResponseWriter, r *http.Request) {
+	defer func() { _ = r.Body.Close() }()
+
+	body, err := parseJSON[node.CreateNodeFolderDTO](r.Body, validationStruct)
+	if err != nil {
+		resp := errView(err)
+		writeJSON(w, resp.Code, resp)
+		return
+	}
+
+	folder, err := c.createNodeFolder.Execute(r.Context(), *body)
+	if err != nil {
+		resp := errView(err)
+		writeJSON(w, resp.Code, resp)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, FolderViewFromDomain(folder, nil))
+}
+
+func (h *NodeHandler) CreateNodeFileHandler(w http.ResponseWriter, r *http.Request) {
+	dto, err := parseCreateNodeFileDTOMultipart(r)
+	if err != nil {
+		resp := errView(err)
+		writeJSON(w, resp.Code, resp)
+		return
+	}
+
+	defer func() {
+		_ = dto.File.Close()
+	}()
+
+	node, doc, err := h.createNodeFile.Execute(r.Context(), *dto)
+	if err != nil {
+		resp := errView(err)
+		writeJSON(w, resp.Code, resp)
+		return
+	}
+
+	resp := FileViewFromDomain(node, doc)
+	writeJSON(w, http.StatusCreated, resp)
+}
+
+func (h *NodeHandler) UpdateNodeHandler(w http.ResponseWriter, r *http.Request) {
+	err := apperror.ErrNotImplemented(nil)
+	resp := errView(err)
 	writeJSON(w, resp.Code, resp)
 }
 
@@ -191,49 +258,6 @@ func (h *NodeHandler) DownloadNodeFileHandler(w http.ResponseWriter, r *http.Req
 		w.WriteHeader(http.StatusPartialContent)
 	}
 	_, _ = io.Copy(w, file)
-}
-
-func (c *NodeHandler) CreateFolderHandler(w http.ResponseWriter, r *http.Request) {
-	defer func() { _ = r.Body.Close() }()
-
-	body, err := parseJSON[node.CreateNodeFolderDTO](r.Body, validationStruct)
-	if err != nil {
-		resp := errView(err)
-		writeJSON(w, resp.Code, resp)
-		return
-	}
-
-	folder, err := c.createNodeFolder.Execute(r.Context(), *body)
-	if err != nil {
-		resp := errView(err)
-		writeJSON(w, resp.Code, resp)
-		return
-	}
-
-	writeJSON(w, http.StatusCreated, FolderViewFromDomain(folder, nil))
-}
-
-func (h *NodeHandler) CreateNodeFileHandler(w http.ResponseWriter, r *http.Request) {
-	dto, err := parseCreateNodeFileDTOMultipart(r)
-	if err != nil {
-		resp := errView(err)
-		writeJSON(w, resp.Code, resp)
-		return
-	}
-
-	defer func() {
-		_ = dto.File.Close()
-	}()
-
-	node, doc, err := h.createNodeFile.Execute(r.Context(), *dto)
-	if err != nil {
-		resp := errView(err)
-		writeJSON(w, resp.Code, resp)
-		return
-	}
-
-	resp := FileViewFromDomain(node, doc)
-	writeJSON(w, http.StatusCreated, resp)
 }
 
 func (h *NodeHandler) DeleteDocHandler(w http.ResponseWriter, r *http.Request) {
@@ -371,7 +395,13 @@ func (h *NodeHandler) MountV1(p chi.Router) {
 
 	r.Get("/{nodeID}", h.GetNodeHandler)
 
+	r.Put("/{nodeID}", h.UpdateNodeHandler)
+
 	r.Delete("/{nodeID}", h.DeleteNodeHandler)
+
+	r.Get("/{nodeID}/download", h.DownloadNodeFolderHandler)
+
+	r.Get("/paginate", h.PaginateNodeHandler)
 
 	r.Get("/{nodeID}/comments", h.GetNodeCommentsHandler)
 
@@ -386,6 +416,8 @@ func (h *NodeHandler) MountV1(p chi.Router) {
 	r.Get("/docs/{docID}/download", h.DownloadNodeFileHandler)
 
 	r.Delete("/docs/{docID}", h.DeleteDocHandler)
+
+	r.Get("/docs/paginate", h.PaginateDocHandler)
 
 	p.Mount("/api/v1/nodes", r)
 }
