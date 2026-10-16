@@ -215,14 +215,13 @@ func (r *groupUsrRepository) UpsertAll(ctx context.Context, d []domain.GroupUsr)
 		return ErrInvalidArgument
 	}
 
-	rows := make([]groupUsrRow, len(d), len(d))
+	rows := make([]groupUsrRow, len(d))
 	assignedAt := time.Now().UTC()
-	for i, gu := range d {
-		row := &rows[i]
-		row.UsrID = gu.UsrID
-		row.GroupID = gu.GroupID
-		row.Access = gu.Access
-		row.AssignedAt = assignedAt
+	for i := range d {
+		rows[i].UsrID = d[i].UsrID
+		rows[i].GroupID = d[i].GroupID
+		rows[i].Access = d[i].Access
+		rows[i].AssignedAt = assignedAt
 	}
 
 	_, err := sqlx.NamedExecContext(ctx, r.db, upsertGroupUsrQuery, rows)
