@@ -2,7 +2,6 @@ package node
 
 import (
 	"context"
-	"fmt"
 	"uuid"
 
 	"ownned/internal/app/apperror"
@@ -70,7 +69,7 @@ func (uc *CreateNodeFolderUseCase) Execute(
 
 	if !yes {
 		detail := make(map[string]string)
-		detail["reason"] = fmt.Sprintf("User does not have access to write on specified parent node")
+		detail["reason"] = "User does not have access to write on specified parent node"
 		return nil, apperror.ErrForbidden(detail)
 	}
 

@@ -15,11 +15,11 @@ type FileNode struct {
 	Doc domain.Doc
 }
 
-func (n *FileNode) File() (isFile bool, doc *domain.Doc) {
+func (n *FileNode) File() (bool, *domain.Doc) {
 	return n.Type == domain.FileNodeType, &n.Doc
 }
 
-func (n *FileNode) Folder() (isFolder bool, chldr []domain.Node) {
+func (n *FileNode) Folder() (bool, []domain.Node) {
 	return false, nil
 }
 
@@ -28,10 +28,10 @@ type FolderNode struct {
 	Children []domain.Node
 }
 
-func (n *FolderNode) File() (isFile bool, doc *domain.Doc) {
+func (n *FolderNode) File() (bool, *domain.Doc) {
 	return false, nil
 }
 
-func (n *FolderNode) Folder() (isFolder bool, children []domain.Node) {
+func (n *FolderNode) Folder() (bool, []domain.Node) {
 	return n.Type == domain.FolderNodeType, n.Children
 }
