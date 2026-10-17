@@ -90,6 +90,8 @@ func main() {
 	accessChecker := group.NewAccessChecker(groupUsrs)
 	getRoot := node.NewGetRootNodesUseCase(nodes, groups, logger)
 	getNode := node.NewGetNodeByIDUseCase(accessChecker, nodes, docs, logger)
+	paginateNode := node.NewPaginateNodeUseCase(nodes, groups)
+	paginateDoc := node.NewPaginateDocUseCase(docs, groups)
 	createNodeFolder := node.NewCreateNodeFolderUseCase(accessChecker, nodes)
 	createNodeFile := node.NewCreateDocUseCase(
 		docs,
@@ -147,6 +149,8 @@ func main() {
 	httpapi.NewNodeHandler(
 		getRoot,
 		getNode,
+		paginateNode,
+		paginateDoc,
 		downloadNodeFile,
 		createNodeFolder,
 		createNodeFile,

@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"uuid"
 
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/node"
 	"ownned/internal/app/storage"
+	"ownned/internal/domain"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -16,6 +18,8 @@ import (
 type NodeHandler struct {
 	getRoot           *node.GetRootNodesUseCase
 	getNode           *node.GetNodeUseCase
+	paginateNode      *node.PaginateNodeUseCase
+	paginateDoc       *node.PaginateDocUseCase
 	downloadNodeFile  *node.DownloadNodeFileUseCase
 	createNodeFolder  *node.CreateNodeFolderUseCase
 	createNodeFile    *node.CreateNodeFileUseCase
@@ -31,6 +35,8 @@ type NodeHandler struct {
 func NewNodeHandler(
 	getRoot *node.GetRootNodesUseCase,
 	getNode *node.GetNodeUseCase,
+	paginateNode *node.PaginateNodeUseCase,
+	paginateDoc *node.PaginateDocUseCase,
 	downloadNodeFile *node.DownloadNodeFileUseCase,
 	createNodeFolder *node.CreateNodeFolderUseCase,
 	createNodeFile *node.CreateNodeFileUseCase,
@@ -45,6 +51,8 @@ func NewNodeHandler(
 	return &NodeHandler{
 		getRoot:           getRoot,
 		getNode:           getNode,
+		paginateNode:      paginateNode,
+		paginateDoc:       paginateDoc,
 		downloadNodeFile:  downloadNodeFile,
 		createNodeFolder:  createNodeFolder,
 		createNodeFile:    createNodeFile,
@@ -75,9 +83,30 @@ func (c *NodeHandler) getRootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *NodeHandler) paginateNodeHandler(w http.ResponseWriter, r *http.Request) {
-	err := apperror.ErrNotImplemented(nil)
-	resp := errView(err)
-	writeJSON(w, resp.Code, resp)
+	q := r.URL.Query()
+	params := node.PaginateNode{
+		PaginationParam: parsePaginationParam(q),
+	}
+
+	if nodeID, err := uuid.Parse(q.Get("root_id")); err == nil {
+		params.RootID = &nodeID
+	}
+
+	if nodeType := q.Get("node_type"); nodeType != "" {
+		t := new(domain.NodeType(nodeType))
+		if t.IsValid() {
+			params.Type = t
+		}
+	}
+
+	resp, err := c.paginateNode.Execute(r.Context(), params)
+	if err != nil {
+		resp := errView(err)
+		writeJSON(w, resp.Code, resp)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, resp.Map(nodeViewFromDomain))
 }
 
 func (c *NodeHandler) getNodeHandler(w http.ResponseWriter, r *http.Request) {
@@ -124,9 +153,35 @@ func (h *NodeHandler) downloadNodeFolderHandler(w http.ResponseWriter, r *http.R
 }
 
 func (h *NodeHandler) paginateDocHandler(w http.ResponseWriter, r *http.Request) {
-	err := apperror.ErrNotImplemented(nil)
-	resp := errView(err)
-	writeJSON(w, resp.Code, resp)
+	q := r.URL.Query()
+	params := node.PaginateDoc{
+		PaginationParam: parsePaginationParam(q),
+	}
+
+	if nodeID, err := uuid.Parse(q.Get("root_id")); err == nil {
+		params.RootID = &nodeID
+	}
+
+	if mimetype := q.Get("mimetype"); mimetype != "" {
+		params.MimeType = &mimetype
+	}
+
+	if minSize, err := strconv.ParseUint(q.Get("min_size"), 10, 64); err == nil {
+		params.MinSize = &minSize
+	}
+
+	if maxSize, err := strconv.ParseUint(q.Get("max_size"), 10, 64); err == nil {
+		params.MaxSize = &maxSize
+	}
+
+	resp, err := h.paginateDoc.Execute(r.Context(), params)
+	if err != nil {
+		resp := errView(err)
+		writeJSON(w, resp.Code, resp)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, resp.Map(docViewFromDomain))
 }
 
 func (c *NodeHandler) createFolderHandler(w http.ResponseWriter, r *http.Request) {

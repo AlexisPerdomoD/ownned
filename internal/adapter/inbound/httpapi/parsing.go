@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"uuid"
 
 	"ownned/internal/app/node"
+	"ownned/internal/app/pagination"
 )
 
 type validationKind string
@@ -95,6 +97,24 @@ func parseRange(header string) (offset, limit uint64, ok bool) {
 	}
 
 	return start, end - start + 1, true
+}
+
+func parsePaginationParam(q url.Values) pagination.PaginationParam {
+	resp := pagination.PaginationParam{}
+
+	if limit, err := strconv.ParseUint(q.Get("limit"), 10, 32); err == nil {
+		resp.Limit = uint(limit)
+	}
+
+	if page, err := strconv.ParseUint(q.Get("page"), 10, 32); err == nil {
+		resp.Page = uint(page)
+	}
+
+	if search := q.Get("search"); search != "" {
+		resp.Search = search
+	}
+
+	return resp
 }
 
 func parseCreateNodeFileDTOMultipart(r *http.Request) (*node.CreateNodeFileDTO, error) {

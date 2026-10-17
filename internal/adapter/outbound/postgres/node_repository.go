@@ -5,10 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
+	"strings"
 	"time"
 
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/node"
+	"ownned/internal/app/pagination"
 	"ownned/internal/domain"
 
 	"github.com/jmoiron/sqlx"
@@ -120,7 +123,7 @@ func (r *nodeRepository) GetRoot(ctx context.Context) ([]domain.Node, error) {
 	return nodes, nil
 }
 
-func (r *nodeRepository) GetRootByGroups(ctx context.Context, groups []domain.GroupID) ([]domain.Node, error) {
+func (r *nodeRepository) GetRootByGroupIDs(ctx context.Context, groups []domain.GroupID) ([]domain.Node, error) {
 	if len(groups) == 0 {
 		detail := make(map[string]string)
 		detail["reason"] = "no groups provided for getting root nodes"
@@ -166,6 +169,81 @@ func (r *nodeRepository) GetByGroupID(ctx context.Context, groupID domain.GroupI
 	}
 
 	return nodes, nil
+}
+
+func (r *nodeRepository) Paginate(ctx context.Context, p node.PaginateNode) (*pagination.PaginationResult[domain.Node], error) {
+	var where strings.Builder
+	where.WriteString("\nWHERE 1=1")
+	params := make([]any, 0)
+	q := getNodeQuery
+
+	if p.Type != nil {
+		statement := fmt.Sprintf("\nAND n.type = $%d", len(params)+1)
+		where.WriteString(statement)
+		params = append(params, *p.Type)
+	}
+
+	if len(p.GroupIDs) > 0 {
+		statement := fmt.Sprintf(
+			"\nAND EXISTS (SELECT 1 FROM fs.group_nodes gn WHERE gn.node_id = n.id AND gn.group_id = ANY($%d::uuid[]))",
+			len(params)+1)
+		where.WriteString(statement)
+		params = append(params, pq.Array(p.GroupIDs))
+	}
+
+	if p.RootID != nil {
+		// TODO: implement
+		// autojoin ??
+	}
+
+	if p.Search != "" {
+		pos := len(params) + 1
+		statement := fmt.Sprintf("\nAND (n.name ILIKE $%d OR n.description ILIKE $%d)", pos, pos)
+		where.WriteString(statement)
+		params = append(params, "%"+p.Search+"%")
+	}
+
+	statements := where.String()
+	countQ := fmt.Sprintf("SELECT count(*) FROM fs.nodes n %s", statements)
+	totalCount := new(int64)
+	if err := r.db.QueryRowxContext(ctx, countQ, params...).Scan(totalCount); err != nil {
+		return nil, err
+	}
+
+	page, limit := p.GetSafePage(), p.GetSafeLimit()
+
+	if *totalCount == 0 {
+		return &pagination.PaginationResult[domain.Node]{
+			Data:       make([]domain.Node, 0),
+			Page:       page,
+			Limit:      limit,
+			TotalPages: 0,
+			TotalCount: 0,
+		}, nil
+	}
+
+	q = fmt.Sprintf("%s%s\nORDER BY n.id\nLIMIT $%d OFFSET $%d", q, statements, len(params)+1, len(params)+2)
+
+	params = append(params, limit)
+	params = append(params, (page-1)*limit)
+
+	rows, err := r.db.QueryxContext(ctx, q, params...)
+	if err != nil {
+		return nil, err
+	}
+	defer safeClose(ctx, rows)
+	data, err := readSlice[domain.Node, nodeRow](rows)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pagination.PaginationResult[domain.Node]{
+		Data:       data,
+		Page:       page,
+		Limit:      limit,
+		TotalPages: uint(math.Ceil(float64(*totalCount) / float64(limit))),
+		TotalCount: uint(*totalCount),
+	}, nil
 }
 
 func (r *nodeRepository) Create(ctx context.Context, n *domain.Node) error {

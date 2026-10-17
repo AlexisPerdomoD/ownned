@@ -50,7 +50,7 @@ func (uc *GetRootNodesUseCase) Execute(ctx context.Context) ([]domain.Node, erro
 			groupIDs = append(groupIDs, groups[i].ID)
 		}
 
-		return uc.nodes.GetRootByGroups(ctx, groupIDs)
+		return uc.nodes.GetRootByGroupIDs(ctx, groupIDs)
 
 	default:
 		uc.log.Warn("user role not supported for getting root nodes", "role", usr.Role)

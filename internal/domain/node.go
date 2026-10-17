@@ -49,6 +49,15 @@ const (
 	FileNodeType   NodeType = "file"
 )
 
+func (t NodeType) IsValid() bool {
+	switch t {
+	case FolderNodeType, FileNodeType:
+		return true
+	default:
+		return false
+	}
+}
+
 type NodeID = uuid.UUID
 
 type Node struct {
