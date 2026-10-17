@@ -16,9 +16,7 @@ func NewDeleteGroupUsrUseCase(
 	groupUsrs GroupUsrRepository,
 ) *DeleteGroupUsrUseCase {
 	return &DeleteGroupUsrUseCase{
-		accessChecker: accessChecker{
-			groupUsrs: groupUsrs,
-		},
+		groupUsrs: groupUsrs,
 	}
 }
 

@@ -18,8 +18,8 @@ func NewUpsertGroupUsrUseCase(
 	usrs UsrLookup,
 ) *UpsertGroupUsrUseCase {
 	return &UpsertGroupUsrUseCase{
-		accessChecker: accessChecker{groupUsrs: groupUsr},
-		usrs:          usrs,
+		groupUsrs: groupUsr,
+		usrs:      usrs,
 	}
 }
 

@@ -28,13 +28,11 @@ func (m *jwtManagerST) GenerateAccessToken(payload identity.Identity) (string, e
 	now := time.Now()
 
 	claims := &accessClaims{
-		UsrID: payload.ID.String(),
-		Role:  string(payload.Role),
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    m.iss,
-			ExpiresAt: jwt.NewNumericDate(now.Add(m.exp)),
-			IssuedAt:  jwt.NewNumericDate(now),
-		},
+		UsrID:     payload.ID.String(),
+		Role:      string(payload.Role),
+		Issuer:    m.iss,
+		ExpiresAt: jwt.NewNumericDate(now.Add(m.exp)),
+		IssuedAt:  jwt.NewNumericDate(now),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

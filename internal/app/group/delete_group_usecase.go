@@ -16,8 +16,8 @@ type DeleteGroupUseCase struct {
 
 func NewDeleteGroupUseCase(group GroupRepository, groupUsr GroupUsrRepository) *DeleteGroupUseCase {
 	return &DeleteGroupUseCase{
-		accessChecker: accessChecker{groupUsrs: groupUsr},
-		group:         group,
+		groupUsrs: groupUsr,
+		group:     group,
 	}
 }
 

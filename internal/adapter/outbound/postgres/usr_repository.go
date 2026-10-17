@@ -92,15 +92,13 @@ type usrGroupAccessRow struct {
 
 func (r *usrGroupAccessRow) ToDomain() domain.UsrGroupAccess {
 	return domain.UsrGroupAccess{
-		Usr: domain.Usr{
-			ID:        r.ID,
-			Role:      r.Role,
-			Firstname: r.Firstname,
-			Lastname:  r.Lastname,
-			Username:  r.Username,
-			CreatedAt: r.CreatedAt,
-			UpdatedAt: r.UpdatedAt,
-		},
+		ID:         r.ID,
+		Role:       r.Role,
+		Firstname:  r.Firstname,
+		Lastname:   r.Lastname,
+		Username:   r.Username,
+		CreatedAt:  r.CreatedAt,
+		UpdatedAt:  r.UpdatedAt,
 		Access:     r.Access,
 		AssignDate: r.AssignedAt,
 	}

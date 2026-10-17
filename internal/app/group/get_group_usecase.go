@@ -20,10 +20,10 @@ func NewGetGroupUseCase(
 	nodes NodeLookup,
 ) *GetGroupUseCase {
 	return &GetGroupUseCase{
-		accessChecker: accessChecker{groupUsrs: groupUsrs},
-		groups:        groups,
-		usrs:          usrs,
-		nodes:         nodes,
+		groupUsrs: groupUsrs,
+		groups:    groups,
+		usrs:      usrs,
+		nodes:     nodes,
 	}
 }
 

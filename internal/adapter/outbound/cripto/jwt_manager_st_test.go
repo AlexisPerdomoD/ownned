@@ -80,22 +80,18 @@ func TestJWTManagerST_ValidateAccessToken_Invalid(t *testing.T) {
 	}
 
 	wrongSigningMethodToken, err := jwt.NewWithClaims(jwt.SigningMethodHS384, &accessClaims{
-		UsrID: uuid.NewV7().String(),
-		Role:  string(domain.NormalUsrRole),
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
+		UsrID:     uuid.NewV7().String(),
+		Role:      string(domain.NormalUsrRole),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 	}).SignedString(manager.secret)
 	if err != nil {
 		t.Fatalf("failed to sign wrong-method test token: %v", err)
 	}
 
 	invalidClaimsToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &accessClaims{
-		UsrID: "not-a-uuid",
-		Role:  string(domain.NormalUsrRole),
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
+		UsrID:     "not-a-uuid",
+		Role:      string(domain.NormalUsrRole),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 	}).SignedString(manager.secret)
 	if err != nil {
 		t.Fatalf("failed to sign invalid-claims test token: %v", err)
