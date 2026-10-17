@@ -168,9 +168,6 @@ CREATE TABLE fs.group_nodes (
 CREATE INDEX idx_group_nodes_node
     ON fs.group_nodes(node_id);
 
-CREATE INDEX idx_group_nodes_group
-    ON fs.group_nodes(group_id);
-
 -- ============================
 -- Docs
 -- ============================
