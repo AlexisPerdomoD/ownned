@@ -124,7 +124,17 @@ func (r *docRepository) Paginate(ctx context.Context, p node.PaginateDoc) (*pagi
 	var where strings.Builder
 	where.WriteString("\nWHERE 1=1")
 	params := make([]any, 0)
-	q := getDocQuery
+	baseQ := getDocQuery
+
+	// NOTE: Must be first filter since paramter is used in q
+	if p.RootID != nil {
+		baseQ = fmt.Sprintf("%s\nJOIN fs.nodes n ON n.id = d.node_id\nJOIN fs.nodes root ON root.id = $%d", baseQ, len(params)+1)
+		params = append(params, *p.RootID)
+
+		statement := "\nAND n.path <@ root.path"
+		where.WriteString(statement)
+
+	}
 
 	if p.MimeType != nil && *p.MimeType != "" {
 		statement := fmt.Sprintf("\nAND d.mime_type = $%d", len(params)+1)
@@ -152,11 +162,6 @@ func (r *docRepository) Paginate(ctx context.Context, p node.PaginateDoc) (*pagi
 		params = append(params, pq.Array(p.GroupIDs))
 	}
 
-	if p.RootID != nil {
-		// TODO: implement
-		// autojoin ??
-	}
-
 	if p.Search != "" {
 		pos := len(params) + 1
 		statement := fmt.Sprintf("\nAND (d.title ILIKE $%d OR d.filename ILIKE $%d)", pos, pos)
@@ -165,7 +170,8 @@ func (r *docRepository) Paginate(ctx context.Context, p node.PaginateDoc) (*pagi
 	}
 
 	statements := where.String()
-	countQ := fmt.Sprintf("SELECT count(*) FROM fs.docs d %s", statements)
+	q := fmt.Sprintf("%s\n%s", baseQ, statements)
+	countQ := fmt.Sprintf("SELECT count(*) FROM (%s) as filtered", q)
 	totalCount := new(int64)
 	if err := r.db.QueryRowxContext(ctx, countQ, params...).Scan(totalCount); err != nil {
 		return nil, err
@@ -183,7 +189,7 @@ func (r *docRepository) Paginate(ctx context.Context, p node.PaginateDoc) (*pagi
 		}, nil
 	}
 
-	q = fmt.Sprintf("%s%s\nORDER BY d.id\nLIMIT $%d OFFSET $%d", q, statements, len(params)+1, len(params)+2)
+	q = fmt.Sprintf("%s\nORDER BY d.id\nLIMIT $%d OFFSET $%d", q, len(params)+1, len(params)+2)
 	params = append(params, limit)
 	params = append(params, (page-1)*limit)
 

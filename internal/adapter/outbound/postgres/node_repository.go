@@ -175,7 +175,16 @@ func (r *nodeRepository) Paginate(ctx context.Context, p node.PaginateNode) (*pa
 	var where strings.Builder
 	where.WriteString("\nWHERE 1=1")
 	params := make([]any, 0)
-	q := getNodeQuery
+	baseQ := getNodeQuery
+
+	// NOTE: Must be first filter since paramter is used in q
+	if p.RootID != nil {
+		baseQ = fmt.Sprintf("%s\nJOIN fs.nodes root ON root.id = $%d", baseQ, len(params)+1)
+		params = append(params, *p.RootID)
+
+		statement := "\nAND n.path <@ root.path"
+		where.WriteString(statement)
+	}
 
 	if p.Type != nil {
 		statement := fmt.Sprintf("\nAND n.type = $%d", len(params)+1)
@@ -191,11 +200,6 @@ func (r *nodeRepository) Paginate(ctx context.Context, p node.PaginateNode) (*pa
 		params = append(params, pq.Array(p.GroupIDs))
 	}
 
-	if p.RootID != nil {
-		// TODO: implement
-		// autojoin ??
-	}
-
 	if p.Search != "" {
 		pos := len(params) + 1
 		statement := fmt.Sprintf("\nAND (n.name ILIKE $%d OR n.description ILIKE $%d)", pos, pos)
@@ -204,7 +208,8 @@ func (r *nodeRepository) Paginate(ctx context.Context, p node.PaginateNode) (*pa
 	}
 
 	statements := where.String()
-	countQ := fmt.Sprintf("SELECT count(*) FROM fs.nodes n %s", statements)
+	q := fmt.Sprintf("%s\n%s", baseQ, statements)
+	countQ := fmt.Sprintf("SELECT count(*) FROM (%s) as filtered", q)
 	totalCount := new(int64)
 	if err := r.db.QueryRowxContext(ctx, countQ, params...).Scan(totalCount); err != nil {
 		return nil, err
@@ -222,7 +227,7 @@ func (r *nodeRepository) Paginate(ctx context.Context, p node.PaginateNode) (*pa
 		}, nil
 	}
 
-	q = fmt.Sprintf("%s%s\nORDER BY n.id\nLIMIT $%d OFFSET $%d", q, statements, len(params)+1, len(params)+2)
+	q = fmt.Sprintf("%s\nORDER BY n.id\nLIMIT $%d OFFSET $%d", q, len(params)+1, len(params)+2)
 
 	params = append(params, limit)
 	params = append(params, (page-1)*limit)
