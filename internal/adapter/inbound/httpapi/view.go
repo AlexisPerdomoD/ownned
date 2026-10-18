@@ -11,6 +11,7 @@ import (
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/auth"
 	"ownned/internal/app/group"
+	"ownned/internal/app/node"
 	"ownned/internal/domain"
 
 	"github.com/go-playground/validator/v10"
@@ -235,36 +236,38 @@ type NodeView struct {
 	Description string          `json:"description"`
 	Type        domain.NodeType `json:"type"`
 	Path        domain.NodePath `json:"path"`
+	DisplayPath string          `json:"display_path"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
-	Children    []NodeView      `json:"children,omitempty"`
+	Children    []NodeView      `json:"children"`
 	Doc         *DocView        `json:"doc,omitempty"`
 }
 
-func nodeViewFromDomain(n *domain.Node) NodeView {
-	if n == nil {
+func nodeViewFromDomain(d *domain.Node) NodeView {
+	if d == nil {
 		return NodeView{}
 	}
+
 	return NodeView{
-		ID:          n.ID,
-		UsrID:       n.UsrID,
-		Name:        n.Name,
-		Description: n.Description,
-		Type:        n.Type,
-		Path:        n.Path,
-		CreatedAt:   n.CreatedAt,
-		UpdatedAt:   n.UpdatedAt,
+		ID:          d.ID,
+		UsrID:       d.UsrID,
+		Name:        d.Name,
+		Description: d.Description,
+		Type:        d.Type,
+		Path:        d.Path,
+		CreatedAt:   d.CreatedAt,
+		UpdatedAt:   d.UpdatedAt,
 	}
 }
 
-func nodeFolderViewFromDomain(n *domain.Node, chldr []domain.Node) NodeView {
+func nodeFolderViewFromDomain(n *node.FolderNode) NodeView {
 	if n == nil {
 		return NodeView{}
 	}
 
-	chldrView := make([]NodeView, len(chldr))
-	for i, c := range chldr {
-		chldrView[i] = nodeFolderViewFromDomain(&c, nil)
+	chldrView := make([]NodeView, len(n.Children))
+	for i := range n.Children {
+		chldrView[i] = nodeViewFromDomain(&n.Children[i])
 	}
 
 	return NodeView{
@@ -274,17 +277,18 @@ func nodeFolderViewFromDomain(n *domain.Node, chldr []domain.Node) NodeView {
 		Description: n.Description,
 		Type:        n.Type,
 		Path:        n.Path,
+		DisplayPath: n.DisplayPath,
 		CreatedAt:   n.CreatedAt,
 		UpdatedAt:   n.UpdatedAt,
 		Children:    chldrView,
 	}
 }
 
-func nodeFileViewFromDomain(n *domain.Node, doc *domain.Doc) NodeView {
+func nodeFileViewFromDomain(n *node.FileNode) NodeView {
 	if n == nil {
 		return NodeView{}
 	}
-	docView := docViewFromDomain(doc)
+
 	return NodeView{
 		ID:          n.ID,
 		UsrID:       n.UsrID,
@@ -292,9 +296,29 @@ func nodeFileViewFromDomain(n *domain.Node, doc *domain.Doc) NodeView {
 		Description: n.Description,
 		Type:        n.Type,
 		Path:        n.Path,
+		DisplayPath: n.DisplayPath,
 		CreatedAt:   n.CreatedAt,
 		UpdatedAt:   n.UpdatedAt,
-		Doc:         &docView,
+		Doc:         new(docViewFromDomain(&n.Doc)),
+	}
+}
+
+func nodeViewFromNodeLike(n node.NodeLike) NodeView {
+	if n == nil || n.Get() == nil {
+		return NodeView{}
+	}
+
+	switch val := n.(type) {
+	case *node.FolderNode:
+		return nodeFolderViewFromDomain(val)
+
+	case *node.FileNode:
+		return nodeFileViewFromDomain(val)
+
+	default:
+		view := nodeViewFromDomain(n.Get())
+		view.DisplayPath = n.GetDisplayPath()
+		return view
 	}
 }
 

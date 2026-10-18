@@ -19,11 +19,17 @@ type NodeRepository interface {
 	// GetByID returns a node by its identifier, if no node is found it returns nil, nil.
 	GetByID(ctx context.Context, id domain.NodeID) (*domain.Node, error)
 
-	// GetChildren returns the children of a node based on its path, only immediate children are returned.
-	GetChildren(ctx context.Context, path domain.NodePath) ([]domain.Node, error)
+	// GetChildren returns the children of a node identified by path.
+	// If depth is nil, all descendants are returned; otherwise, only
+	// descendants up to the specified depth are returned.
+	// Results are ordered by path in ascending order.
+	GetChildren(ctx context.Context, path domain.NodePath, depth *uint) ([]domain.Node, error)
 
 	// GetRoot returns the root nodes of the system.
 	GetRoot(ctx context.Context) ([]domain.Node, error)
+
+	// GetDisplayPathByID returns the display path of a node based on its path and the name of nodes included in the path.
+	GetDisplayPathByID(ctx context.Context, id domain.NodeID) (*string, error)
 
 	// GetRootByGroupIDs returns the root nodes of the system based on the provided groups.
 	GetRootByGroupIDs(ctx context.Context, groups []domain.GroupID) ([]domain.Node, error)

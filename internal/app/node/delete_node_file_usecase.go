@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"log/slog"
+
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/group"
 	"ownned/internal/app/identity"
@@ -37,51 +38,61 @@ func NewDeleteDocUseCase(
 
 func (uc *DeleteNodeFileUseCase) Execute(
 	ctx context.Context,
-	docID domain.DocID) (*domain.Node, *domain.Doc, error) {
+	docID domain.DocID,
+) (*FileNode, error) {
 	usr, err := identity.Get(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if !usr.Role.CanDeleteDoc() {
 		detail := make(map[string]string)
 		detail["reason"] = "User can no do this action."
-		return nil, nil, apperror.ErrForbidden(detail)
+		return nil, apperror.ErrForbidden(detail)
 	}
 
 	doc, err := uc.docs.GetByID(ctx, docID)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if doc == nil {
 		detail := make(map[string]string)
 		detail["reason"] = "Doc entity was not found"
-		return nil, nil, apperror.ErrNotFound(detail)
+		return nil, apperror.ErrNotFound(detail)
 	}
 
-	node, err := uc.nodes.GetByID(ctx, doc.NodeID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	yes, err := uc.HasNodeAccessToFromPath(ctx, node.Path, domain.GroupWriteAccess)
+	yes, err := uc.HasNodeAccessTo(ctx, doc.NodeID, domain.GroupWriteAccess)
 	if err != nil {
 		uc.log.WarnContext(ctx, "failed to check if user can access node", "nodeID", doc.NodeID, "error", err)
-		return nil, nil, err
+		return nil, err
 	}
 
 	if !yes {
 		detail := make(map[string]string)
 		detail["reason"] = "User does not have access to specified node"
-		return nil, nil, apperror.ErrForbidden(detail)
+		return nil, apperror.ErrForbidden(detail)
+	}
+
+	node, err := uc.nodes.GetByID(ctx, doc.NodeID)
+	if err != nil {
+		return nil, err
+	}
+
+	var displayPath string
+	if path, _ := uc.nodes.GetDisplayPathByID(ctx, node.ID); path != nil {
+		displayPath = *path
 	}
 
 	if err := uc.nodes.Delete(ctx, doc.NodeID); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	_ = uc.storage.Delete(ctx, doc.ID)
 
-	return node, doc, nil
+	return &FileNode{
+		Node:        *node,
+		Doc:         *doc,
+		DisplayPath: displayPath,
+	}, nil
 }

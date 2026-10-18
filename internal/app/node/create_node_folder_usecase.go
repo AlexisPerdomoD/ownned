@@ -33,7 +33,7 @@ func NewCreateNodeFolderUseCase(
 func (uc *CreateNodeFolderUseCase) Execute(
 	ctx context.Context,
 	dto CreateNodeFolderDTO,
-) (*domain.Node, error) {
+) (*FolderNode, error) {
 	usr, err := identity.Get(ctx)
 	if err != nil {
 		return nil, err
@@ -93,5 +93,14 @@ func (uc *CreateNodeFolderUseCase) Execute(
 		return nil, err
 	}
 
-	return folder, nil
+	var displayPath string
+	if path, _ := uc.nodes.GetDisplayPathByID(ctx, folder.ID); path != nil {
+		displayPath = *path
+	}
+
+	return &FolderNode{
+		Node:        *folder,
+		DisplayPath: displayPath,
+		Children:    make([]domain.Node, 0),
+	}, nil
 }

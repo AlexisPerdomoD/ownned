@@ -58,44 +58,44 @@ func NewCreateDocUseCase(
 	}
 }
 
-func (uc *CreateNodeFileUseCase) Execute(ctx context.Context, dto CreateNodeFileDTO) (*domain.Node, *domain.Doc, error) {
+func (uc *CreateNodeFileUseCase) Execute(ctx context.Context, dto CreateNodeFileDTO) (*FileNode, error) {
 	usr, err := identity.Get(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if !usr.Role.CanCreateNode() || !usr.Role.CanCreateDoc() {
 		detail := make(map[string]string)
 		detail["reason"] = "user does not have permission to create documents"
-		return nil, nil, apperror.ErrForbidden(detail)
+		return nil, apperror.ErrForbidden(detail)
 	}
 
 	folder, err := uc.nodes.GetByID(ctx, dto.ParentID)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if folder == nil {
 		detail := make(map[string]string)
 		detail["reason"] = "Folder was not found."
-		return nil, nil, apperror.ErrNotFound(detail)
+		return nil, apperror.ErrNotFound(detail)
 	}
 
 	if folder.Type != domain.FolderNodeType {
 		detail := make(map[string]string)
 		detail["reason"] = "ParentID does not point to a folder."
-		return nil, nil, apperror.ErrBadRequest(detail)
+		return nil, apperror.ErrBadRequest(detail)
 	}
 
 	yes, err := uc.HasNodeAccessToFromPath(ctx, folder.Path, domain.GroupWriteAccess)
 	if err != nil {
 		uc.logger.WarnContext(ctx, "failed to check if user can access node", "nodeID", folder.ID, "error", err)
-		return nil, nil, err
+		return nil, err
 	}
 	if !yes {
 		detail := make(map[string]string)
 		detail["reason"] = "User does not have access to specified folder to create documents"
-		return nil, nil, apperror.ErrForbidden(detail)
+		return nil, apperror.ErrForbidden(detail)
 	}
 
 	nodeID := uuid.NewV7()
@@ -104,7 +104,7 @@ func (uc *CreateNodeFileUseCase) Execute(ctx context.Context, dto CreateNodeFile
 
 	path, err := folder.Path.NewChildPath(nodeID)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	uploadCommand := storage.UploadCmd{
@@ -115,7 +115,7 @@ func (uc *CreateNodeFileUseCase) Execute(ctx context.Context, dto CreateNodeFile
 
 	size, err := uc.storage.Put(ctx, uploadCommand)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	ext := filepath.Ext(dto.Filename)
@@ -140,9 +140,18 @@ func (uc *CreateNodeFileUseCase) Execute(ctx context.Context, dto CreateNodeFile
 	}
 
 	if err := uc.persist(ctx, node, doc); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return node, doc, nil
+	var displayPath string
+	if path, _ := uc.nodes.GetDisplayPathByID(ctx, node.ID); path != nil {
+		displayPath = *path
+	}
+
+	return &FileNode{
+		Node:        *node,
+		Doc:         *doc,
+		DisplayPath: displayPath,
+	}, nil
 }
 
 func (uc *CreateNodeFileUseCase) persist(ctx context.Context, node *domain.Node, doc *domain.Doc) error {

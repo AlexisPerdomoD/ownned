@@ -76,7 +76,7 @@ func (c *NodeHandler) getRootHandler(w http.ResponseWriter, r *http.Request) {
 
 	views := make([]NodeView, len(nodes))
 	for i := range nodes {
-		views[i] = nodeFolderViewFromDomain(&nodes[i], nil)
+		views[i] = nodeViewFromNodeLike(&nodes[i])
 	}
 
 	writeJSON(w, http.StatusOK, views)
@@ -119,31 +119,14 @@ func (c *NodeHandler) getNodeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	node, err := c.getNode.Execute(r.Context(), nodeID)
+	n, err := c.getNode.Execute(r.Context(), nodeID)
 	if err != nil {
 		resp := errView(err)
 		writeJSON(w, resp.Code, resp)
 		return
 	}
 
-	if isFolder, children := node.Folder(); isFolder {
-		writeJSON(w, http.StatusOK,
-			nodeFolderViewFromDomain(node.Get(), children),
-		)
-		return
-	}
-
-	if isFile, doc := node.File(); isFile {
-		writeJSON(w, http.StatusOK,
-			nodeFileViewFromDomain(node.Get(), doc),
-		)
-		return
-	}
-
-	detail := make(map[string]string)
-	detail["reason"] = "internal server state error occurred, please try again later"
-	resp := errView(apperror.ErrInternal(detail))
-	writeJSON(w, resp.Code, resp)
+	writeJSON(w, http.StatusOK, nodeViewFromNodeLike(n))
 }
 
 func (h *NodeHandler) downloadNodeFolderHandler(w http.ResponseWriter, r *http.Request) {
@@ -201,7 +184,7 @@ func (c *NodeHandler) createFolderHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, nodeFolderViewFromDomain(folder, nil))
+	writeJSON(w, http.StatusCreated, nodeViewFromNodeLike(folder))
 }
 
 func (h *NodeHandler) createNodeFileHandler(w http.ResponseWriter, r *http.Request) {
@@ -216,15 +199,14 @@ func (h *NodeHandler) createNodeFileHandler(w http.ResponseWriter, r *http.Reque
 		_ = dto.File.Close()
 	}()
 
-	node, doc, err := h.createNodeFile.Execute(r.Context(), *dto)
+	node, err := h.createNodeFile.Execute(r.Context(), *dto)
 	if err != nil {
 		resp := errView(err)
 		writeJSON(w, resp.Code, resp)
 		return
 	}
 
-	resp := nodeFileViewFromDomain(node, doc)
-	writeJSON(w, http.StatusCreated, resp)
+	writeJSON(w, http.StatusCreated, nodeFileViewFromDomain(node))
 }
 
 func (h *NodeHandler) updateNodeHandler(w http.ResponseWriter, r *http.Request) {
@@ -325,15 +307,14 @@ func (h *NodeHandler) deleteDocHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	node, doc, err := h.deleteNodeFile.Execute(r.Context(), docID)
+	node, err := h.deleteNodeFile.Execute(r.Context(), docID)
 	if err != nil {
 		resp := errView(err)
 		writeJSON(w, resp.Code, resp)
 		return
 	}
 
-	writeJSON(w, http.StatusOK,
-		nodeFileViewFromDomain(node, doc))
+	writeJSON(w, http.StatusOK, nodeFileViewFromDomain(node))
 }
 
 func (h *NodeHandler) getNodeCommentsHandler(w http.ResponseWriter, r *http.Request) {

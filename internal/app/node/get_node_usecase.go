@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/group"
@@ -55,6 +56,21 @@ func (uc *GetNodeUseCase) Execute(ctx context.Context, nodeID domain.NodeID) (No
 		return nil, apperror.ErrIlegalDBState(nil)
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	wg := sync.WaitGroup{}
+	displayPath := new(string)
+
+	wg.Go(func() {
+		path, err := uc.nodes.GetDisplayPathByID(ctx, node.ID)
+		if err != nil {
+			uc.log.WarnContext(ctx, "failed to get display path for node", "nodeID", node.ID, "error", err)
+			return
+		}
+
+		displayPath = path
+	})
+
 	if node.Type == domain.FileNodeType {
 		doc, err := uc.docs.GetByNodeID(ctx, node.ID)
 		if err != nil {
@@ -66,13 +82,23 @@ func (uc *GetNodeUseCase) Execute(ctx context.Context, nodeID domain.NodeID) (No
 			return nil, apperror.ErrIlegalDBState(nil)
 		}
 
-		return &FileNode{Node: *node, Doc: *doc}, nil
+		wg.Wait()
+		return &FileNode{
+			Node:        *node,
+			Doc:         *doc,
+			DisplayPath: *displayPath,
+		}, nil
 	}
 
-	children, err := uc.nodes.GetChildren(ctx, node.Path)
+	children, err := uc.nodes.GetChildren(ctx, node.Path, new(uint(1)))
 	if err != nil {
 		return nil, err
 	}
 
-	return &FolderNode{Node: *node, Children: children}, nil
+	wg.Wait()
+	return &FolderNode{
+		Node:        *node,
+		Children:    children,
+		DisplayPath: *displayPath,
+	}, nil
 }

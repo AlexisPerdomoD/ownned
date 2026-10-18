@@ -30,6 +30,14 @@ SELECT
 	n.updated_at
 FROM fs.nodes n`
 
+const getNodeDisplayPathQuery string = `
+SELECT  
+	'/' + string_agg(ancestor.name, '/' ORDER BY nlevel(ancestor.path) ASC)
+FROM fs.nodes AS target
+JOIN fs.nodes AS ancestor
+  ON target.path <@ ancestor.path
+WHERE target.id = $1;`
+
 const insertNodeQuery string = `
 INSERT INTO fs.nodes (
 	id,
@@ -92,12 +100,22 @@ func (r *nodeRepository) GetByID(ctx context.Context, id domain.NodeID) (*domain
 	return &d, nil
 }
 
-func (r *nodeRepository) GetChildren(ctx context.Context, folderPath domain.NodePath) ([]domain.Node, error) {
-	q := fmt.Sprintf("%s\nWHERE nlevel(n.path)=nlevel($1::ltree)+1", getNodeQuery)
-	rows, err := r.db.QueryxContext(ctx, q, folderPath)
+func (r *nodeRepository) GetChildren(ctx context.Context, folderPath domain.NodePath, depth *uint) ([]domain.Node, error) {
+	q := fmt.Sprintf("%s\nWHERE nlevel(n.path) > nlevel($1::ltree)", getNodeQuery)
+	params := []any{folderPath}
+
+	if depth != nil {
+		q = q + "\nAND nlevel(n.path) <= nlevel($1::ltree)+$2"
+		params = append(params, *depth)
+	}
+
+	q = q + "\nORDER BY n.path"
+
+	rows, err := r.db.QueryxContext(ctx, q, params...)
 	if err != nil {
 		return nil, err
 	}
+
 	defer safeClose(ctx, rows)
 	nodes, err := readSlice[domain.Node, nodeRow](rows)
 	if err != nil {
@@ -121,6 +139,16 @@ func (r *nodeRepository) GetRoot(ctx context.Context) ([]domain.Node, error) {
 	}
 
 	return nodes, nil
+}
+
+func (r *nodeRepository) GetDisplayPathByID(ctx context.Context, id domain.NodeID) (*string, error) {
+	path := new(string)
+
+	if err := r.db.QueryRowxContext(ctx, getNodeDisplayPathQuery, id).Scan(path); err != nil {
+		return nil, err
+	}
+
+	return path, nil
 }
 
 func (r *nodeRepository) GetRootByGroupIDs(ctx context.Context, groups []domain.GroupID) ([]domain.Node, error) {
