@@ -8,15 +8,15 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func logRouter(r chi.Router) {
-	methodColors := map[string]string{
-		"GET":    "\033[32m", // verde
-		"POST":   "\033[34m", // azul
-		"PUT":    "\033[33m", // amarillo
-		"PATCH":  "\033[33m", // amarillo
-		"DELETE": "\033[31m", // rojo
-	}
+var methodColors = map[string]string{
+	"GET":    "\033[32m", // verde
+	"POST":   "\033[34m", // azul
+	"PUT":    "\033[33m", // amarillo
+	"PATCH":  "\033[33m", // amarillo
+	"DELETE": "\033[31m", // rojo
+}
 
+func PresentRouter(r chi.Router) {
 	const (
 		reset = "\033[0m"
 		bold  = "\033[1m"

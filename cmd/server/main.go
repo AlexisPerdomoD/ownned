@@ -170,6 +170,7 @@ func main() {
 		}))
 	}
 
+	httpapi.PresentRouter(r)
 	logger.Info("server starting", "mode", cfg.Mode, "port", cfg.Port, "serveWebApp", cfg.ServeWebApp)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), r); err != nil {
 		logger.Error("server stopped", "err", err)
