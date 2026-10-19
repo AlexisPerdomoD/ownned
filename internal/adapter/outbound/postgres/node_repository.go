@@ -54,7 +54,7 @@ const deleteNodeQuery string = `DELETE FROM nodes WHERE path <@ (SELECT path FRO
 
 type nodeRow struct {
 	ID          domain.NodeID `db:"id"`
-	UsrID       domain.UsrID  `db:"usr_id"`
+	UsrID       *domain.UsrID `db:"usr_id"`
 	Name        string        `db:"name"`
 	Description string        `db:"description"`
 	Path        string        `db:"path"`

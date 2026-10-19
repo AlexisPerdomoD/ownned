@@ -17,18 +17,13 @@ func NewDeleteGroupNodeUseCase(
 	groupNode GroupNodeRepository,
 	groupUsr GroupUsrRepository,
 ) *DeleteGroupNodeUseCase {
-
 	return &DeleteGroupNodeUseCase{
 		accessChecker:       accessChecker{groupUsr},
 		groupNodeRepository: groupNode,
 	}
 }
 
-func (uc *DeleteGroupNodeUseCase) Execute(
-	ctx context.Context,
-	groupID domain.GroupID,
-	nodeID domain.NodeID) error {
-
+func (uc *DeleteGroupNodeUseCase) Execute(ctx context.Context, groupID domain.GroupID, nodeID domain.NodeID) error {
 	usr, err := identity.Get(ctx)
 	if err != nil {
 		return err
@@ -40,14 +35,14 @@ func (uc *DeleteGroupNodeUseCase) Execute(
 		return apperror.ErrForbidden(detail)
 	}
 
-	yes, err := uc.HasGroupAccessTo(ctx, groupID, domain.GroupOwnerAccess)
+	yes, err := uc.HasGroupAccessTo(ctx, groupID, domain.GroupWriteDeleteAccess)
 	if err != nil {
 		return err
 	}
 
 	if !yes {
 		detail := make(map[string]string)
-		detail["reason"] = "User does not have access enough to group ID=" + groupID.String()
+		detail["reason"] = "Not enough privileges to delete group node assignment."
 		return apperror.ErrForbidden(detail)
 	}
 

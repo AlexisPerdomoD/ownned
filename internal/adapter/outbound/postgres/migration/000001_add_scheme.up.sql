@@ -23,7 +23,7 @@ $$ LANGUAGE plpgsql;
 -- Users
 -- ============================
 CREATE TABLE fs.usrs (
-    id           UUID,
+    id           UUID NOT NULL,
     role         VARCHAR(20) NOT NULL,
     firstname    text NOT NULL,
     lastname     text NOT NULL,
@@ -58,8 +58,8 @@ FOR EACH ROW EXECUTE FUNCTION fs.set_updated_at();
 -- Groups
 -- ============================
 CREATE TABLE fs.groups (
-    id           UUID,
-    usr_id       UUID NOT NULL,
+    id           UUID NOT NULL,
+    usr_id       UUID,
     name         text NOT NULL,
     description  text,
     created_at   timestamptz NOT NULL DEFAULT now(),
@@ -68,6 +68,9 @@ CREATE TABLE fs.groups (
     CONSTRAINT groups_pk PRIMARY KEY (id),
     CONSTRAINT groups_usr_fk FOREIGN KEY (usr_id) REFERENCES fs.usrs(id) ON DELETE CASCADE
 );
+
+CREATE UNIQUE INDEX idx_usr_id_name
+    ON fs.groups(usr_id, name) NULLS NOT DISTINCT;
 
 CREATE TRIGGER trg_groups_updated_at
 BEFORE UPDATE ON fs.groups
@@ -88,6 +91,7 @@ CREATE TABLE fs.group_usrs (
     CONSTRAINT group_usrs_access_check CHECK (access IN (
         'read_only_access', 
         'write_access', 
+        'write_delete_access',
         'owner_access')
     )
 );
@@ -99,10 +103,10 @@ CREATE INDEX idx_group_usrs_user
 -- Nodes (tree)
 -- ============================
 CREATE TABLE fs.nodes (
-    id           UUID,
-    usr_id       UUID NOT NULL,
+    id           UUID NOT NULL,
+    usr_id       UUID,
     name         text NOT NULL,
-    description  text,
+    description  text DEFAULT '',
     path         ltree NOT NULL,
     type         VARCHAR(20) NOT NULL,
     created_at   timestamptz NOT NULL DEFAULT now(),
@@ -133,9 +137,9 @@ CREATE UNIQUE INDEX ux_nodes_parent_name
 -- Node Comments
 -- ============================
 CREATE TABLE fs.node_comments (
-    id           UUID,
+    id           UUID NOT NULL,
     node_id      UUID NOT NULL,
-    usr_id      UUID NOT NULL,
+    usr_id       UUID NOT NULL,
     content      text NOT NULL,
     created_at   timestamptz NOT NULL DEFAULT now(),
     updated_at   timestamptz NOT NULL DEFAULT now(),
@@ -172,7 +176,7 @@ CREATE INDEX idx_group_nodes_node
 -- Docs
 -- ============================
 CREATE TABLE fs.docs (
-    id             UUID,
+    id             UUID NOT NULL,
     node_id        UUID NOT NULL,
     title          text NOT NULL,
     filename       text NOT NULL,

@@ -75,18 +75,13 @@ func (uc *CreateNodeFolderUseCase) Execute(
 
 	folderID := uuid.NewV7()
 
-	path, err := parent.Path.NewChildPath(folderID)
-	if err != nil {
-		return nil, err
-	}
-
 	folder := &domain.Node{
 		ID:          folderID,
-		UsrID:       usr.ID,
+		UsrID:       &usr.ID,
 		Name:        dto.Name,
 		Description: dto.Description,
 		Type:        domain.FolderNodeType,
-		Path:        path,
+		Path:        parent.Path.NewChildPath(folderID),
 	}
 
 	if err := uc.nodes.Create(ctx, folder); err != nil {

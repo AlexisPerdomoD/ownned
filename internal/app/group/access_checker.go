@@ -3,6 +3,7 @@ package group
 import (
 	"context"
 	"errors"
+
 	"ownned/internal/app/identity"
 	"ownned/internal/domain"
 )
@@ -35,11 +36,7 @@ func NewAccessChecker(usrGroup GroupUsrRepository) AccessChecker {
 	return &accessChecker{usrGroup}
 }
 
-func (ac *accessChecker) HasNodeAccessToFromPath(
-	ctx context.Context,
-	pth domain.NodePath,
-	accs domain.GroupUsrAccess,
-) (bool, error) {
+func (ac *accessChecker) HasNodeAccessToFromPath(ctx context.Context, pth domain.NodePath, accs domain.GroupUsrAccess) (bool, error) {
 	u, err := identity.Get(ctx)
 	if err != nil {
 		return false, err
@@ -60,11 +57,7 @@ func (ac *accessChecker) HasNodeAccessToFromPath(
 	return true, nil
 }
 
-func (ac *accessChecker) HasNodeAccessTo(
-	ctx context.Context,
-	nodeID domain.NodeID,
-	accs domain.GroupUsrAccess,
-) (bool, error) {
+func (ac *accessChecker) HasNodeAccessTo(ctx context.Context, nodeID domain.NodeID, accs domain.GroupUsrAccess) (bool, error) {
 	u, err := identity.Get(ctx)
 	if err != nil {
 		return false, err
@@ -86,11 +79,7 @@ func (ac *accessChecker) HasNodeAccessTo(
 }
 
 // HasGroupAccessTo checks if a user has access to a group based on the user's role and the access of the group to the user
-func (ac *accessChecker) HasGroupAccessTo(
-	ctx context.Context,
-	groupID domain.GroupID,
-	reqAccs domain.GroupUsrAccess,
-) (bool, error) {
+func (ac *accessChecker) HasGroupAccessTo(ctx context.Context, groupID domain.GroupID, reqAccs domain.GroupUsrAccess) (bool, error) {
 	u, err := identity.Get(ctx)
 	if err != nil {
 		return false, err

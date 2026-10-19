@@ -17,12 +17,9 @@ const NodePathSeparator = "."
 
 var ErrNodePathInvalid = errors.New("invalid node path")
 
-func (p NodePath) NewChildPath(nodeID uuid.UUID) (NodePath, error) {
-	if nodeID == uuid.Nil() {
-		return NodePath(""), ErrNodePathInvalid
-	}
+func (p NodePath) NewChildPath(nodeID uuid.UUID) NodePath {
 	rawPath := string(p) + NodePathSeparator + strings.ReplaceAll(nodeID.String(), "-", "_")
-	return NodePath(rawPath), nil
+	return NodePath(rawPath)
 }
 
 func (p NodePath) String() string {
@@ -62,7 +59,7 @@ type NodeID = uuid.UUID
 
 type Node struct {
 	ID          NodeID
-	UsrID       UsrID
+	UsrID       *UsrID
 	Name        string
 	Description string
 	Path        NodePath

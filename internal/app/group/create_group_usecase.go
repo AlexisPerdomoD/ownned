@@ -46,7 +46,7 @@ func (uc *CreateGroupUseCase) Execute(ctx context.Context, args CreateGroupDTO) 
 
 	group := &domain.Group{
 		ID:          groupID,
-		UsrID:       usr.ID,
+		UsrID:       &usr.ID,
 		Name:        args.Name,
 		Description: args.Description,
 	}

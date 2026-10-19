@@ -191,7 +191,7 @@ type createUsrTx struct {
 	txUsr
 
 	nodes      usr.NodeCreator
-	groups     usr.GroupCreator
+	groups     usr.GroupRepository
 	groupUsrs  usr.GroupUsrUpsertor
 	groupNodes usr.GroupNodeUpsertor
 }
@@ -204,7 +204,7 @@ func (u *createUsrTx) NodeCreator() usr.NodeCreator {
 	return u.nodes
 }
 
-func (u *createUsrTx) GroupCreator() usr.GroupCreator {
+func (u *createUsrTx) GroupRepository() usr.GroupRepository {
 	if u.groups == nil {
 		u.groups = NewGroupRepository(u.db())
 	}

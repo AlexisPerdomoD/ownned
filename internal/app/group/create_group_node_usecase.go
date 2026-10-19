@@ -46,7 +46,7 @@ func (uc *CreateGroupNodeUseCase) Execute(
 
 	if !yes {
 		detail := make(map[string]string)
-		detail["reason"] = "User does not have access enough to group"
+		detail["reason"] = "Must have access to group as owner to assign node to group"
 		return apperror.ErrForbidden(detail)
 	}
 
@@ -57,7 +57,7 @@ func (uc *CreateGroupNodeUseCase) Execute(
 
 	if !yes {
 		detail := make(map[string]string)
-		detail["reason"] = "User does not have access enough to node"
+		detail["reason"] = "Must have access to node as owner to assign node to an ownned group"
 		return apperror.ErrForbidden(detail)
 	}
 

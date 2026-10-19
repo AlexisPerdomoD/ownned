@@ -18,26 +18,17 @@ func NewPaginateGroupUseCase(
 	return &PaginateGroupUseCase{groups: groups}
 }
 
-func (uc *PaginateGroupUseCase) Execute(
-	ctx context.Context,
-	args pagination.PaginationParam,
-	onlyMyGroups bool,
-) (*pagination.PaginationResult[domain.Group], error) {
-	param := GroupPaginateParam{
-		UsrID:           nil,
-		PaginationParam: args,
-	}
-
+func (uc *PaginateGroupUseCase) Execute(ctx context.Context, params GroupPaginateParam) (*pagination.PaginationResult[domain.Group], error) {
 	usr, err := identity.Get(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if usr.Role != domain.SuperUsrRole || onlyMyGroups {
-		param.UsrID = &usr.ID
+	if usr.Role != domain.SuperUsrRole {
+		params.UsrID = &usr.ID
 	}
 
-	res, err := uc.groups.Paginate(ctx, param)
+	res, err := uc.groups.Paginate(ctx, params)
 	if err != nil {
 		return nil, err
 	}

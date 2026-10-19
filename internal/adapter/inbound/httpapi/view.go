@@ -231,7 +231,7 @@ func docViewFromDomain(d *domain.Doc) DocView {
 
 type NodeView struct {
 	ID          domain.NodeID   `json:"id"`
-	UsrID       domain.UsrID    `json:"usr_id"`
+	UsrID       *domain.UsrID   `json:"usr_id"`
 	Name        string          `json:"name"`
 	Description string          `json:"description"`
 	Type        domain.NodeType `json:"type"`
@@ -346,12 +346,12 @@ func nodeCommentViewFromDomain(c *domain.NodeComment) NodeCommentView {
 }
 
 type GroupView struct {
-	ID          uuid.UUID `json:"id"`
-	UsrID       uuid.UUID `json:"usr_id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          uuid.UUID  `json:"id"`
+	UsrID       *uuid.UUID `json:"usr_id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 type PopulateGroupView struct {

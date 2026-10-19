@@ -2,7 +2,6 @@ package group
 
 import (
 	"context"
-	"fmt"
 
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/identity"
@@ -43,18 +42,18 @@ func (uc *DeleteGroupUseCase) Execute(
 
 	if group == nil {
 		detail := make(map[string]string)
-		detail["reason"] = "Group does not exist with ID=" + groupID.String()
+		detail["reason"] = "Group was not found"
 		return nil, apperror.ErrNotFound(detail)
 	}
 
-	yes, err := uc.HasGroupAccessTo(ctx, group.ID, domain.GroupOwnerAccess)
+	yes, err := uc.HasGroupAccessTo(ctx, group.ID, domain.GroupWriteDeleteAccess)
 	if err != nil {
 		return nil, err
 	}
 
 	if !yes {
 		detail := make(map[string]string)
-		detail["reason"] = fmt.Sprintf("User does not have access to specified group")
+		detail["reason"] = "Not enough privileges to delete group."
 		return nil, apperror.ErrForbidden(detail)
 	}
 

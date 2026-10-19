@@ -11,18 +11,23 @@ var ErrNoAccess = errors.New("no access")
 // GroupID is a group identifier in the system
 type GroupID = uuid.UUID
 
+// GroupRootName is the name of the root group
+const GroupRootName = "."
+
 type GroupUsrAccess string
 
 const (
-	GroupReadOnlyAccess GroupUsrAccess = "read_only_access"
-	GroupWriteAccess    GroupUsrAccess = "write_access"
-	GroupOwnerAccess    GroupUsrAccess = "owner_access"
+	GroupReadOnlyAccess    GroupUsrAccess = "read_only_access"
+	GroupWriteAccess       GroupUsrAccess = "write_access"
+	GroupWriteDeleteAccess GroupUsrAccess = "write_delete_access"
+	GroupOwnerAccess       GroupUsrAccess = "owner_access"
 )
 
 var GroupAccessRank = map[GroupUsrAccess]int{
-	GroupReadOnlyAccess: 1,
-	GroupWriteAccess:    2,
-	GroupOwnerAccess:    3,
+	GroupReadOnlyAccess:    1,
+	GroupWriteAccess:       2,
+	GroupWriteDeleteAccess: 3,
+	GroupOwnerAccess:       4,
 }
 
 func (a GroupUsrAccess) String() string {
@@ -33,6 +38,10 @@ func (a GroupUsrAccess) String() string {
 		return "Modify Access"
 	case GroupOwnerAccess:
 		return "Owner Access"
+
+	case GroupWriteDeleteAccess:
+		return "Write Delete Access"
+
 	default:
 		return "Unknown Access"
 	}
@@ -45,7 +54,7 @@ func (a GroupUsrAccess) IsEquivalent(b GroupUsrAccess) bool {
 func (a GroupUsrAccess) IsValidAccessToRole(r UsrRole) (can bool, reason string) {
 	switch r {
 	case SuperUsrRole:
-		return false, "Super users can not be assigned to groups."
+		return false, "Super users can not mannually be assigned to groups."
 	case NormalUsrRole:
 		return true, ""
 	case LimitedUsrRole:
@@ -60,13 +69,16 @@ func (a GroupUsrAccess) IsValidAccessToRole(r UsrRole) (can bool, reason string)
 }
 
 func (a GroupUsrAccess) IsValid() bool {
-	return a == GroupReadOnlyAccess || a == GroupWriteAccess || a == GroupOwnerAccess
+	return a == GroupReadOnlyAccess ||
+		a == GroupWriteAccess ||
+		a == GroupWriteDeleteAccess ||
+		a == GroupOwnerAccess
 }
 
 // Group represents a identifier to be tag to a Folder or file in the system and be associated with a user(s)
 type Group struct {
 	ID          GroupID
-	UsrID       UsrID
+	UsrID       *UsrID
 	Name        string
 	Description string
 	CreatedAt   time.Time

@@ -16,12 +16,12 @@ import (
 )
 
 type CreateNodeFileDTO struct {
-	ParentID     domain.NodeID `json:"parentID" validate:"required"`
-	Filename     string        `json:"filename" validate:"required,min=1"`
-	Description  string        `json:"description" validate:"max=255"`
-	ExpectedSize uint64        `json:"size" validate:"required,gte=0"`
-	Mimetype     string        `json:"mimetype" validate:"required,max=255"`
-	File         io.ReadCloser `json:"file" validate:"required"` // TODO: revisar ciclo de vida de File como argumento
+	ParentID     domain.NodeID `validate:"required"`
+	Filename     string        `validate:"required,min=1"`
+	Description  string        `validate:"max=255"`
+	ExpectedSize uint64        `validate:"required,gte=0"`
+	Mimetype     string        `validate:"required,max=255"`
+	File         io.ReadCloser `validate:"required"` // TODO: revisar ciclo de vida de File como argumento
 }
 
 type CreateNodeFileTx interface {
@@ -98,14 +98,10 @@ func (uc *CreateNodeFileUseCase) Execute(ctx context.Context, dto CreateNodeFile
 		return nil, apperror.ErrForbidden(detail)
 	}
 
-	nodeID := uuid.NewV7()
-
 	docID := uuid.NewV7()
 
-	path, err := folder.Path.NewChildPath(nodeID)
-	if err != nil {
-		return nil, err
-	}
+	nodeID := uuid.NewV7()
+	path := folder.Path.NewChildPath(nodeID)
 
 	uploadCommand := storage.UploadCmd{
 		Key:          nodeID,
@@ -123,7 +119,7 @@ func (uc *CreateNodeFileUseCase) Execute(ctx context.Context, dto CreateNodeFile
 
 	node := &domain.Node{
 		ID:          nodeID,
-		UsrID:       usr.ID,
+		UsrID:       &usr.ID,
 		Type:        domain.FileNodeType,
 		Description: dto.Description,
 		Name:        title,

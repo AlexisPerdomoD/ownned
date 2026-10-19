@@ -20,10 +20,7 @@ func NewDeleteGroupUsrUseCase(
 	}
 }
 
-func (uc *DeleteGroupUsrUseCase) Execute(
-	ctx context.Context,
-	groupID domain.GroupID,
-	targetUsrID domain.UsrID) error {
+func (uc *DeleteGroupUsrUseCase) Execute(ctx context.Context, groupID domain.GroupID, targetUsrID domain.UsrID) error {
 	usr, err := identity.Get(ctx)
 	if err != nil {
 		return err
@@ -35,14 +32,14 @@ func (uc *DeleteGroupUsrUseCase) Execute(
 		return apperror.ErrForbidden(detail)
 	}
 
-	yes, err := uc.HasGroupAccessTo(ctx, groupID, domain.GroupOwnerAccess)
+	yes, err := uc.HasGroupAccessTo(ctx, groupID, domain.GroupWriteDeleteAccess)
 	if err != nil {
 		return err
 	}
 
 	if !yes {
 		detail := make(map[string]string)
-		detail["reason"] = "User does not have access enough to group ID=" + groupID.String()
+		detail["reason"] = "Not enough privileges to delete group user assignment."
 		return apperror.ErrForbidden(detail)
 	}
 

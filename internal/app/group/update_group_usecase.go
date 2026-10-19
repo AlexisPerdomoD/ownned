@@ -50,7 +50,7 @@ func (uc *UpdateGroupUseCase) Execute(
 
 	if group == nil {
 		detail := make(map[string]string)
-		detail["reason"] = "Group does not exist with ID=" + groupID.String()
+		detail["reason"] = "Group was not found"
 		return nil, apperror.ErrNotFound(detail)
 	}
 

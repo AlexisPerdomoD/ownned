@@ -47,12 +47,12 @@ WHERE id=$4`
 const deleteGroupQuery string = `DELETE FROM fs.groups WHERE id=$1`
 
 type groupRow struct {
-	ID          uuid.UUID `db:"id"`
-	UsrID       uuid.UUID `db:"usr_id"`
-	Name        string    `db:"name"`
-	Description string    `db:"description"`
-	CreatedAt   time.Time `db:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at"`
+	ID          uuid.UUID  `db:"id"`
+	UsrID       *uuid.UUID `db:"usr_id"`
+	Name        string     `db:"name"`
+	Description string     `db:"description"`
+	CreatedAt   time.Time  `db:"created_at"`
+	UpdatedAt   time.Time  `db:"updated_at"`
 }
 
 func (r *groupRow) ToDomain() domain.Group {
@@ -68,6 +68,24 @@ func (r *groupRow) ToDomain() domain.Group {
 
 type groupRepository struct {
 	db sqlx.ExtContext
+}
+
+func (r *groupRepository) GetRoot(ctx context.Context) (*domain.Group, error) {
+	q := fmt.Sprintf("%s\nWHERE g.usr_id IS NULL AND g.name=$1", getGroupQuery)
+	row := &groupRow{}
+	err := r.db.QueryRowxContext(ctx, q, domain.GroupRootName).StructScan(row)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			detail := make(map[string]string)
+			detail["reason"] = "no root group found"
+			return nil, apperror.ErrIlegalDBState(detail)
+		}
+
+		return nil, err
+	}
+
+	d := row.ToDomain()
+	return &d, nil
 }
 
 func (r *groupRepository) GetByID(ctx context.Context, id domain.GroupID) (*domain.Group, error) {
@@ -157,49 +175,52 @@ func (r *groupRepository) Paginate(
 ) (*pagination.PaginationResult[domain.Group], error) {
 	var where strings.Builder
 	params := make([]any, 0)
+	baseQ := getGroupQuery
 	where.WriteString("\nWHERE 1=1")
+
 	if param.UsrID != nil {
-		statement := fmt.Sprintf("\nAND g.usr_id = $%d", len(params)+1)
+		baseQ = fmt.Sprintf("%s\nJOIN fs.group_usrs gu ON gu.group_id = g.id", getGroupQuery)
+		statement := fmt.Sprintf("\nAND gu.usr_id = $%d", len(params)+1)
 		where.WriteString(statement)
 		params = append(params, *param.UsrID)
 	}
 
 	if param.Search != "" {
-		statement := fmt.Sprintf("\nAND g.name ILIKE $%d", len(params)+1)
+		pos := len(params) + 1
+		statement := fmt.Sprintf("\nAND (g.name ILIKE $%d OR g.description ILIKE $%d)", pos, pos)
 		where.WriteString(statement)
 		params = append(params, "%"+param.Search+"%")
 	}
 
-	whereStr := where.String()
-	countQuery := fmt.Sprintf("SELECT count(*) FROM fs.groups g %s", whereStr)
+	q := baseQ + where.String()
+	countQ := fmt.Sprintf("SELECT count(*) FROM (%s) as filtered", q)
 	var totalCount int64
-	err := r.db.QueryRowxContext(ctx, countQuery, params...).Scan(&totalCount)
+	err := r.db.QueryRowxContext(ctx, countQ, params...).Scan(&totalCount)
 	if err != nil {
 		return nil, err
 	}
 
+	page, limit := param.GetSafePage(), param.GetSafeLimit()
 	if totalCount == 0 {
 		return &pagination.PaginationResult[domain.Group]{
 			Data:       make([]domain.Group, 0),
-			Page:       param.Page,
-			Limit:      param.Limit,
+			Page:       page,
+			Limit:      limit,
 			TotalPages: 0,
 			TotalCount: 0,
 		}, nil
 	}
 
-	page := param.GetSafePage()
-	pageCount := param.GetSafeLimit()
-	totalPages := uint(math.Ceil(float64(totalCount) / float64(pageCount)))
-	query := fmt.Sprintf("%s%s\nORDER BY g.id\nLIMIT $%d OFFSET $%d",
-		getGroupQuery,
-		whereStr,
+	totalPages := uint(math.Ceil(float64(totalCount) / float64(limit)))
+
+	q = fmt.Sprintf("%s\nORDER BY g.id\nLIMIT $%d OFFSET $%d",
+		q,
 		len(params)+1,
 		len(params)+2)
-	params = append(params, pageCount)
-	params = append(params, (page-1)*pageCount)
+	params = append(params, limit)
+	params = append(params, (page-1)*limit)
 
-	rows, err := r.db.QueryxContext(ctx, query, params...)
+	rows, err := r.db.QueryxContext(ctx, q, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +234,7 @@ func (r *groupRepository) Paginate(
 	return &pagination.PaginationResult[domain.Group]{
 		Data:       data,
 		Page:       page,
-		Limit:      pageCount,
+		Limit:      limit,
 		TotalPages: totalPages,
 		TotalCount: uint(totalCount),
 	}, nil

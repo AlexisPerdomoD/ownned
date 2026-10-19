@@ -3,6 +3,7 @@ package group
 import (
 	"context"
 	"fmt"
+
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/identity"
 	"ownned/internal/domain"
@@ -23,11 +24,7 @@ func NewUpsertGroupUsrUseCase(
 	}
 }
 
-func (uc *UpsertGroupUsrUseCase) Execute(
-	ctx context.Context,
-	groupID domain.GroupID,
-	targetUsrID domain.UsrID,
-	access domain.GroupUsrAccess) error {
+func (uc *UpsertGroupUsrUseCase) Execute(ctx context.Context, groupID domain.GroupID, targetUsrID domain.UsrID, access domain.GroupUsrAccess) error {
 	usr, err := identity.Get(ctx)
 	if err != nil {
 		return err
@@ -39,14 +36,14 @@ func (uc *UpsertGroupUsrUseCase) Execute(
 		return apperror.ErrForbidden(detail)
 	}
 
-	yes, err := uc.HasGroupAccessTo(ctx, groupID, domain.GroupOwnerAccess)
+	yes, err := uc.HasGroupAccessTo(ctx, groupID, domain.GroupWriteAccess)
 	if err != nil {
 		return err
 	}
 
 	if !yes {
 		detail := make(map[string]string)
-		detail["reason"] = fmt.Sprintf("User does not have access enough to group to assign users.")
+		detail["reason"] = "User does not have access enough to group to assign users."
 		return apperror.ErrForbidden(detail)
 	}
 
@@ -57,7 +54,7 @@ func (uc *UpsertGroupUsrUseCase) Execute(
 
 	if targetUsr == nil {
 		detail := make(map[string]string)
-		detail["reason"] = fmt.Sprintf("User does not exist.")
+		detail["reason"] = "Target user was not found"
 		return apperror.ErrNotFound(detail)
 	}
 

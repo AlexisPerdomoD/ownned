@@ -20,7 +20,7 @@ type CreateUsrTx interface {
 	UsrRepository() UsrRepository
 	UsrPwdRepository() UsrPwdRepository
 	NodeCreator() NodeCreator
-	GroupCreator() GroupCreator
+	GroupRepository() GroupRepository
 	GroupUsrUpsertor() GroupUsrUpsertor
 	GroupNodeUpsertor() GroupNodeUpsertor
 }
@@ -106,45 +106,38 @@ func (uc *CreateUsrUseCase) Execute(
 		}
 	}()
 
-	usrID := uuid.NewV7()
-	rootGroupID := uuid.NewV7()
-	rootFolderID := uuid.NewV7()
-
-	rootFolderPath, err := domain.NodePathUsrRoot.NewChildPath(rootFolderID)
-	if err != nil {
-		return nil, err
-	}
-
 	newUsr = &domain.Usr{
-		ID:        usrID,
+		ID:        uuid.NewV7(),
 		Username:  dto.Username,
 		Role:      dto.Role,
 		Firstname: dto.Firstname,
 		Lastname:  dto.Lastname,
 	}
 
-	rootFolder := &domain.Node{
-		ID:          rootFolderID,
+	folderID := uuid.NewV7()
+
+	folder := &domain.Node{
+		ID:          folderID,
 		Name:        newUsr.Username,
-		UsrID:       newUsr.ID,
+		UsrID:       &newUsr.ID,
 		Description: fmt.Sprintf("Auto generated root node for %s in particular.", newUsr.Fullname()),
 		Type:        domain.FolderNodeType,
-		Path:        rootFolderPath,
+		Path:        domain.NodePathUsrRoot.NewChildPath(folderID),
 	}
 
 	rootGroup := &domain.Group{
-		ID:          rootGroupID,
-		UsrID:       newUsr.ID,
+		ID:          uuid.NewV7(),
+		UsrID:       &newUsr.ID,
 		Name:        newUsr.Username,
 		Description: fmt.Sprintf("Auto generated root group to handle root folder access for %s in particular.", newUsr.Fullname()),
 	}
 
-	rootGroupNode := &domain.GroupNode{
+	groupNode := &domain.GroupNode{
 		GroupID: rootGroup.ID,
-		NodeID:  rootFolder.ID,
+		NodeID:  folder.ID,
 	}
 
-	rootGroupUsr := &domain.GroupUsr{
+	groupUsr := &domain.GroupUsr{
 		GroupID: rootGroup.ID,
 		UsrID:   newUsr.ID,
 		Access:  domain.GroupOwnerAccess,
@@ -161,24 +154,41 @@ func (uc *CreateUsrUseCase) Execute(
 			return err
 		}
 
-		if err := t.NodeCreator().Create(t.Ctx(), rootFolder); err != nil {
+		if err := t.NodeCreator().Create(t.Ctx(), folder); err != nil {
 			uc.log.DebugContext(t.Ctx(), "error creating usr node", "err", err, "stack", debug.Stack())
 			return err
 		}
 
-		if err := t.GroupCreator().Create(t.Ctx(), rootGroup); err != nil {
+		if err := t.GroupRepository().Create(t.Ctx(), rootGroup); err != nil {
 			uc.log.DebugContext(t.Ctx(), "error creating usr group", "err", err, "stack", debug.Stack())
 			return err
 		}
 
-		if err := t.GroupNodeUpsertor().Upsert(t.Ctx(), rootGroupNode); err != nil {
+		if err := t.GroupNodeUpsertor().Upsert(t.Ctx(), groupNode); err != nil {
 			uc.log.WarnContext(t.Ctx(), "error creating usr group node", "err", err, "stack", debug.Stack())
 			return err
 		}
 
-		if err := t.GroupUsrUpsertor().Upsert(t.Ctx(), rootGroupUsr); err != nil {
+		if err := t.GroupUsrUpsertor().Upsert(t.Ctx(), groupUsr); err != nil {
 			uc.log.DebugContext(t.Ctx(), "error creating usr group usr", "err", err, "stack", debug.Stack())
 			return err
+		}
+
+		if newUsr.Role == domain.SuperUsrRole {
+			rootGroup, err := t.GroupRepository().GetRoot(t.Ctx())
+			if err != nil {
+				uc.log.DebugContext(t.Ctx(), "error getting root group", "err", err, "stack", debug.Stack())
+				return err
+			}
+
+			if err := t.GroupUsrUpsertor().Upsert(t.Ctx(), &domain.GroupUsr{
+				GroupID: rootGroup.ID,
+				UsrID:   newUsr.ID,
+				Access:  domain.GroupOwnerAccess,
+			}); err != nil {
+				uc.log.DebugContext(t.Ctx(), "error creating usr group usr", "err", err, "stack", debug.Stack())
+				return err
+			}
 		}
 
 		return nil

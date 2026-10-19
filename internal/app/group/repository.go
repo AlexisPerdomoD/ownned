@@ -2,6 +2,7 @@ package group
 
 import (
 	"context"
+
 	"ownned/internal/app/pagination"
 	"ownned/internal/domain"
 )
@@ -13,6 +14,8 @@ type GroupPaginateParam struct {
 
 // GroupRepository is the interface to interact with the group repository
 type GroupRepository interface {
+	// GetRoot returns the root group of the system. If no root group exists returns ErrIlegalDBState
+	GetRoot(ctx context.Context) (*domain.Group, error)
 	// GetByID returns a group by its identifier
 	GetByID(ctx context.Context, id domain.GroupID) (*domain.Group, error)
 	// GetByIDs returns groups by its identifiers

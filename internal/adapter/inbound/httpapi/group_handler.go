@@ -2,13 +2,10 @@ package httpapi
 
 import (
 	"net/http"
-	"strconv"
-	"strings"
 	"uuid"
 
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/group"
-	"ownned/internal/app/pagination"
 	"ownned/internal/domain"
 
 	"github.com/go-chi/chi/v5"
@@ -76,26 +73,15 @@ func (h *GroupHandler) getGroupHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h *GroupHandler) paginateGroupHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	var limit, page uint
-	search := q.Get("search")
-	includeAllFlag := strings.ToLower(q.Get("scope")) == "all"
-
-	if rawlimit, err := strconv.ParseUint(q.Get("limit"), 10, 32); err == nil {
-		limit = uint(rawlimit)
+	params := group.GroupPaginateParam{
+		PaginationParam: parsePaginationParam(q),
 	}
 
-	if rawpage, err := strconv.ParseUint(q.Get("page"), 10, 32); err == nil {
-		page = uint(rawpage)
+	if val, err := uuid.Parse(q.Get("usr_id")); err == nil {
+		params.UsrID = &val
 	}
 
-	res, err := h.paginateGroup.Execute(
-		r.Context(),
-		pagination.PaginationParam{
-			Page:   page,
-			Limit:  limit,
-			Search: search,
-		},
-		includeAllFlag)
+	res, err := h.paginateGroup.Execute(r.Context(), params)
 	if err != nil {
 		resp := errView(err)
 		writeJSON(w, resp.Code, resp)
