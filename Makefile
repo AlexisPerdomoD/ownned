@@ -104,4 +104,4 @@ superusr:
 	GOTRACEBACK=all go run ./cmd/superusr $(ARGS)
 
 approot:
-	go run ./cmd/approot $(ARGS)
+	go run ./cmd/approot 
