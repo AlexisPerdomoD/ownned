@@ -1,4 +1,4 @@
-import { createSignal, createEffect } from 'solid-js'
+import { createEffect } from 'solid-js'
 
 import { buildCreateGroupDTO, buildUpdateGroupDTO } from '@/entities/groups/api'
 
@@ -37,60 +37,63 @@ export function GroupForm(props) {
         }
     }
 
-    if (!props.open) return null
-
     return (
-        <div
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-            onClick={props.onClose}
-        >
-            <div
-                class="bg-[--color-surface] border border-[--color-border] rounded-[--radius-md] w-full max-w-md p-6"
-                onClick={e => e.stopPropagation()}
-            >
-                <h3 class="font-serif text-lg text-[--color-ink-dark] mb-4">
-                    {props.group ? 'Edit Group' : 'New Group'}
-                </h3>
+        <>
+            {!props.open ? null : (
+                <div
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+                    onClick={props.onClose}
+                >
+                    <div
+                        class="bg-surface border border-border rounded-md w-full max-w-md p-6"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <h3 class="font-serif text-lg text-[--color-ink-dark] mb-4">
+                            {props.group ? 'Edit Group' : 'New Group'}
+                        </h3>
 
-                <form onSubmit={handleSubmit} class="flex flex-col gap-4">
-                    <div class="flex flex-col gap-1">
-                        <label
-                            for="group-name"
-                            class="text-xs text-[--color-muted] tracking-wide uppercase"
+                        <form
+                            onSubmit={handleSubmit}
+                            class="flex flex-col gap-4"
                         >
-                            Name *
-                        </label>
-                        <input
-                            ref={r => (nameInput = r)}
-                            id="group-name"
-                            type="text"
-                            maxLength={255}
-                            class="
+                            <div class="flex flex-col gap-1">
+                                <label
+                                    for="group-name"
+                                    class="text-xs text-[--color-muted] tracking-wide uppercase"
+                                >
+                                    Name *
+                                </label>
+                                <input
+                                    ref={r => (nameInput = r)}
+                                    id="group-name"
+                                    type="text"
+                                    maxLength={255}
+                                    class="
                                 w-full
                                 font-sans font-light text-sm
-                                text-[--color-ink-dark] placeholder:text-[--color-muted]
-                                bg-[--color-bg] border border-[--color-border] rounded-xs
+                                text-ink-dark placeholder:text-muted
+                                bg-bg border border-border rounded-xs
                                 px-3 py-2
-                                focus:outline-none focus:border-[--color-ink]
-                                hover:border-[--color-muted]
+                                focus:outline-none focus:border-ink
+                                hover:border-muted
                             "
-                            required
-                        />
-                    </div>
+                                    required
+                                />
+                            </div>
 
-                    <div class="flex flex-col gap-1">
-                        <label
-                            for="group-description"
-                            class="text-xs text-[--color-muted] tracking-wide uppercase"
-                        >
-                            Description
-                        </label>
-                        <textarea
-                            ref={r => (descInput = r)}
-                            id="group-description"
-                            rows={3}
-                            maxLength={1000}
-                            class="
+                            <div class="flex flex-col gap-1">
+                                <label
+                                    for="group-description"
+                                    class="text-xs text-muted tracking-wide uppercase"
+                                >
+                                    Description
+                                </label>
+                                <textarea
+                                    ref={r => (descInput = r)}
+                                    id="group-description"
+                                    rows={3}
+                                    maxLength={1000}
+                                    class="
                                 w-full
                                 font-sans font-light text-sm
                                 text-[--color-ink-dark] placeholder:text-[--color-muted]
@@ -99,40 +102,46 @@ export function GroupForm(props) {
                                 focus:outline-none focus:border-[--color-ink]
                                 hover:border-[--color-muted]
                             "
-                        />
-                    </div>
+                                />
+                            </div>
 
-                    <div class="flex justify-end gap-2 pt-2">
-                        <button
-                            type="button"
-                            onClick={props.onClose}
-                            class="
+                            <div class="flex justify-end gap-2 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={props.onClose}
+                                    class="
                                 px-4 py-2 text-sm font-normal
                                 text-[--color-ink] border border-[--color-border] rounded-xs
                                 bg-transparent
                                 hover:bg-[--color-bg-2]
                                 transition-colors duration-[--ease-base]
                             "
-                            disabled={props.loading}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={props.loading}
-                            class="
+                                    disabled={props.loading}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={props.loading}
+                                    class="
                                 px-4 py-2 text-sm font-normal
                                 bg-[--color-ink-dark] text-[--color-bg] border border-[--color-ink-dark] rounded-xs
                                 hover:bg-[--color-ink]
                                 transition-colors duration-[--ease-base]
                                 disabled:opacity-40 disabled:cursor-not-allowed
                             "
-                        >
-                            {props.loading ? 'Saving...' : (props.group ? 'Update' : 'Create')}
-                        </button>
+                                >
+                                    {props.loading
+                                        ? 'Saving...'
+                                        : props.group
+                                          ? 'Update'
+                                          : 'Create'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                </form>
-            </div>
-        </div>
+                </div>
+            )}
+        </>
     )
 }

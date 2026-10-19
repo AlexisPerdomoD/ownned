@@ -1,4 +1,4 @@
-import { createSignal, For } from 'solid-js'
+import { For, createSignal } from 'solid-js'
 
 import {
     useCreateUsr,
@@ -131,147 +131,152 @@ function CreateUsrForm(props) {
         props.onSubmit?.(username, password, firstname, lastname, role, [])
     }
 
-    if (!props.open) return null
-
     return (
-        <div
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-            onClick={() => props.onClose?.()}
-        >
-            <div
-                class="bg-[--color-surface] border border-[--color-border] rounded-[--radius-md] w-full max-w-md p-6"
-                onClick={e => e.stopPropagation()}
-            >
-                <h3 class="font-serif text-lg text-[--color-ink-dark] mb-4">
-                    New User
-                </h3>
+        <>
+            {!props.open ? null : (
+                <div
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+                    onClick={() => props.onClose?.()}
+                >
+                    <div
+                        class="bg-success border border-border rounded-md w-full max-w-md p-6"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <h3 class="font-serif text-lg text-ink-dark mb-4">
+                            New User
+                        </h3>
 
-                <form onSubmit={handleSubmit} class="flex flex-col gap-4">
-                    <div class="flex flex-col gap-1">
-                        <label class="text-xs text-[--color-muted] uppercase tracking-wide">
-                            Email *
-                        </label>
-                        <input
-                            ref={r => (usernameInput = r)}
-                            type="email"
-                            placeholder="email@example.com"
-                            class="
+                        <form
+                            onSubmit={handleSubmit}
+                            class="flex flex-col gap-4"
+                        >
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs text-muted uppercase tracking-wide">
+                                    Email *
+                                </label>
+                                <input
+                                    ref={r => (usernameInput = r)}
+                                    type="email"
+                                    placeholder="email@example.com"
+                                    class="
                                 w-full font-sans font-light text-sm
                                 text-[--color-ink-dark]
-                                bg-[--color-bg] border border-[--color-border] rounded-xs
+                                bg-[--color-bg] border border-border rounded-xs
                                 px-3 py-2
-                                focus:outline-none focus:border-[--color-ink]
+                                focus:outline-none focus:border-ink
                             "
-                            required
-                        />
-                    </div>
+                                    required
+                                />
+                            </div>
 
-                    <div class="flex gap-2">
-                        <div class="flex flex-col gap-1 flex-1">
-                            <label class="text-xs text-[--color-muted] uppercase tracking-wide">
-                                First Name *
-                            </label>
-                            <input
-                                ref={r => (firstnameInput = r)}
-                                type="text"
-                                placeholder="John"
-                                class="
+                            <div class="flex gap-2">
+                                <div class="flex flex-col gap-1 flex-1">
+                                    <label class="text-xs text-muted uppercase tracking-wide">
+                                        First Name *
+                                    </label>
+                                    <input
+                                        ref={r => (firstnameInput = r)}
+                                        type="text"
+                                        placeholder="John"
+                                        class="
                                     w-full font-sans font-light text-sm
                                     text-[--color-ink-dark]
                                     bg-[--color-bg] border border-[--color-border] rounded-xs
                                     px-3 py-2
                                     focus:outline-none focus:border-[--color-ink]
                                 "
-                                required
-                            />
-                        </div>
-                        <div class="flex flex-col gap-1 flex-1">
-                            <label class="text-xs text-[--color-muted] uppercase tracking-wide">
-                                Last Name *
-                            </label>
-                            <input
-                                ref={r => (lastnameInput = r)}
-                                type="text"
-                                placeholder="Doe"
-                                class="
+                                        required
+                                    />
+                                </div>
+                                <div class="flex flex-col gap-1 flex-1">
+                                    <label class="text-xs text-muted uppercase tracking-wide">
+                                        Last Name *
+                                    </label>
+                                    <input
+                                        ref={r => (lastnameInput = r)}
+                                        type="text"
+                                        placeholder="Doe"
+                                        class="
                                     w-full font-sans font-light text-sm
                                     text-[--color-ink-dark]
                                     bg-[--color-bg] border border-[--color-border] rounded-xs
                                     px-3 py-2
                                     focus:outline-none focus:border-[--color-ink]
                                 "
-                                required
-                            />
-                        </div>
-                    </div>
+                                        required
+                                    />
+                                </div>
+                            </div>
 
-                    <div class="flex flex-col gap-1">
-                        <label class="text-xs text-[--color-muted] uppercase tracking-wide">
-                            Role *
-                        </label>
-                        <select
-                            ref={r => (roleInput = r)}
-                            defaultValue="normal_usr_role"
-                            class="
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs text-muted uppercase tracking-wide">
+                                    Role *
+                                </label>
+                                <select
+                                    ref={r => (roleInput = r)}
+                                    defaultValue="normal_usr_role"
+                                    class="
                                 w-full font-sans font-light text-sm
                                 text-[--color-ink-dark]
                                 bg-[--color-bg] border border-[--color-border] rounded-xs
                                 px-3 py-2
                                 focus:outline-none focus:border-[--color-ink]
                             "
-                            required
-                        >
-                            <For each={roleOptions}>
-                                {opt => (
-                                    <option value={opt.value}>
-                                        {opt.label}
-                                    </option>
-                                )}
-                            </For>
-                        </select>
-                    </div>
+                                    required
+                                >
+                                    <For each={roleOptions}>
+                                        {opt => (
+                                            <option value={opt.value}>
+                                                {opt.label}
+                                            </option>
+                                        )}
+                                    </For>
+                                </select>
+                            </div>
 
-                    <div class="flex flex-col gap-1">
-                        <label class="text-xs text-[--color-muted] uppercase tracking-wide">
-                            Password *
-                        </label>
-                        <input
-                            ref={r => (passwordInput = r)}
-                            type="password"
-                            minLength={8}
-                            placeholder="Min 8 characters"
-                            class="
+                            <div class="flex flex-col gap-1">
+                                <label class="text-xs text-muted uppercase tracking-wide">
+                                    Password *
+                                </label>
+                                <input
+                                    ref={r => (passwordInput = r)}
+                                    type="password"
+                                    minLength={8}
+                                    placeholder="Min 8 characters"
+                                    class="
                                 w-full font-sans font-light text-sm
                                 text-[--color-ink-dark]
                                 bg-[--color-bg] border border-[--color-border] rounded-xs
                                 px-3 py-2
                                 focus:outline-none focus:border-[--color-ink]
                             "
-                            required
-                        />
-                    </div>
+                                    required
+                                />
+                            </div>
 
-                    {errors()?.general && (
-                        <p class="text-xs text-[--color-danger]">
-                            {errors().general}
-                        </p>
-                    )}
+                            {errors()?.general && (
+                                <p class="text-xs text-danger">
+                                    {errors().general}
+                                </p>
+                            )}
 
-                    <div class="flex justify-end gap-2">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={props.onClose}
-                        >
-                            Cancel
-                        </Button>
-                        <Button type="submit" loading={props.loading}>
-                            Create
-                        </Button>
+                            <div class="flex justify-end gap-2">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={props.onClose}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button type="submit" loading={props.loading}>
+                                    Create
+                                </Button>
+                            </div>
+                        </form>
                     </div>
-                </form>
-            </div>
-        </div>
+                </div>
+            )}
+        </>
     )
 }
 
@@ -359,15 +364,21 @@ export function UsrsView() {
                 open={showForm()}
                 loading={creating()}
                 onSubmit={(username, password, firstname, lastname, role) => {
-                    create(username, password, firstname, lastname, role).then(([success, usr]) => {
-                        if (!success) {
-                            toast({ type: 'error', message: usr.general ?? 'Error creating user.' })
-                            return
-                        }
+                    create(username, password, firstname, lastname, role).then(
+                        ([success, usr]) => {
+                            if (!success) {
+                                toast({
+                                    type: 'error',
+                                    message:
+                                        usr.general ?? 'Error creating user.'
+                                })
+                                return
+                            }
 
-                        setShowForm(false)
-                        refresh()
-                    })
+                            setShowForm(false)
+                            refresh()
+                        }
+                    )
                 }}
                 onClose={() => setShowForm(false)}
             />

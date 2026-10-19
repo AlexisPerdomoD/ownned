@@ -25,7 +25,7 @@ export function GroupUsersList({ users, loading = false, onRemove }) {
     return (
         <div class="flex flex-col gap-2">
             <Show when={loading}>
-                <div class="py-4 text-center text-sm text-[--color-muted]">
+                <div class="py-4 text-center text-sm text-muted">
                     Loading...
                 </div>
             </Show>
@@ -39,17 +39,21 @@ export function GroupUsersList({ users, loading = false, onRemove }) {
             <Show when={!loading && users.length > 0}>
                 <For each={users}>
                     {usr => (
-                        <div class="flex items-center justify-between p-2 bg-[--color-bg-2] rounded-[--radius-xs]">
+                        <div class="flex items-center justify-between p-2 bg-bg-2 rounded-xs">
                             <div class="flex items-center gap-2">
                                 <span class="text-sm">{usr.usr_id}</span>
-                                <Badge variant={accessVariant[usr.access] ?? 'neutral'}>
+                                <Badge
+                                    variant={
+                                        accessVariant[usr.access] ?? 'neutral'
+                                    }
+                                >
                                     {usr.access.replace('_', ' ')}
                                 </Badge>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => onRemove?.(usr.usr_id)}
-                                class="text-xs text-[--color-danger] hover:underline"
+                                class="text-xs text-danger hover:underline"
                             >
                                 Remove
                             </button>
@@ -98,11 +102,7 @@ export function AddUserForm({ availableUsrs, loading = false, onAdd }) {
             >
                 <option value="">Select user...</option>
                 <For each={availableUsrs}>
-                    {usr => (
-                        <option value={usr.id}>
-                            {usr.username}
-                        </option>
-                    )}
+                    {usr => <option value={usr.id}>{usr.username}</option>}
                 </For>
             </select>
 
@@ -118,9 +118,7 @@ export function AddUserForm({ availableUsrs, loading = false, onAdd }) {
                 "
             >
                 <For each={accessOptions}>
-                    {opt => (
-                        <option value={opt.value}>{opt.label}</option>
-                    )}
+                    {opt => <option value={opt.value}>{opt.label}</option>}
                 </For>
             </select>
 

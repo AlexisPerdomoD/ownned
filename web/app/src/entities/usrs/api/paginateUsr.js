@@ -26,9 +26,7 @@ export class CreateUsrDTO {
         access: z
             .array(
                 z.strictObject({
-                    group_id: z
-                        .string('Group ID must be a string.')
-                        .uuid('Invalid group ID format.'),
+                    group_id: z.uuid('Invalid group ID format.'),
                     access: z.enum(
                         ['read_only_access', 'write_access', 'owner_access'],
                         {
@@ -149,4 +147,3 @@ export async function apiDeleteUsr(usrId) {
         method: 'DELETE'
     })
 }
-

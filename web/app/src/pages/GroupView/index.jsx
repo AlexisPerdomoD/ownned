@@ -1,19 +1,19 @@
-import { Show, createSignal, createEffect } from 'solid-js'
+import { Show, createEffect, createSignal } from 'solid-js'
 
+import { apiPaginateUsrs } from '@/entities/usrs/api'
+import { GroupNodesList } from '@/features/group/ui/GroupNodesList'
+import { AddUserForm, GroupUsersList } from '@/features/group/ui/GroupUsersList'
 import { useGetGroup } from '@/features/group/usecase'
 import {
-    useUpdateGroup,
     useDeleteGroup,
-    useUpsertGroupUsr,
+    useDeleteGroupNode,
     useDeleteGroupUsr,
+    useUpdateGroup,
     useUpsertGroupNode,
-    useDeleteGroupNode
+    useUpsertGroupUsr
 } from '@/features/group/usecase'
-import { apiPaginateUsrs } from '@/entities/usrs/api'
-import { GroupUsersList, AddUserForm } from '@/features/group/ui/GroupUsersList'
-import { GroupNodesList } from '@/features/group/ui/GroupNodesList'
-import { PageHeader, Button, Spinner, Tabs } from '@/shared/ui'
-import { useParams, useNavigate } from '@solidjs/router'
+import { Button, PageHeader, Spinner, Tabs } from '@/shared/ui'
+import { useNavigate, useParams } from '@solidjs/router'
 
 export function GroupView() {
     const params = useParams()
@@ -76,7 +76,10 @@ export function GroupView() {
 
     return (
         <section class="flex flex-col p-6">
-            <Show when={!loading()} fallback={<Spinner size="lg" class="mx-auto mt-20" />}>
+            <Show
+                when={!loading()}
+                fallback={<Spinner size="lg" class="mx-auto mt-20" />}
+            >
                 <PageHeader
                     title={groupData()?.name ?? 'Group'}
                     subtitle={groupData()?.description}
@@ -101,7 +104,7 @@ export function GroupView() {
 
                 <Show when={tab() === 'users'}>
                     <section class="flex flex-col gap-4">
-                        <div class="p-4 bg-[--color-surface] border border-[--color-border-subtle] rounded-[--radius-md]">
+                        <div class="p-4 bg-surface border border-border-subtle rounded-md">
                             <h4 class="text-sm font-medium mb-3">Add User</h4>
                             <AddUserForm
                                 availableUsrs={availableUsrs()}
@@ -110,8 +113,10 @@ export function GroupView() {
                             />
                         </div>
 
-                        <div class="p-4 bg-[--color-surface] border border-[--color-border-subtle] rounded-[--radius-md]">
-                            <h4 class="text-sm font-medium mb-3">Assigned Users</h4>
+                        <div class="p-4 bg-surface border border-surface rounded-md">
+                            <h4 class="text-sm font-medium mb-3">
+                                Assigned Users
+                            </h4>
                             <GroupUsersList
                                 users={groupData()?.usrs ?? []}
                                 loading={addingUsr() || removingUsr()}
@@ -123,9 +128,9 @@ export function GroupView() {
 
                 <Show when={tab() === 'nodes'}>
                     <section class="flex flex-col gap-4">
-                        <div class="p-4 bg-[--color-surface] border border-[--color-border-subtle] rounded-[--radius-md]">
+                        <div class="p-4 bg-surface border border-border-subtle rounded-md">
                             <h4 class="text-sm font-medium mb-3">Add Node</h4>
-                            <p class="text-xs text-[--color-muted] mb-2">
+                            <p class="text-xs text-muted mb-2">
                                 Enter a node ID to share with this group:
                             </p>
                             <form
@@ -150,14 +155,20 @@ export function GroupView() {
                                     "
                                     required
                                 />
-                                <Button type="submit" size="sm" loading={addingNode}>
+                                <Button
+                                    type="submit"
+                                    size="sm"
+                                    loading={addingNode}
+                                >
                                     Add
                                 </Button>
                             </form>
                         </div>
 
-                        <div class="p-4 bg-[--color-surface] border border-[--color-border-subtle] rounded-[--radius-md]">
-                            <h4 class="text-sm font-medium mb-3">Shared Nodes</h4>
+                        <div class="p-4 bg-surface border border-border-subtle rounded-md">
+                            <h4 class="text-sm font-medium mb-3">
+                                Shared Nodes
+                            </h4>
                             <GroupNodesList
                                 nodes={groupData()?.nodes ?? []}
                                 loading={addingNode() || removingNode()}

@@ -14,7 +14,7 @@ function DateCell({ row, key }) {
     return new Date(date).toLocaleDateString()
 }
 
-function UsersCell({ row }) {
+export function UsersCell({ row }) {
     const users = row.usrs ?? []
     return (
         <div class="flex flex-wrap gap-1">
@@ -123,4 +123,3 @@ export function GroupsTable(props) {
         />
     )
 }
-

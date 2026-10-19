@@ -10,6 +10,13 @@ const __dirname = dirname(__filename)
 
 export default defineConfig({
     plugins: [solid(), tailwindcss()],
+    optimizeDeps: {
+        rolldownOptions: {
+            transform: {
+                jsx: 'preserve'
+            }
+        }
+    },
     resolve: {
         alias: {
             '@': `${__dirname}/src`,

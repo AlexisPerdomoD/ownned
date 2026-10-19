@@ -25,20 +25,20 @@ export function CommentsList({ comments, loading = false, onDelete }) {
             <Show when={!loading && comments.length > 0}>
                 <For each={comments}>
                     {comment => (
-                        <div class="p-3 bg-[--color-bg-2] rounded-[--radius-sm]">
+                        <div class="p-3 bg-bg-2 rounded-sm">
                             <div class="flex items-start justify-between gap-2">
-                                <p class="text-sm text-[--color-ink] whitespace-pre-wrap">
+                                <p class="text-sm text-ink whitespace-pre-wrap">
                                     {comment.content}
                                 </p>
                                 <button
                                     type="button"
                                     onClick={() => onDelete?.(comment.id)}
-                                    class="text-xs text-[--color-danger] hover:underline shrink-0"
+                                    class="text-xs text-danger hover:underline shrink-0"
                                 >
                                     Delete
                                 </button>
                             </div>
-                            <p class="text-xs text-[--color-muted] mt-1">
+                            <p class="text-xs text-muted mt-1">
                                 {new Date(comment.created_at).toLocaleString()}
                             </p>
                         </div>
@@ -83,7 +83,12 @@ export function CommentForm({ loading = false, onSubmit }) {
                 "
             />
             <div class="flex justify-end">
-                <Button type="submit" size="sm" loading={loading} disabled={!content().trim()}>
+                <Button
+                    type="submit"
+                    size="sm"
+                    loading={loading}
+                    disabled={!content().trim()}
+                >
                     Add Comment
                 </Button>
             </div>

@@ -63,8 +63,6 @@ export function usePwdLogin() {
             return
         }
 
-        globalThis.console.log(dto)
-
         return loginPwd(dto)
             .then(() => navigate('/nodes', { replace: true }))
             .catch(err => {

@@ -1,12 +1,12 @@
 import { Show, createEffect, createSignal } from 'solid-js'
 
+import { apiDownloadDoc } from '@/entities/docs/api'
 import { CommentForm, CommentsList } from '@/features/comments/ui/CommentsList'
 import {
     useCreateComment,
     useDeleteComment,
     useGetComments
 } from '@/features/comments/usecase'
-import { apiDownloadDoc } from '@/entities/docs/api'
 import { DocCard, NodeList, UploadDropzone } from '@/features/node/ui'
 import {
     useCreateDoc,
@@ -80,16 +80,16 @@ function NodeForm({ open, node, loading, onSubmit, onClose }) {
             onClick={onClose}
         >
             <div
-                class="bg-[--color-surface] border border-[--color-border] rounded-[--radius-md] w-full max-w-md p-6"
+                class="bg-surface border border-border rounded-md w-full max-w-md p-6"
                 onClick={e => e.stopPropagation()}
             >
-                <h3 class="font-serif text-lg text-[--color-ink-dark] mb-4">
+                <h3 class="font-serif text-lg text-ink-dark mb-4">
                     {node ? 'Edit Node' : 'New Folder'}
                 </h3>
 
                 <form onSubmit={handleSubmit} class="flex flex-col gap-4">
                     <div class="flex flex-col gap-1">
-                        <label class="text-xs text-[--color-muted] uppercase tracking-wide">
+                        <label class="text-xs text-muted uppercase tracking-wide">
                             Name *
                         </label>
                         <input
@@ -109,7 +109,7 @@ function NodeForm({ open, node, loading, onSubmit, onClose }) {
                     </div>
 
                     <div class="flex flex-col gap-1">
-                        <label class="text-xs text-[--color-muted] uppercase tracking-wide">
+                        <label class="text-xs text-muted uppercase tracking-wide">
                             Description
                         </label>
                         <textarea
@@ -229,8 +229,10 @@ export function NodeView() {
     const nodeData = () => node()
     const canEdit = () => nodeData()?.type === 'folder'
 
-    const folderChildren = () => nodeData()?.children?.filter(n => n.type === 'folder') ?? []
-    const fileChildren = () => nodeData()?.children?.filter(n => n.type === 'file') ?? []
+    const folderChildren = () =>
+        nodeData()?.children?.filter(n => n.type === 'folder') ?? []
+    const fileChildren = () =>
+        nodeData()?.children?.filter(n => n.type === 'file') ?? []
 
     return (
         <section class="flex flex-col p-6">
@@ -321,9 +323,7 @@ export function NodeView() {
                     when={nodeData()?.type === 'folder' && tab() === 'contents'}
                 >
                     <section class="mt-4">
-                        <h3 class="font-serif text-lg mb-2">
-                            Folders
-                        </h3>
+                        <h3 class="font-serif text-lg mb-2">Folders</h3>
                         <NodeList
                             nodes={folderChildren()}
                             loading={loading()}
@@ -386,4 +386,3 @@ export function NodeView() {
         </section>
     )
 }
-
