@@ -5,25 +5,31 @@ import (
 	"log/slog"
 	"sync"
 
-	"ownned/internal/app/apperror"
 	"ownned/internal/app/group"
 	"ownned/internal/app/identity"
 	"ownned/internal/domain"
 )
 
 type GetRootNodesUseCase struct {
+	group.AccessChecker
 	nodes  NodeRepository
 	groups group.GroupRepository
 	log    *slog.Logger
 }
 
 func NewGetRootNodesUseCase(
+	access_checker group.AccessChecker,
 	nodes NodeRepository,
 	groups group.GroupRepository,
 	mainLogger *slog.Logger,
 ) *GetRootNodesUseCase {
 	log := mainLogger.With("usecase", "GetRootNodesUseCase")
-	return &GetRootNodesUseCase{nodes: nodes, groups: groups, log: log}
+	return &GetRootNodesUseCase{
+		AccessChecker: access_checker,
+		nodes:         nodes,
+		groups:        groups,
+		log:           log,
+	}
 }
 
 func (uc *GetRootNodesUseCase) Execute(ctx context.Context) ([]NodeDisplay, error) {
@@ -32,66 +38,56 @@ func (uc *GetRootNodesUseCase) Execute(ctx context.Context) ([]NodeDisplay, erro
 		return nil, err
 	}
 
-	switch usr.Role {
+	groups, err := uc.groups.GetByUsrAssignedID(ctx, usr.ID)
+	if err != nil {
+		return nil, err
+	}
 
-	case domain.SuperUsrRole:
-		nodes, err := uc.nodes.GetRoot(ctx)
-		if err != nil {
-			return nil, err
-		}
+	if len(groups) == 0 {
+		return []NodeDisplay{}, nil
+	}
 
-		resp := make([]NodeDisplay, len(nodes))
-		for i := range nodes {
-			resp[i] = NodeDisplay{Node: nodes[i], DisplayPath: "/" + nodes[i].Name}
-		}
+	groupIDs := make([]domain.GroupID, len(groups))
+	for i := range groups {
+		groupIDs[i] = groups[i].ID
+	}
 
-		return resp, nil
+	nodes, err := uc.nodes.GetRootByGroupIDs(ctx, groupIDs)
+	if err != nil {
+		return nil, err
+	}
 
-	case domain.LimitedUsrRole, domain.NormalUsrRole:
-		groups, err := uc.groups.GetByUsrAssignedID(ctx, usr.ID)
-		if err != nil {
-			return nil, err
-		}
+	resp := make([]NodeDisplay, 0, len(nodes))
+	wg := sync.WaitGroup{}
 
-		if len(groups) == 0 {
-			return []NodeDisplay{}, nil
-		}
+	for i := range nodes {
+		resp = append(resp, NodeDisplay{Node: nodes[i]})
+		display := &resp[i]
 
-		groupIDs := make([]domain.GroupID, len(groups))
-		for i := range groups {
-			groupIDs[i] = groups[i].ID
-		}
-
-		nodes, err := uc.nodes.GetRootByGroupIDs(ctx, groupIDs)
-		if err != nil {
-			return nil, err
-		}
-
-		resp := make([]NodeDisplay, len(nodes))
-		wg := sync.WaitGroup{}
-
-		for i := range nodes {
-			cb := func() {
-				node := &resp[i]
-				path, err := uc.nodes.GetDisplayPathByID(ctx, node.ID)
-				if err != nil {
-					uc.log.WarnContext(ctx, "failed to get display path for node",
-						"nodeID", node.ID,
-						"error", err)
-					return
-				}
-
-				node.DisplayPath = *path
+		wg.Go(func() {
+			access, err := uc.GetNodeAccess(ctx, display.ID)
+			if err != nil {
+				uc.log.WarnContext(ctx, "failed to get access for node",
+					"nodeID", display.ID,
+					"error", err)
+				return
 			}
 
-			wg.Go(cb)
-		}
+			display.access = access
 
-		wg.Wait()
-		return resp, nil
+			path, err := uc.nodes.GetDisplayPathByID(ctx, display.ID)
+			if err != nil {
+				uc.log.WarnContext(ctx, "failed to get display path for node",
+					"nodeID", display.ID,
+					"error", err)
+				return
+			}
 
-	default:
-		uc.log.Warn("user role not supported for getting root nodes", "role", usr.Role)
-		return nil, apperror.ErrForbidden(nil)
+			display.DisplayPath = *path
+		})
+
 	}
+
+	wg.Wait()
+	return resp, nil
 }

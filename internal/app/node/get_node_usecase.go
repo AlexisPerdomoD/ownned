@@ -34,13 +34,13 @@ func NewGetNodeByIDUseCase(
 }
 
 func (uc *GetNodeUseCase) Execute(ctx context.Context, nodeID domain.NodeID) (NodeLike, error) {
-	yes, err := uc.HasNodeAccessTo(ctx, nodeID, domain.GroupReadOnlyAccess)
+	access, err := uc.GetNodeAccess(ctx, nodeID)
 	if err != nil {
 		uc.log.WarnContext(ctx, "failed to check if user can access node", "nodeID", nodeID, "error", err)
 		return nil, err
 	}
 
-	if !yes {
+	if access == nil {
 		detail := make(map[string]string)
 		detail["reason"] = "User does not have access to specified node"
 		return nil, apperror.ErrForbidden(detail)
@@ -87,6 +87,7 @@ func (uc *GetNodeUseCase) Execute(ctx context.Context, nodeID domain.NodeID) (No
 			Node:        *node,
 			Doc:         *doc,
 			DisplayPath: *displayPath,
+			access:      access,
 		}, nil
 	}
 
@@ -100,5 +101,6 @@ func (uc *GetNodeUseCase) Execute(ctx context.Context, nodeID domain.NodeID) (No
 		Node:        *node,
 		Children:    children,
 		DisplayPath: *displayPath,
+		access:      access,
 	}, nil
 }

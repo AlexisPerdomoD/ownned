@@ -230,17 +230,18 @@ func docViewFromDomain(d *domain.Doc) DocView {
 }
 
 type NodeView struct {
-	ID          domain.NodeID   `json:"id"`
-	UsrID       *domain.UsrID   `json:"usr_id"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Type        domain.NodeType `json:"type"`
-	Path        domain.NodePath `json:"path"`
-	DisplayPath string          `json:"display_path"`
-	CreatedAt   time.Time       `json:"created_at"`
-	UpdatedAt   time.Time       `json:"updated_at"`
-	Children    []NodeView      `json:"children"`
-	Doc         *DocView        `json:"doc,omitempty"`
+	ID          domain.NodeID          `json:"id"`
+	UsrID       *domain.UsrID          `json:"usr_id"`
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Type        domain.NodeType        `json:"type"`
+	Path        domain.NodePath        `json:"path"`
+	DisplayPath string                 `json:"display_path"`
+	CreatedAt   time.Time              `json:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at"`
+	Access      *domain.GroupUsrAccess `json:"access_level,omitempty"` // Note: include only for specific usecases
+	Children    []NodeView             `json:"children"`               // Note: include only for specific usecases
+	Doc         *DocView               `json:"doc,omitempty"`          // Note: include only for specific usecases
 }
 
 func nodeViewFromDomain(d *domain.Node) NodeView {
@@ -278,6 +279,7 @@ func nodeFolderViewFromDomain(n *node.FolderNode) NodeView {
 		Type:        n.Type,
 		Path:        n.Path,
 		DisplayPath: n.DisplayPath,
+		Access:      n.GetAccess(),
 		CreatedAt:   n.CreatedAt,
 		UpdatedAt:   n.UpdatedAt,
 		Children:    chldrView,
@@ -297,6 +299,7 @@ func nodeFileViewFromDomain(n *node.FileNode) NodeView {
 		Type:        n.Type,
 		Path:        n.Path,
 		DisplayPath: n.DisplayPath,
+		Access:      n.GetAccess(),
 		CreatedAt:   n.CreatedAt,
 		UpdatedAt:   n.UpdatedAt,
 		Doc:         new(docViewFromDomain(&n.Doc)),
@@ -318,6 +321,7 @@ func nodeViewFromNodeLike(n node.NodeLike) NodeView {
 	default:
 		view := nodeViewFromDomain(n.Get())
 		view.DisplayPath = n.GetDisplayPath()
+		view.Access = n.GetAccess()
 		return view
 	}
 }

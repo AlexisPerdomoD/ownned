@@ -88,7 +88,7 @@ func main() {
 
 	// NODE USECASES
 	accessChecker := group.NewAccessChecker(groupUsrs)
-	getRoot := node.NewGetRootNodesUseCase(nodes, groups, logger)
+	getRoot := node.NewGetRootNodesUseCase(accessChecker, nodes, groups, logger)
 	getNode := node.NewGetNodeByIDUseCase(accessChecker, nodes, docs, logger)
 	paginateNode := node.NewPaginateNodeUseCase(nodes, groups)
 	paginateDoc := node.NewPaginateDocUseCase(docs, groups)
