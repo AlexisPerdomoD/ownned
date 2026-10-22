@@ -113,6 +113,8 @@ type EnvConfig struct {
 	TestPgSsl      string
 }
 
+// LoadEnvConfig loads the environment variables and returns a config struct.
+// If a required environment variable is not set, it panics.
 func LoadEnvConfig() *EnvConfig {
 	return &EnvConfig{
 		Mode:            getenv("MODE", "local"),
