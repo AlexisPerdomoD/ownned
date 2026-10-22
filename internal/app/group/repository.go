@@ -40,6 +40,8 @@ type GroupRepository interface {
 type GroupUsrRepository interface {
 	// GetGroupAccess returns the access of a user to a Group based on usrs group access, if no access is found it returns nil , ErrNoAccess
 	GetGroupAccess(ctx context.Context, usrID domain.UsrID, groupID domain.GroupID) (domain.GroupUsrAccess, error)
+	// GetNodeAccess returns the access of a user to a node based on usrs group access, if no access is found it returns nil , ErrNoAccess
+	GetNodeAccess(ctx context.Context, usrID domain.UsrID, nodeID domain.NodeID) (domain.GroupUsrAccess, error)
 	// HasNodeAccessFromPath validate the access to specific node based on group usr assigment, if no access is found it returns ErrNoAccess
 	HasAccessFromPath(ctx context.Context, usrID domain.UsrID, path domain.NodePath, access domain.GroupUsrAccess) error
 	// HasNodeAccessvalidate the access to specific node based on group usr assigment, if no access is found it returns ErrNoAccess

@@ -23,7 +23,30 @@ FROM fs.group_usrs gu`
 
 const getGroupAccessQuery string = "SELECT gu.access from fs.group_usrs gu\nWHERE gu.usr_id=$1 AND gu.group_id=$2"
 
-const getNodeAccessQuery string = `
+const getNodeAccessByIDQuery = `
+SELECT CASE MAX(
+    CASE gu.access
+        WHEN 'owner_access' THEN 4
+        WHEN 'write_delete_access' THEN 3
+        WHEN 'write_access' THEN 2
+        WHEN 'read_only_access' THEN 1
+        ELSE 0
+    END
+)
+    WHEN 4 THEN 'owner_access'
+	WHEN 3 THEN 'write_delete_access'
+    WHEN 2 THEN 'write_access'
+    WHEN 1 THEN 'read_only_access'
+    ELSE NULL
+END AS access
+FROM fs.group_usrs gu
+JOIN fs.group_nodes gn ON gn.group_id = gu.group_id
+JOIN fs.nodes n_grant ON n_grant.id = gn.node_id
+JOIN fs.nodes n_target ON n_target.id = $2
+WHERE gu.usr_id = $1
+  AND n_grant.path @> n_target.path;`
+
+const checkNodeAccessQuery string = `
 SELECT EXISTS ( 
 	SELECT 1 
 	FROM fs.group_usrs gu 
@@ -34,22 +57,24 @@ SELECT EXISTS (
 	AND n_grant.path @> $2  
 	AND (
 		CASE gu.access
-			WHEN 'owner_access' THEN 3
+			WHEN 'owner_access' THEN 4
+			WHEN 'write_delete_access' THEN 3
 			WHEN 'write_access' THEN 2
 			WHEN 'read_only_access' THEN 1
 			ELSE 0 -- db invalid value case 
 		END
 		>=
 		CASE $3
-			WHEN 'owner_access' THEN 3
+			WHEN 'owner_access' THEN 4
+			WHEN 'write_delete_access' THEN 3
 			WHEN 'write_access' THEN 2
 			WHEN 'read_only_access' THEN 1
-			ELSE 4 -- invalid parameter case
+			ELSE 5 -- invalid parameter case
 		END
 	)
 );`
 
-const getNodeAccessByIDQuery string = `
+const checkNodeAccessByIDQuery string = `
 SELECT EXISTS (
 	SELECT 1
 	FROM fs.group_usrs gu
@@ -60,17 +85,19 @@ SELECT EXISTS (
 	AND n_grant.path @> n_target.path
 	AND (
 		CASE gu.access
-			WHEN 'owner_access' THEN 3
+			WHEN 'owner_access' THEN 4
+			WHEN 'write_delete_access' THEN 3
 			WHEN 'write_access' THEN 2
 			WHEN 'read_only_access' THEN 1
 			ELSE 0
 		END
 		>=
 		CASE $3
-			WHEN 'owner_access' THEN 3
+			WHEN 'owner_access' THEN 4
+			WHEN 'write_delete_access' THEN 3
 			WHEN 'write_access' THEN 2
 			WHEN 'read_only_access' THEN 1
-			ELSE 4
+			ELSE 5
 		END
 	)
 );`
@@ -129,6 +156,24 @@ func (r *groupUsrRepository) GetGroupAccess(
 	return access, nil
 }
 
+func (r *groupUsrRepository) GetNodeAccess(ctx context.Context, usrID domain.UsrID, nodeID domain.NodeID) (domain.GroupUsrAccess, error) {
+	var access sql.NullString
+	err := r.db.QueryRowxContext(ctx, getNodeAccessByIDQuery, usrID, nodeID).Scan(&access)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.GroupReadOnlyAccess, domain.ErrNoAccess
+		}
+
+		return domain.GroupReadOnlyAccess, err
+	}
+
+	if !access.Valid {
+		return domain.GroupReadOnlyAccess, domain.ErrNoAccess
+	}
+
+	return domain.GroupUsrAccess(access.String), nil
+}
+
 func (r *groupUsrRepository) HasAccessFromPath(
 	ctx context.Context,
 	id domain.UsrID,
@@ -136,7 +181,7 @@ func (r *groupUsrRepository) HasAccessFromPath(
 	acss domain.GroupUsrAccess,
 ) error {
 	var hasAccess bool
-	err := r.db.QueryRowxContext(ctx, getNodeAccessQuery, id, pth, acss).Scan(&hasAccess)
+	err := r.db.QueryRowxContext(ctx, checkNodeAccessQuery, id, pth, acss).Scan(&hasAccess)
 	if err != nil {
 		return err
 	}
@@ -157,7 +202,7 @@ func (r *groupUsrRepository) HasAccess(
 	var hasAccess bool
 	if err := r.db.QueryRowxContext(
 		ctx,
-		getNodeAccessByIDQuery,
+		checkNodeAccessByIDQuery,
 		usrID,
 		nodeID,
 		access).
