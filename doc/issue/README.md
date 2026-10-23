@@ -32,17 +32,11 @@
 
 ### Fase 1 — Ajustes globales de contrato e infraestructura (cerrada; verificación pendiente en 31–37)
 
-Fase 1 implementada (5 `hecho` + 6 `revisión`). Resumen en [`../history/web_closure_fase1.md`](../history/web_closure_fase1.md). Los smokes/verificaciones pendientes son issues dedicadas:
+Fase 1 implementada y verificada (6 de 7 criterios `hecho`; issue 35 en `revisión`). Resumen en [`../history/web_closure_fase1.md`](../history/web_closure_fase1.md) y [`../history/web_closure_fase1_verification.md`](../history/web_closure_fase1_verification.md).
 
 | ID | Título | Estado | Depende de |
 | --- | --- | --- | --- |
-| 31 | [Verificación E2E: transporte API unificado](31.web_closure_fase1.web.app.verify_transporte_e2e.md) | pendiente | 01 (implementado) |
-| 32 | [Verificación: sesión determinística (401/500)](32.web_closure_fase1.web.app.verify_sesion_401_500.md) | pendiente | 02 (implementado) |
-| 33 | [Verificación E2E: flujo de comentarios](33.web_closure_fase1.web.app.verify_comentarios_e2e.md) | pendiente | 04 (implementado) |
-| 34 | [Verificación: creación de usuario (contraseña)](34.web_closure_fase1.web.app.verify_usuarios_password.md) | pendiente | 06 (hecho) |
-| 35 | [Verificación: login/logout desde Vite](35.web_closure_fase1.web.app.verify_login_vite.md) | pendiente | 08 (implementado) |
-| 36 | [Verificación E2E: descarga/borrado de documento](36.web_closure_fase1.internal.nodes.verify_descarga_borrado_e2e.md) | pendiente | 09 (implementado) |
-| 37 | [Test de integración: borrado recursivo de nodos](37.web_closure_fase1.internal.nodes.verify_borrado_recursivo_test.md) | pendiente | 11 (fix absorbido) |
+| 35 | [Verificación: login/logout desde Vite](35.web_closure_fase1.web.app.verify_login_vite.md) | revisión | 08 (implementado) |
 
 ### Fase 2 — Flujos críticos rotos
 
