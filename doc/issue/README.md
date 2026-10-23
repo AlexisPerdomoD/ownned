@@ -41,9 +41,6 @@ Fase 1 implementada y verificada (7 de 7 criterios `hecho`). Resumen en [`../his
 
 | ID | Título | Estado | Depende de |
 | --- | --- | --- | --- |
-| 12 | [Gobernar acciones de nodo con rol + access_level](12.web_closure_fase2.web.app.gating_nodos.md) | pendiente | 1.2, 1.3 |
-| 13 | [Completar flujo de comentarios](13.web_closure_fase2.web.app.comentarios_completo.md) | pendiente | 1.4, 1.2; después de 12 |
-| 14 | [Cerrar administración de usuarios](14.web_closure_fase2.web.app.admin_usuarios.md) | pendiente | 1.2, 1.6, 1.7 |
 | 15 | [Cerrar gestión básica de grupos](15.web_closure_fase2.web.app.grupos.md) | pendiente | 1.5, 1.3 |
 | 16 | [Endurecer subida/borrado de documentos](16.web_closure_fase2.web.app.docs_transfer.md) | pendiente | 1.1, 1.3; E2E requiere 1.9 |
 | 17 | [Normalizar operaciones de carpeta](17.web_closure_fase2.web.app.carpeta_ops.md) | pendiente | 1.3, 2.1 |
