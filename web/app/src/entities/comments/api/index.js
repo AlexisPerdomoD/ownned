@@ -8,7 +8,7 @@ export class CreateCommentDTO {
         content: z
             .string('Content must be a string.')
             .min(1, 'Content is required.')
-            .max(10000, 'Content must be at most 10000 characters.')
+            .max(255, 'Content must be at most 255 characters.')
     })
 
     static get schema() {
@@ -21,7 +21,8 @@ export class CreateCommentDTO {
     }
 
     toJSON() {
-        return { node_id: this.node_id, content: this.content }
+        // Backend contract: node id travels in the route, only content in body.
+        return { content: this.content }
     }
 
     static build(node_id, content) {
@@ -40,37 +41,84 @@ export class CreateCommentDTO {
 
 export const buildCreateCommentDTO = CreateCommentDTO.build
 
+export class UpdateCommentDTO {
+    static #schema = z.strictObject({
+        content: z
+            .string('Content must be a string.')
+            .min(1, 'Content is required.')
+            .max(255, 'Content must be at most 255 characters.')
+    })
+
+    static get schema() {
+        return structuredClone(UpdateCommentDTO.#schema)
+    }
+
+    constructor({ content }) {
+        this.content = content
+    }
+
+    toJSON() {
+        return { content: this.content }
+    }
+
+    static build(content) {
+        const r = UpdateCommentDTO.#schema.safeParse({ content })
+        if (!r.success) {
+            const issues = {}
+            r.error.issues.forEach(issue => {
+                issues[issue.path.at(-1)?.toString() ?? 'general'] =
+                    issue.message
+            })
+            return [false, issues]
+        }
+        return [true, new UpdateCommentDTO(r.data)]
+    }
+}
+
+export const buildUpdateCommentDTO = UpdateCommentDTO.build
+
 /**
  * Get comments for a node.
  * @param {string} nodeId
  * @returns {Promise<import('@/entities/nodes').NodeComment[]>}
  */
 export async function apiGetComments(nodeId) {
-    const params = new URLSearchParams()
-    params.set('node_id', nodeId)
-    return await reqJSON(`/api/v1/comments?${params}`)
+    return await reqJSON(`/api/v1/nodes/${nodeId}/comments`)
 }
 
 /**
- * Create a comment.
+ * Create a comment on a node.
+ * @param {string} nodeId
  * @param {CreateCommentDTO} dto
  * @returns {Promise<import('@/entities/nodes').NodeComment>}
  */
-export async function apiCreateComment(dto) {
-    return await reqJSON('/api/v1/comments', {
+export async function apiCreateComment(nodeId, dto) {
+    return await reqJSON(`/api/v1/nodes/${nodeId}/comments`, {
         method: 'POST',
         body: JSON.stringify(dto)
     })
 }
 
 /**
- * Delete a comment.
+ * Update a comment (only the backend-verified owner is allowed).
+ * @param {string} commentId
+ * @param {UpdateCommentDTO} dto
+ * @returns {Promise<import('@/entities/nodes').NodeComment>}
+ */
+export async function apiUpdateComment(commentId, dto) {
+    return await reqJSON(`/api/v1/nodes/comments/${commentId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(dto)
+    })
+}
+
+/**
+ * Delete a comment (author or super, per backend use case).
  * @param {string} commentId
  * @returns {Promise<{message: string}>}
  */
 export async function apiDeleteComment(commentId) {
-    return await reqJSON(`/api/v1/comments/${commentId}`, {
+    return await reqJSON(`/api/v1/nodes/comments/${commentId}`, {
         method: 'DELETE'
     })
 }
-

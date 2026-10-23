@@ -1,6 +1,11 @@
 import { createEffect, createSignal } from 'solid-js'
 
-import { apiGetComments, apiCreateComment, apiDeleteComment } from '@/entities/comments/api'
+import {
+    apiGetComments,
+    apiCreateComment,
+    apiDeleteComment,
+    apiUpdateComment
+} from '@/entities/comments/api'
 
 export function useGetComments(/** @type {() => string} */ getNodeId) {
     const [comments, setComments] = createSignal([])
@@ -29,7 +34,7 @@ export function useCreateComment() {
 
         setLoading(true)
         try {
-            const comment = await apiCreateComment(dto)
+            const comment = await apiCreateComment(nodeId, dto)
             return [true, comment]
         } catch (e) {
             return [false, { general: e.message }]
@@ -39,6 +44,28 @@ export function useCreateComment() {
     }
 
     return { create, loading }
+}
+
+export function useUpdateComment() {
+    const [loading, setLoading] = createSignal(false)
+
+    const update = async (/** @type {string} */ commentId, /** @type {string} */ content) => {
+        const { buildUpdateCommentDTO } = await import('@/entities/comments/api')
+        const [valid, dto] = buildUpdateCommentDTO(content)
+        if (!valid) return [false, dto]
+
+        setLoading(true)
+        try {
+            const comment = await apiUpdateComment(commentId, dto)
+            return [true, comment]
+        } catch (e) {
+            return [false, { general: e.message }]
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return { update, loading }
 }
 
 export function useDeleteComment() {
