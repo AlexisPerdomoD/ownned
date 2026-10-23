@@ -1,6 +1,7 @@
-import { Show, createEffect, createSignal } from 'solid-js'
+import { For, Show, createEffect, createSignal } from 'solid-js'
 
 import { apiPaginateUsrs } from '@/entities/usrs/api'
+import { apiGetRoot } from '@/entities/nodes/api/getRoot'
 import { GroupNodesList } from '@/features/group/ui/GroupNodesList'
 import { AddUserForm, GroupUsersList } from '@/features/group/ui/GroupUsersList'
 import { useGetGroup } from '@/features/group/usecase'
@@ -31,6 +32,7 @@ export function GroupView() {
     const [showDelete, setShowDelete] = createSignal(false)
     const [availableUsrs, setAvailableUsrs] = createSignal([])
     const [loadingUsrs, setLoadingUsrs] = createSignal(false)
+    const [availableNodes, setAvailableNodes] = createSignal([])
 
     createEffect(async () => {
         if (group()?.id) {
@@ -40,6 +42,12 @@ export function GroupView() {
                 setAvailableUsrs(res.data)
             } finally {
                 setLoadingUsrs(false)
+            }
+            try {
+                const roots = await apiGetRoot()
+                setAvailableNodes(roots ?? [])
+            } catch {
+                setAvailableNodes([])
             }
         }
     })
@@ -130,7 +138,7 @@ export function GroupView() {
                         <div class="p-4 bg-surface border border-border-subtle rounded-md">
                             <h4 class="text-sm font-medium mb-3">Add Node</h4>
                             <p class="text-xs text-muted mb-2">
-                                Enter a node ID to share with this group:
+                                Select a node to share with this group:
                             </p>
                             <form
                                 onSubmit={e => {
@@ -141,19 +149,25 @@ export function GroupView() {
                                 }}
                                 class="flex gap-2"
                             >
-                                <input
+                                <select
                                     name="node_id"
-                                    type="text"
-                                    placeholder="node-id"
+                                    required
                                     class="
-                                        flex-1 font-mono text-sm
+                                        flex-1 font-sans text-sm
                                         text-[--color-ink-dark]
                                         bg-[--color-bg] border border-[--color-border] rounded-xs
                                         px-3 py-2
                                         focus:outline-none focus:border-[--color-ink]
                                     "
-                                    required
-                                />
+                                >
+                                    <For each={availableNodes()}>
+                                        {n => (
+                                            <option value={n.id}>
+                                                {n.display_path ?? n.name}
+                                            </option>
+                                        )}
+                                    </For>
+                                </select>
                                 <Button
                                     type="submit"
                                     size="sm"

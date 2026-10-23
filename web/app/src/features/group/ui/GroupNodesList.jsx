@@ -27,8 +27,8 @@ export function GroupNodesList({ nodes, loading = false, onRemove }) {
                     {node => (
                         <div class="flex items-center justify-between p-2 bg-bg-2 rounded-xs">
                             <div class="flex items-center gap-2">
-                                <span class="text-sm font-mono">
-                                    {node.node_id}
+                                <span class="text-sm">
+                                    {node.display_path ?? node.node_id}
                                 </span>
                             </div>
                             <button
