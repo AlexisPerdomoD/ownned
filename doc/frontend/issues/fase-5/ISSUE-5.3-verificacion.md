@@ -1,0 +1,29 @@
+# [ISSUE-5.3] Verificación automatizada de flujos críticos
+
+- **Fase:** 5 — Capacidades avanzadas, verificación y cierre
+- **Tipo:** Módulo específico (tests)
+- **Estado:** pendiente
+- **Depende de:** D7 resuelta (Vitest para lógica pura + checklist manual); cierre de fases 1–4
+- **Conflicto de archivos:** ninguno (nueva config de tests)
+- **Commit sugerido:** `test(web): cover critical client flows`
+- **Plan maestro:** [`../plan-cierre-cliente-web.md`](../plan-cierre-cliente-web.md)
+
+## Objetivo / alcance
+
+Suite Vitest mínima **solo para lógica pura**: helpers `shared/authz` (prioridad máxima: aquí vive la integridad de las decisiones de acceso, incluida la regla D1) y validaciones de DTOs (1.6, contraseñas/payloads). Los flujos E2E se cierran con checklist manual documentado de los 9 flujos de `canonical-flows.md`.
+
+**No introducir** Playwright/Cypress ni harness de navegador en este ciclo: maximiza garantía donde el error más cuesta (permisos) con mínima dependencia.
+
+## Archivos afectados
+
+- `web/app` (config Vitest + tests de `shared/authz/` y validaciones)
+
+## Criterios de aceptación
+
+- [ ] `shared/authz` con cobertura de la matriz completa (rol × nivel × acción), incluido el caso D1 (limited no comenta con ningún nivel).
+- [ ] Validación de usuario con las reglas backend replicadas.
+- [ ] Checklist E2E manual con resultado documentado por flujo.
+
+## Prompt para agente ejecutor
+
+> "Configura Vitest en `web/app` y añade tests unitarios para `shared/authz` (matriz completa rol × nivel × acción, incluida la regla D1) y las validaciones de usuario. No añadas framework E2E; ejecuta el checklist manual de `doc/frontend/canonical-flows.md` y registra el resultado por flujo en la descripción del commit/PR."

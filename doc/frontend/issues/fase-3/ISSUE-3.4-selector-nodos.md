@@ -1,0 +1,29 @@
+# [ISSUE-3.4] Selector visual de nodos para compartir con grupos
+
+- **Fase:** 3 — Explorador, paginación y compartición usable
+- **Tipo:** Módulo específico (flujo)
+- **Estado:** pendiente
+- **Depende de:** 2.4 (se beneficia de 3.2, no obligatorio)
+- **Conflicto de archivos:** ninguno dentro de fase 3 (puede correr en paralelo con 3.1–3.3)
+- **Commit sugerido:** `feat(groups): add visual node sharing picker`
+- **Plan maestro:** [`../plan-cierre-cliente-web.md`](../plan-cierre-cliente-web.md)
+
+## Objetivo / alcance
+
+Reemplazar el input manual de UUID por selección navegable/buscable de nodos que el usuario puede compartir (respetando su propio techo de rol).
+
+## Archivos afectados
+
+- `web/app/src/features/group/ui/GroupNodesList.jsx`
+- `web/app/src/features/group/usecase/useUpsertGroupNode.js`
+- `web/app/src/entities/nodes/api/*`
+
+## Criterios de aceptación
+
+- [ ] Cero inputs de UUID manuales.
+- [ ] Permisos `403` interpretados como "no puedes compartir este nodo", no como error genérico.
+- [ ] Lista y relación actualizadas tras asociar/quitar.
+
+## Prompt para agente ejecutor
+
+> "En `web/app`, sustituye el pegado manual de UUID en asignación nodo↔grupo por un selector navegable/buscable de nodos. Respeta el techo de rol y los `403` backend."

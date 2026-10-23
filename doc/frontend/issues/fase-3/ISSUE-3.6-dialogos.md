@@ -1,0 +1,27 @@
+# [ISSUE-3.6] Consolidar confirmaciones y modales compartidos
+
+- **Fase:** 3 — Explorador, paginación y compartición usable
+- **Tipo:** Ajuste Global / Infraestructura
+- **Estado:** pendiente
+- **Depende de:** fases 2–3 estables para no crear conflictos
+- **Conflicto de archivos:** amplio (`pages/*`, `features/*/ui/*`) → última de fase 3
+- **Commit sugerido:** `refactor(ui): consolidate dialogs and modals`
+- **Plan maestro:** [`../plan-cierre-cliente-web.md`](../plan-cierre-cliente-web.md)
+
+## Objetivo / alcance
+
+Eliminar todos los `window.confirm()` reemplazándolos por `ConfirmDialog`; unificar modales inline al `Modal` compartido.
+
+## Archivos afectados
+
+- `web/app/src/pages/*`
+- `web/app/src/features/*/ui/*` (búsqueda y reemplazo)
+
+## Criterios de aceptación
+
+- [ ] Cero `window.confirm`/`window.alert` en `src/`.
+- [ ] Foco gestionado y Escape cierra el diálogo.
+
+## Prompt para agente ejecutor
+
+> "Busca y reemplaza en `web/app/src` todos los `window.confirm`/modales inline por los componentes compartidos (`shared/ui/ConfirmDialog.jsx`, `shared/ui/Modal.jsx`). No cambies textos ni flujos."

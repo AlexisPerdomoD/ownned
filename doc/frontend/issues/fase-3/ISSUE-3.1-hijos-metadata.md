@@ -1,0 +1,30 @@
+# [ISSUE-3.1] Renderizar hijos de carpeta con metadata real y gating por hijo
+
+- **Fase:** 3 — Explorador, paginación y compartición usable
+- **Tipo:** Módulo específico (flujo de exploración)
+- **Estado:** pendiente
+- **Depende de:** 1.10 (documentación del contrato, ya operativa tras el ajuste del dev) + 2.1 (authz consumido)
+- **Conflicto de archivos:** `NodeView` → dentro de fase 3, orden: 3.1 → 3.2 → 3.3 → 3.5
+- **Commit sugerido:** `feat(nodes): render folder children with contract metadata`
+- **Plan maestro:** [`../plan-cierre-cliente-web.md`](../plan-cierre-cliente-web.md)
+
+## Objetivo / alcance
+
+Renderizar los hijos con metadata real: archivos con `doc` (id, nombre original, tipo → iconos y base para el futuro reproductor multimedia), carpetas con metadata de nodo. El `doc` de hijo es **best-effort**: si llega vacío/inválido, degradar con icono genérico y nombre de nodo sin tratarlo como error. Aplicar gating por hijo con su propio campo `access_level` (nunca inferir del padre). **No consumir `doc` en tarjetas de raíz** (`GET /nodes` entrega `NodeDisplay` sin metadata).
+
+## Archivos afectados
+
+- `web/app/src/pages/NodeView/index.jsx`
+- `web/app/src/features/node/ui/NodeList.jsx`
+- `web/app/src/features/node/ui/NodeCard.jsx`
+- `web/app/src/features/node/ui/DocCard.jsx`
+
+## Criterios de aceptación
+
+- [ ] Los archivos hijos con `doc` válido muestran nombre original y tipo; los que llegan con `doc` vacío degradan a icono/nombre de nodo sin tratarlo como error.
+- [ ] Gating individual conforme al `access_level` propio de cada hijo (hoy el backend lo computa junto al nodo solicitado; no inferimos).
+- [ ] Rendimiento aceptable en carpeta con cientos de hijos (documentar el punto de corte).
+
+## Prompt para agente ejecutor
+
+> "En `web/app`, consume la metadata por hijo de `GET /nodes/{id}` para renderizar carpetas/archivos con `doc` real (iconos por tipo y base para el futuro reproductor multimedia) y gating individual por `access_level` del hijo. Si `doc` llega vacío (best-effort del backend), degrada con icono genérico y nombre de nodo. No dependas de `doc` en `HomeView`/raíces (el endpoint de raíces entrega `NodeDisplay` sin metadata). Añade un límite razonable + mensaje de 'demasiados elementos' si aplica."

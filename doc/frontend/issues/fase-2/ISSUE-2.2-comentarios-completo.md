@@ -1,0 +1,32 @@
+# [ISSUE-2.2] Completar flujo de comentarios (edición, autoría, límites)
+
+- **Fase:** 2 — Flujos críticos rotos
+- **Tipo:** Módulo específico (flujo)
+- **Estado:** pendiente
+- **Depende de:** 1.4, 1.2; ejecutar **después de 2.1** (mismo archivo)
+- **Conflicto de archivos:** `pages/NodeView/index.jsx` (solo montaje de comentarios)
+- **Commit sugerido:** `feat(comments): complete comment editing flow`
+- **Plan maestro:** [`../plan-cierre-cliente-web.md`](../plan-cierre-cliente-web.md)
+
+## Objetivo / alcance
+
+Edición inline con `PATCH`, mostrar edit/borrar solo a autor o super según regla (usando `shared/authz`), mantener límite 255, preservar borrador en error.
+
+**No tocar:** rutas de comentarios ya corregidas en 1.4 (solo editar consumo), gating de nodos 2.1.
+
+## Archivos afectados
+
+- `web/app/src/features/comments/ui/CommentsList.jsx`
+- `web/app/src/features/comments/usecase/index.js`
+- `web/app/src/pages/NodeView/index.jsx` (montaje de comentarios)
+
+## Criterios de aceptación
+
+- [ ] GET/POST/PATCH/DELETE usan rutas correctas.
+- [ ] Autor ve editar/borrar; otros usuarios no, salvo super.
+- [ ] Los usuarios `limited_usr_role` **no ven la affordance de comentar** (D1), aunque el backend acepte la petición; si el backend la rechaza también mostramos el error, pero la regla D1 ya evita enviarla.
+- [ ] Error no pierde el texto que el usuario estaba escribiendo.
+
+## Prompt para agente ejecutor
+
+> "En `web/app/src/features/comments`, añade edición inline (PATCH) y gating de autoría con authz. Asegura límite 255 y preservación del borrador en fallos. APLICA D1: un usuario con rol limited no debe ver el botón/envío de comentario (regla confirmada de producto; el backend ahora mismo aún permite comentar con solo lectura — no impacta a este scope, se arregla después en backend). En `NodeView` solo ajusta el montaje de la lista de comentarios; no cambies el resto de la vista."
