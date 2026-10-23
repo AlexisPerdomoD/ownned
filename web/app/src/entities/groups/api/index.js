@@ -250,7 +250,7 @@ export async function apiGetGroup(groupId) {
  */
 export async function apiUpdateGroup(groupId, dto) {
     return await reqJSON(`/api/v1/groups/${groupId}`, {
-        method: 'PUT',
+        method: 'PATCH',
         body: JSON.stringify(dto)
     })
 }
