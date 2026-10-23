@@ -7,7 +7,7 @@ import {
     usePaginateGroups,
     useUpdateGroup
 } from '@/features/group/usecase'
-import { Button, PageHeader, Pagination } from '@/shared/ui'
+import { Button, ConfirmDialog, PageHeader, Pagination } from '@/shared/ui'
 import { useNavigate } from '@solidjs/router'
 
 export function GroupsView() {
@@ -21,6 +21,8 @@ export function GroupsView() {
     const [showForm, setShowForm] = createSignal(false)
     const [editingGroup, setEditingGroup] = createSignal(null)
     const [searchInput, setSearchInput] = createSignal('')
+    const [deleteTarget, setDeleteTarget] = createSignal(null)
+    const [showDelete, setShowDelete] = createSignal(false)
 
     const handleCreate = async ({ name, description }) => {
         const [success] = await create(name, description)
@@ -44,13 +46,16 @@ export function GroupsView() {
         }
     }
 
-    const handleDelete = async group => {
-        if (confirm(`Delete group "${group.name}"?`)) {
-            const [success] = await remove(group.id)
-            if (success) {
-                refresh()
-            }
-        }
+    const handleDelete = group => {
+        setDeleteTarget(group)
+        setShowDelete(true)
+    }
+
+    const confirmDelete = async () => {
+        const group = deleteTarget()
+        if (!group) return
+        const [success] = await remove(group.id)
+        if (success) refresh()
     }
 
     const handleSearch = () => {
@@ -120,6 +125,15 @@ export function GroupsView() {
                     setShowForm(false)
                     setEditingGroup(null)
                 }}
+            />
+
+            <ConfirmDialog
+                open={showDelete()}
+                onClose={() => setShowDelete(false)}
+                onConfirm={confirmDelete}
+                title="Delete group"
+                description={`Delete "${deleteTarget()?.name}"? This cannot be undone.`}
+                confirmLabel="Delete"
             />
         </section>
     )

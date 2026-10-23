@@ -12,7 +12,7 @@ import {
     useUpsertGroupNode,
     useUpsertGroupUsr
 } from '@/features/group/usecase'
-import { Button, PageHeader, Spinner, Tabs } from '@/shared/ui'
+import { Button, ConfirmDialog, PageHeader, Spinner, Tabs } from '@/shared/ui'
 import { useNavigate, useParams } from '@solidjs/router'
 
 export function GroupView() {
@@ -28,6 +28,7 @@ export function GroupView() {
     const { remove: removeNode, loading: removingNode } = useDeleteGroupNode()
 
     const [tab, setTab] = createSignal('users')
+    const [showDelete, setShowDelete] = createSignal(false)
     const [availableUsrs, setAvailableUsrs] = createSignal([])
     const [loadingUsrs, setLoadingUsrs] = createSignal(false)
 
@@ -47,13 +48,11 @@ export function GroupView() {
         await update(group().id, name, description)
     }
 
-    const handleDelete = async () => {
-        if (confirm(`Delete group "${group().name}"?`)) {
-            const [success] = await deleteGroup(group().id)
-            if (success) {
-                navigate('/groups')
-            }
-        }
+    const handleDelete = () => setShowDelete(true)
+
+    const confirmDelete = async () => {
+        const [success] = await deleteGroup(group().id)
+        if (success) navigate('/groups')
     }
 
     const handleAddUsr = async (usrId, access) => {
@@ -178,6 +177,15 @@ export function GroupView() {
                     </section>
                 </Show>
             </Show>
+
+            <ConfirmDialog
+                open={showDelete()}
+                onClose={() => setShowDelete(false)}
+                onConfirm={confirmDelete}
+                title="Delete group"
+                description={`Delete "${groupData()?.name}"? This cannot be undone.`}
+                confirmLabel="Delete"
+            />
         </section>
     )
 }

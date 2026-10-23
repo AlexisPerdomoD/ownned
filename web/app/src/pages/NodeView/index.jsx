@@ -188,6 +188,8 @@ export function NodeView() {
     const [editingNode, setEditingNode] = createSignal(null)
     const [showCreate, setShowCreate] = createSignal(false)
     const [showDelete, setShowDelete] = createSignal(false)
+    const [deleteDocTarget, setDeleteDocTarget] = createSignal(null)
+    const [showDeleteDoc, setShowDeleteDoc] = createSignal(false)
     const [newName, setNewName] = createSignal('')
     const [newDesc, setNewDesc] = createSignal('')
     const [tab, setTab] = createSignal('contents')
@@ -252,8 +254,14 @@ export function NodeView() {
         }
     }
 
-    const handleDeleteDoc = async doc => {
-        if (!confirm(`Delete "${doc.title}"?`)) return
+    const handleDeleteDoc = doc => {
+        setDeleteDocTarget(doc)
+        setShowDeleteDoc(true)
+    }
+
+    const confirmDeleteDoc = async () => {
+        const doc = deleteDocTarget()
+        if (!doc) return
         const [success, err] = await deleteDoc(doc.id)
         if (!success) {
             toast({ type: 'error', message: err?.general ?? 'Delete failed' })
@@ -556,6 +564,15 @@ export function NodeView() {
                     onConfirm={confirmDelete}
                     title="Delete folder"
                     description={`Delete "${nodeData()?.name}" and all its contents? This cannot be undone.`}
+                    confirmLabel="Delete"
+                />
+
+                <ConfirmDialog
+                    open={showDeleteDoc()}
+                    onClose={() => setShowDeleteDoc(false)}
+                    onConfirm={confirmDeleteDoc}
+                    title="Delete document"
+                    description={`Delete "${deleteDocTarget()?.title}"? This cannot be undone.`}
                     confirmLabel="Delete"
                 />
             </Show>
