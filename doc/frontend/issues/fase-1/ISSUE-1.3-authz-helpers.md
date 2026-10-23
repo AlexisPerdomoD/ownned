@@ -2,7 +2,7 @@
 
 - **Fase:** 1 — Ajustes globales de contrato e infraestructura
 - **Tipo:** Ajuste Global / Infraestructura
-- **Estado:** revisión *(implementado sin consumirse en vistas — eso es fase 2; revisado interamente vs matriz de canonical-flows.md)*
+- **Estado:** hecho *(implementado en `a3478a7`; los 4 criterios verificados por revisión estática — ver Cierre)*
 - **Depende de:** nada — ejecución 100% paralela con el resto de la Fase 1
 - **Conflicto de archivos:** ninguno (todas las issues 1.x tocan superficies separadas)
 - **Commit sugerido:** `feat(authz): add shared frontend access helpers`
@@ -19,10 +19,16 @@ Crear módulo puro `shared/authz/` con funciones `canRead/canCreate/canDelete/ca
 
 ## Criterios de aceptación
 
-- [ ] Módulo puro, sin imports de UI ni API.
-- [ ] Maneja `access_level` absent/unknown → ninguna acción mutable habilitada.
-- [ ] Cubre matriz de `canonical-flows.md` (super/normal/limited × read/write/write_delete/owner + sin nivel).
-- [ ] D1 resuelta: `canComment` devuelve `false` siempre que el rol sea `limited_usr_role`, independiente del `access_level` (techo de rol sobre la capacidad de modificar). Regla explícita en el código, no difuminada.
+- [x] Módulo puro, sin imports de UI ni API (`shared/authz/index.js`: solo JSDoc y funciones).
+- [x] Maneja `access_level` absent/unknown → ninguna acción mutable habilitada (`effectiveRank` produce 0 ante nivel desconocido).
+- [x] Cubre matriz de `canonical-flows.md` (`roleCeilingRank` clampa limited → read_only; reglas espejo de `GroupUsrAccess.IsValidAccessToRole` y `UsrRole.CanAssignGroupUsr`).
+- [x] D1 resuelta: `canCommentOnNode` devuelve `false` siempre que el rol sea `limited_usr_role`, independiente del `access_level` (regla explícita y documentada; compensa que el backend todavía lo permite).
+
+## Cierre de la issue (sesión 2026-10-22)
+
+- Implementado en commit `a3478a7` (`web/app/src/shared/authz/index.js`).
+- Sin consumo en vistas por diseño — `ISSUE-2.1-gating-nodos` y `ISSUE-2.2-comentarios-completo` lo consumen en Fase 2.
+- Pendiente: ninguno. Si el dominio backend cambia reglas (p. ej. otra restricción en `IsValidAccessToRole`), actualizar el módulo espejo.
 
 ## Prompt para agente ejecutor
 

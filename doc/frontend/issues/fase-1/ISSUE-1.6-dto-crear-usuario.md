@@ -2,7 +2,7 @@
 
 - **Fase:** 1 — Ajustes globales de contrato e infraestructura
 - **Tipo:** Módulo específico (entidad)
-- **Estado:** revisión *(implementado; validación de contraseña replicada del contrato backend)*
+- **Estado:** hecho *(implementado en `7f37d10` junto con 1.7; superficies compartidas en `entities/usrs` — ver Cierre)*
 - **Depende de:** nada — ejecución 100% paralela con el resto de la Fase 1
 - **Conflicto de archivos:** ninguno (todas las issues 1.x tocan superficies separadas)
 - **Commit sugerido:** `fix(users): align create user contract and validation`
@@ -23,9 +23,14 @@ Consolidar DTO de creación en `createUsr.js` (devolverlo a `entities/usrs/api/i
 
 ## Criterios de aceptación
 
-- [ ] Payload enviado contiene solo campos aceptados por el decoder backend.
-- [ ] Validación de contraseña exacta (mensajes de error claros) y reutilizable.
-- [ ] No quedan archivos duplicados o vacíos re-exportados.
+- [x] Payload enviado contiene solo campos aceptados por el decoder backend (sin `access`).
+- [x] Validación de contraseña exacta (8–255, letra+dígito+símbolo, mensajes claros) y reutilizable (`CreateUsrDTO.#passwordSchema`).
+- [x] No quedan archivos duplicados o vacíos re-exportados (DTO consolidado en `createUsr.js`; duplicado eliminado de `paginateUsr.js`; `import z` sin uso retirado).
+
+## Cierre de la issue (sesión 2026-10-22)
+
+- Implementado en commit `7f37d10` (mismo commit que 1.7; la vista de usuarios no se tocó — el hook absorbió el cambio de firma).
+- Pendiente: ninguno estático; el smoke de contraseña débil/fuerte entra en el smoke manual general del proceso de usuarios (se puede en el mismo ciclo del E2E de 1.1).
 
 ## Prompt para agente ejecutor
 

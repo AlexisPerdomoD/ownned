@@ -33,17 +33,17 @@
 
 | ID | Título | Estado | Depende de |
 | --- | --- | --- | --- |
-| 1.1 | [Unificar transporte API, credenciales y errores](fase-1/ISSUE-1.1-unificar-transporte.md) | revisión | nada |
-| 1.2 | [Sesión determinística y rol en contexto](fase-1/ISSUE-1.2-sesion-determinista.md) | revisión | nada |
-| 1.3 | [Helper compartido de autorización](fase-1/ISSUE-1.3-authz-helpers.md) | revisión | nada |
-| 1.4 | [Contrato de comentarios alineado](fase-1/ISSUE-1.4-comentarios-contrato.md) | revisión | nada |
-| 1.5 | [Update de grupo vía PATCH](fase-1/ISSUE-1.5-grupo-patch.md) | revisión | nada |
-| 1.6 | [DTO y validación de creación de usuario](fase-1/ISSUE-1.6-dto-crear-usuario.md) | revisión | nada |
-| 1.7 | [Retirar affordances sin contrato](fase-1/ISSUE-1.7-retirar-affordances.md) | revisión | nada |
-| 1.8 | [Config local CORS/cookies](fase-1/ISSUE-1.8-config-local.md) | revisión | nada |
-| 1.9 | [backend) Identidad DocID/NodeID en download/delete](fase-1/ISSUE-1.9-back-identidad-docs.md) | revisión | nada |
-| 1.10 | [(docs/verif.) Contrato de hijos tras ajuste backend](fase-1/ISSUE-1.10-contrato-hijos.md) | revisión | nada |
-| 1.11 | [backend) Verificar DELETE de nodos (esquema/cascada)](fase-1/ISSUE-1.11-back-verificar-delete.md) | revisión *(fix aplicado y `make test-local` verde tras fix de infra)* | nada |
+| 1.1 | [Unificar transporte API, credenciales y errores](fase-1/ISSUE-1.1-unificar-transporte.md) | revisión *(smoke E2E pendiente)* | nada |
+| 1.2 | [Sesión determinística y rol en contexto](fase-1/ISSUE-1.2-sesion-determinista.md) | revisión *(smoke 401/500 pendiente)* | nada |
+| 1.3 | [Helper compartido de autorización](fase-1/ISSUE-1.3-authz-helpers.md) | hecho | nada |
+| 1.4 | [Contrato de comentarios alineado](fase-1/ISSUE-1.4-comentarios-contrato.md) | revisión *(smoke comentarios pendiente)* | nada |
+| 1.5 | [Update de grupo vía PATCH](fase-1/ISSUE-1.5-grupo-patch.md) | hecho | nada |
+| 1.6 | [DTO y validación de creación de usuario](fase-1/ISSUE-1.6-dto-crear-usuario.md) | hecho | nada |
+| 1.7 | [Retirar affordances sin contrato](fase-1/ISSUE-1.7-retirar-affordances.md) | hecho | nada |
+| 1.8 | [Config local CORS/cookies](fase-1/ISSUE-1.8-config-local.md) | revisión *(smoke login Vite pendiente)* | nada |
+| 1.9 | [backend) Identidad DocID/NodeID en download/delete](fase-1/ISSUE-1.9-back-identidad-docs.md) | revisión *(E2E descarga/borrado pendiente)* | nada |
+| 1.10 | [(docs/verif.) Contrato de hijos tras ajuste backend](fase-1/ISSUE-1.10-contrato-hijos.md) | hecho | nada |
+| 1.11 | [backend) Verificar DELETE de nodos (esquema/cascada)](fase-1/ISSUE-1.11-back-verificar-delete.md) | revisión *(falta test dedicado del borrado recursivo)* | nada |
 
 ### Fase 2 — Flujos críticos rotos
 
@@ -106,7 +106,32 @@
 
 ## Hallazgos backend fuera del alcance (solo reporte)
 
-1. `internal/adapter/inbound/httpapi/group_handler.go:237`: el decoder de upsert de asignación solo acepta `read_only_access|write_access|owner_access`; el dominio y `doc/frontend/contract-coverage.md` describen 4 niveles con `write_delete_access`. El nivel intermedio no puede asignarse desde ningún lado.
+1. ~~`internal/adapter/inbound/httpapi/group_handler.go:237` — decoder sin `write_delete_access`~~ **RESUELTO por el dev** (commit `94bf94a`): el decoder ahora acepta los 4 niveles (`read_only_access|write_access|write_delete_access|owner_access`). El selector de `GroupUsersList.jsx` sigue mostrando 3 niveles hasta que `ISSUE-2.4-grupos` actualice el DTO del cliente y la UI.
+
+## Handoff a la próxima sesión (Fase 2) — 2026-10-22
+
+Fase 1 **cerrada salvo 6 criterios de smoke/E2E manual** — ninguno bloquea el arranque de Fase 2:
+
+| Pendiente | Issue | Cómo verificar |
+| --- | --- | --- |
+| Login → logout → upload → download con cookies | 1.1 (criterio 3; cubre parte de 1.6/1.8) | Sesión manual Vite + API local (`MODE=local`, `make db-local-up`) |
+| 401 → login; API caída → vista de error con reintento | 1.2 (criterios 1-2) | Expirar la cookie de sesión / apagar el API server y refrescar |
+| Listar/crear/borrar comentarios desde `NodeView` | 1.4 (criterio 3) | Sesión manual contra API local |
+| Crear usuario con contraseña débil/fuerte | 1.6 (nota de Cierre) | Mismo ciclo manual del smoke anterior |
+| Login/logout desde Vite sin tocar código | 1.8 (criterio 2) | `localhost:5173` contra API local |
+| Descarga por `docID` real + borrado sin huérfanos de storage | 1.9 (criterios 1-2) | `make db-local-up` + servidor; subir archivo, descargar por `docID`, borrar y revisar el directorio de storage |
+| Test de integración del borrado recursivo | 1.11 (criterio 2; SQL del fix ya absorbido por el dev) | Para el dev: cubrir `deleteNodeQuery` (`node_repository.go:53`) con subárbol sembrado |
+
+**Estado del entorno:** `make test-local` verde (healthchecks en `702197c`); `.env.example` con `MODE=local`; `eslint src` 0 errores.
+
+**Coordenadas para Fase 2** (respeta la secuencia 2.1 → 2.2; 2.5/2.6 coordinan con 3.5):
+
+1. **2.1 (gating):** consume `shared/authz` (listo); `access_level` y `display_path` existen en raíces, nodo e hijos.
+2. **2.2 (comentarios):** `apiUpdateComment`/`useUpdateComment` ya expuestos — solo falta la edición inline en la vista.
+3. **2.4 (grupos):** el decoder backend ya acepta los 4 niveles — actualizar `UpsertGroupUsrDTO` (`entities/groups/api/index.js:120`, enum de 3) y los selectores para ofrecer `write_delete_access`.
+4. **2.5 (docs transfer):** desbloqueado por 1.9 (fix aplicado; su E2E corresponde al smoke de la tabla anterior).
+5. **2.6 (ops de carpeta):** `PUT /nodes/{nodeID}` sigue `501` — presentar edición como no disponible, no fakearla.
+6. **Reglas vigentes:** `AGENTS.md` — comentarios `// NOTE:`/`// TODO:`, capas limpias (app sin transporte), scope por conversación; front: `web/app/AGENTS.md` (no destructuring de props, tokens de `index.css`).
 
 ## Conflictos intra-fase conocidos (secuencia, no paralelo)
 

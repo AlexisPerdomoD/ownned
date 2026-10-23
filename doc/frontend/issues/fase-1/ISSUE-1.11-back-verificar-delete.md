@@ -2,7 +2,7 @@
 
 - **Fase:** 1 — Ajustes globales de contrato e infraestructura
 - **Tipo:** Ajuste Global / Infraestructura (repo backend)
-- **Estado:** revisión *(fix aplicado y absorbido en el commit `d7fb02a` del dev; `make test-local` con ciclo fresco completo: migración OK y tests PASS tras healthcheck de la infra)*  
+- **Estado:** revisión *(hallazgo vivo → fix aplicado, absorbido por commits del dev `d7fb02a`/`94bf94a`; suite `make test-local` verde tras healthchecks de infra; falta test dedicado del borrado recursivo — ver Cierre)*  
 - **Depende de:** nada — ejecución 100% paralela con el resto de la Fase 1
 - **Conflicto de archivos:** ninguno
 - **Commit sugerido:** `fix(nodes): verify and fix recursive node delete schema` (solo si confirma el hallazgo)
@@ -21,8 +21,14 @@
 
 ## Criterios de aceptación
 
-- [ ] Hallazgo verificado (si es falso positivo y/o ya corregido, documentar por qué en el reporte de la issue).
-- [ ] Si es error: fix + test que cubra borrado recursivo real contra PostgreSQL de test (`make test-local`).
+- [x] Hallazgo verificado (no falso positivo: el `DELETE` externo ya tenía `fs.` pero el subquery `(SELECT path FROM nodes …)` seguía sin prefijo; corregido a `fs.nodes`; trazado en el Registro de ejecución del tablero).
+- [ ] Fix + test que cubra borrado recursivo real contra PostgreSQL de test (`make test-local`): **fix hecho; falta el test dedicado**.
+
+## Cierre de la issue (sesión 2026-10-22)
+
+- Fix aplicado (subquery con prefijo `fs.nodes`); tu commit lo absorbió (`git show d7fb02a -- internal/adapter/outbound/postgres/node_repository.go`).
+- Verificado: `make test-local` con ciclo fresco completo → `Healthy` real, migración OK, todos los tests PASS (el bloqueador original era la race de arranque, corregida con healthchecks en `702197c`; no era el SQL).
+- Pendiente para la próxima sesión (criterio 2): test de integración dedicado al borrado recursivo — sembrar un subárbol, borrar la carpeta padre y verificar que los descendientes desaparecen de `fs.nodes`. Sugerencia para ti: usar la infraestructura de tests DB que prefieras; el SQL a cubrir es `deleteNodeQuery` (`node_repository.go:53`).
 
 ## Prompt para agente ejecutor
 

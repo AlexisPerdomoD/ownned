@@ -2,7 +2,7 @@
 
 - **Fase:** 1 — Ajustes globales de contrato e infraestructura
 - **Tipo:** Ajuste Global / Infraestructura
-- **Estado:** revisión *(implementado; verificación build/lint/vet pasadas; smoke manual con Vite+API pendiente de criticado del dev)*
+- **Estado:** revisión *(código hecho en `31eb6fe`; criterios 1-2 verificados estáticamente, criterio 3 requiere smoke E2E — ver Cierre)*
 - **Depende de:** nada — ejecución 100% paralela con el resto de la Fase 1
 - **Conflicto de archivos:** ninguno (todas las issues 1.x tocan superficies separadas)
 - **Commit sugerido:** `fix(web): unify api transport and error handling`
@@ -24,9 +24,15 @@ Centralizar **todas** las llamadas HTTP en `shared/api/client.js`: JSON, multipa
 
 ## Criterios de aceptación
 
-- [ ] Cero `fetch()` directos fuera de `client.js` en el árbol `src/`.
-- [ ] Errores `400/401/403/404/409/422/429/500/501` normalizados sin perder `detail`.
+- [x] Cero `fetch()` directos fuera de `client.js` en el árbol `src/` (grep: cero coincidencias).
+- [x] Errores `400/401/403/404/409/422/429/500/501` normalizados sin perder `detail` (`throwForApiError` por status; añadidos `413/415` y `ApiValidationError` con `detail` adjunto).
 - [ ] Login → logout → upload → download funcionan con cookies en modo local (Vite + API local).
+
+## Cierre de la issue (sesión 2026-10-22)
+
+- Implementado en commit `31eb6fe`.
+- Verificado: `pnpm build` y `eslint src` limpios; grep confirma cero `fetch()` fuera de `client.js`.
+- Pendiente para la próxima sesión: smoke E2E local (login → logout → upload → download) contra API en `MODE=local`; va en el Handoff de Fase 2 del tablero.
 
 ## Prompt para agente ejecutor
 

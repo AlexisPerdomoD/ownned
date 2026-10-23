@@ -2,7 +2,7 @@
 
 - **Fase:** 1 — Ajustes globales de contrato e infraestructura
 - **Tipo:** Ajuste Global / Infraestructura
-- **Estado:** revisión *(implementado; verificación build/lint pasadas; sim manual de 401/500 pendiente)*
+- **Estado:** revisión *(código hecho en `41fe9c2`; criterios 1-2 requieren smoke manual 401/500 — ver Cierre)*
 - **Depende de:** nada — ejecución 100% paralela con el resto de la Fase 1
 - **Conflicto de archivos:** ninguno (todas las issues 1.x tocan superficies separadas)
 - **Commit sugerido:** `fix(auth): make session recovery deterministic`
@@ -23,7 +23,13 @@ En `AuthProvider`, distinguir `401` (anónimo) de cualquier otro fallo (estado `
 
 - [ ] Con `401` → estado anónimo y redirección a login.
 - [ ] Con `500` / red caída → estado de error con acción de reintento, nunca carga infinita.
-- [ ] Rol disponible en contexto para `Navbar` y futuras vistas sin fetch ad hoc.
+- [x] Rol disponible en contexto para `Navbar` y futuras vistas sin fetch ad hoc (función `role()` expuesta en `useAuth`).
+
+## Cierre de la issue (sesión 2026-10-22)
+
+- Implementado en commit `41fe9c2`.
+- Verificado: `pnpm build` / `eslint src` limpios; estados terminales `checked/checking/error`; 401 → anónimo vía `apiGetMe()` (~401 resolviendo `null`), otros errores → `state.error` con vista de reintento (`ErrView`) en `ProtectedRoute`.
+- Pendiente para la próxima sesión: smoke manual — expirar cookie (401 → login) y apagar API (error con reintento, sin carga infinita).
 
 ## Prompt para agente ejecutor
 

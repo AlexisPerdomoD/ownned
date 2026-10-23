@@ -103,7 +103,7 @@ Actualizar estado/criterios al cerrar cada bloque. Estados: **Pendiente**, **En 
 3. Límites permitidos para total de archivos, tamaño individual y tamaño total; comportamiento de duplicados/nombres repetidos.
 4. Sorting: completar ranking local sobre hijos actuales o agregar filtros de orden al endpoint paginado; dirección reversible de fechas.
 5. Persistencia del estado «mostrar ocultos» y del tema (por dispositivo, sesión o preferencia de cuenta; backend hoy no publica preferencias).
-6. Si borrar usuario forma parte del contrato deseado, definir método, permisos y consecuencias antes de agregarlo.
+6. (D5) Si borrar usuario forma parte del contrato deseado, definir método, permisos y consecuencias antes de agregarlo; mientras no se decida, el cliente no ofrece borrado de usuario.
 7. Definir si `access_level` y `display_path` deben incluirse en cada hijo de `GET /nodes/{nodeID}` o si el cliente consultará cada nodo antes de mostrar acciones; no heredar permisos del padre.
 8. Si se concreta el futuro rol `OneTimeRole`, precisar que bloquea crear/cambiar asignaciones manuales tras la provisión inicial y definir por separado la política de revocación de accesos.
 9. Definir si `limited_usr_role` puede crear comentarios: el endpoint actual requiere acceso de lectura, por lo que la semántica de “no modificar contenido” no lo bloquea automáticamente.

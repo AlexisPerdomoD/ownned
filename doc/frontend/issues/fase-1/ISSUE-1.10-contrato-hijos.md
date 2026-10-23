@@ -2,7 +2,7 @@
 
 - **Fase:** 1 — Ajustes globales de contrato e infraestructura
 - **Tipo:** Módulo específico (documentación + verificación backend)
-- **Estado:** revisión *(matriz contract-coverage.md actualizada con la forma real: hijos con doc best-effort/access/display_path, raíces NodeDisplay sin doc; go build/test/vet OK)*
+- **Estado:** hecho *(documentado en `9af1caf` — ver Cierre)*
 - **Depende de:** nada — ejecución 100% paralela con el resto de la Fase 1
 - **Conflicto de archivos:** ninguno (desbloquea 3.1)
 - **Commit sugerido:** `doc(frontend): record children contract after node metadata fix`
@@ -21,9 +21,15 @@ El ajuste ya aplicado en `internal/app/node/get_node_usecase.go` (doc por hijo b
 
 ## Criterios de aceptación
 
-- [ ] `contract-coverage.md` refleja la forma real de hijos: `doc` opcional y best-effort (vacío ante fallo de lectura), `display_path` y `access_level` por hijo, hijos anidados limitados a un nivel.
-- [ ] Documentado explícitamente que raíces (`NodeDisplay`) no traen `doc`.
-- [ ] `go test ./...` pasa.
+- [x] `contract-coverage.md` refleja la forma real de hijos: `doc` opcional y best-effort (vacío ante fallo de lectura), `display_path` y `access_level` por hijo, `children` limitado a primer nivel.
+- [x] Documentado explícitamente que raíces (`NodeDisplay`) no traen `doc`.
+- [x] `go test ./...` pasa (junto con `go build` y `go vet`).
+
+## Cierre de la issue (sesión 2026-10-22)
+
+- Documentado en commit `9af1caf` (párrafos de nodos + filas de `GET /nodes` y `GET /nodes/{nodeID}` actualizadas).
+- El consumo real de esos campos en la UI pertenece a `ISSUE-3.1-hijos-metadata` (Fase 3).
+- Pendiente: ninguno.
 
 ## Prompt para agente ejecutor
 
