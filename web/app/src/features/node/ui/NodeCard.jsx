@@ -135,7 +135,7 @@ export function NodeCard(props) {
                     </div>
 
                     <h3 class="font-serif text-base text-ink-dark truncate leading-snug">
-                        {props.node.name}
+                        {props.node.display_path ?? props.node.name}
                     </h3>
 
                     {props.node.description && (

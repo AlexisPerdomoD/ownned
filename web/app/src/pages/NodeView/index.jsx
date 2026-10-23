@@ -17,6 +17,13 @@ import {
     useUpdateNode
 } from '@/features/node/usecase'
 import { Button, PageHeader, Spinner, Tabs, toast } from '@/shared/ui'
+import { useAuth } from '@/features/auth/providers/AuthProvider'
+import {
+    canCreateFolder,
+    canDeleteNode,
+    canEditNode,
+    canUploadDoc
+} from '@/shared/authz'
 import { useNavigate, useParams } from '@solidjs/router'
 
 function NodeOverview({ node, onEdit, onDelete }) {
@@ -144,6 +151,9 @@ function NodeForm({ open, node, loading, onSubmit, onClose }) {
 export function NodeView() {
     const params = useParams()
     const navigate = useNavigate()
+    const auth = useAuth()
+    const role = () => auth.role()
+    const accessLevel = () => nodeData()?.access_level
     const { node, loading } = useGetNode(() => params.id)
     const { create, loading: creating } = useCreateFolder()
     const { update, loading: updating } = useUpdateNode()
@@ -241,12 +251,17 @@ export function NodeView() {
                 fallback={<Spinner size="lg" class="mx-auto mt-20" />}
             >
                 <PageHeader
-                    title={nodeData()?.name ?? 'Node'}
+                    title={nodeData()?.display_path ?? nodeData()?.name ?? 'Node'}
                     subtitle={nodeData()?.type}
                     backTo="/nodes"
                 />
 
-                <Show when={canEdit()}>
+                <Show
+                    when={
+                        nodeData()?.type === 'folder' &&
+                        canCreateFolder(role(), accessLevel())
+                    }
+                >
                     <div class="mb-4">
                         <Button onClick={() => setShowCreate(true)}>
                             + New Folder
@@ -256,8 +271,16 @@ export function NodeView() {
 
                 <NodeOverview
                     node={nodeData()}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
+                    onEdit={
+                        canEditNode(role(), accessLevel())
+                            ? handleEdit
+                            : undefined
+                    }
+                    onDelete={
+                        canDeleteNode(role(), accessLevel())
+                            ? handleDelete
+                            : undefined
+                    }
                 />
 
                 <Show when={nodeData()?.type === 'folder'}>
@@ -287,19 +310,30 @@ export function NodeView() {
                                     <DocCard
                                         doc={fileNode.doc}
                                         onDownload={handleDownload}
-                                        onDelete={handleDeleteDoc}
+                                        onDelete={
+                                            canDeleteNode(
+                                                role(),
+                                                fileNode.access_level
+                                            )
+                                                ? handleDeleteDoc
+                                                : undefined
+                                        }
                                     />
                                 ))}
                             </div>
                         </Show>
                     </section>
 
-                    <section class="mt-4">
-                        <UploadDropzone
-                            onUpload={handleUpload}
-                            loading={uploading()}
-                        />
-                    </section>
+                    <Show
+                        when={canUploadDoc(role(), accessLevel())}
+                    >
+                        <section class="mt-4">
+                            <UploadDropzone
+                                onUpload={handleUpload}
+                                loading={uploading()}
+                            />
+                        </section>
+                    </Show>
                 </Show>
 
                 <Show when={nodeData()?.type === 'file'}>
