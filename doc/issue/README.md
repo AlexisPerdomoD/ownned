@@ -37,11 +37,9 @@ Fase 1 implementada y verificada (7 de 7 criterios `hecho`). Resumen en [`../his
 | ID | Título | Estado | Depende de |
 | --- | --- | --- | --- |
 
-### Fase 2 — Flujos críticos rotos
+### Fase 2 — Flujos críticos rotos (cerrada)
 
-| ID | Título | Estado | Depende de |
-| --- | --- | --- | --- |
-
+Todos los issues 12–17 en `hecho`. Resumen en `../history/web_closure_fase2_partial.md` y `../history/web_closure_fase2_groups_docs.md` / `web_closure_fase2_carpeta_ops.md`.
 
 ### Fase 3 — Explorador, paginación y compartición usable
 
