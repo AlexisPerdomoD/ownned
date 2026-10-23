@@ -70,3 +70,51 @@ func MigrateUp(db *sql.DB) error {
 
 	return nil
 }
+
+// MigrateDown rolls back the given number of migrations.
+func MigrateDown(db *sql.DB, steps int) error {
+	if steps <= 0 {
+		return ErrInvalidArgument
+	}
+
+	driver, err := migrationPg.WithInstance(db, &migrationPg.Config{StatementTimeout: time.Second})
+	if err != nil {
+		return err
+	}
+
+	src, err := iofs.New(migrationDir, "migration")
+	if err != nil {
+		return err
+	}
+
+	command, err := migrate.NewWithInstance("iofs", src, "postgres", driver)
+	if err != nil {
+		return err
+	}
+
+	if err := command.Steps(-steps); err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+
+	return nil
+}
+
+// MigrateVersion returns the current migration version and whether the schema is dirty.
+func MigrateVersion(db *sql.DB) (uint, bool, error) {
+	driver, err := migrationPg.WithInstance(db, &migrationPg.Config{StatementTimeout: time.Second})
+	if err != nil {
+		return 0, false, err
+	}
+
+	src, err := iofs.New(migrationDir, "migration")
+	if err != nil {
+		return 0, false, err
+	}
+
+	command, err := migrate.NewWithInstance("iofs", src, "postgres", driver)
+	if err != nil {
+		return 0, false, err
+	}
+
+	return command.Version()
+}
