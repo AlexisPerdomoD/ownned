@@ -86,7 +86,7 @@ build-web:
 	@cp -r web/app/dist web/dist
 	@echo "Web properly build!"
 
-build-http:
+build-http: build-web
 	@mkdir -p $(dir $(HTTP_SERVER_BINARY))
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
 	go build -ldflags="-s -w" -o $(HTTP_SERVER_BINARY) ./cmd/server
