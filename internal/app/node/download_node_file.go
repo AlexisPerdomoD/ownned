@@ -3,19 +3,13 @@ package node
 import (
 	"context"
 	"io"
+
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/group"
 	"ownned/internal/app/storage"
 	"ownned/internal/domain"
 )
 
-// DownloadNodeFileInput identifies the document requested by download
-// (`GET /api/v1/nodes/docs/{docID}/download`) and the optional HTTP Range
-// window resolved by the handler.
-//
-// Size rules: the storage object key is the file node's ID, never the doc ID
-// (see `create_node_file.go`); this use case resolves docID -> node so callers
-// can keep using the public doc identifier.
 type DownloadNodeFileInput struct {
 	DocID  domain.DocID
 	Offset uint64
@@ -43,9 +37,7 @@ func NewDownloadDocUseCase(
 	}
 }
 
-func (uc *DownloadNodeFileUseCase) Execute(
-	ctx context.Context,
-	in DownloadNodeFileInput) (*domain.Doc, io.ReadCloser, error) {
+func (uc *DownloadNodeFileUseCase) Execute(ctx context.Context, in DownloadNodeFileInput) (*domain.Doc, io.ReadCloser, error) {
 	doc, err := uc.docs.GetByID(ctx, in.DocID)
 	if err != nil {
 		return nil, nil, err
@@ -57,8 +49,6 @@ func (uc *DownloadNodeFileUseCase) Execute(
 		return nil, nil, apperror.ErrNotFound(detail)
 	}
 
-	// NOTE: the storage object is keyed by the doc's node ID, so the access
-	// check and the download must both target that node, not the doc ID.
 	yes, err := uc.HasNodeAccessTo(
 		ctx,
 		doc.NodeID,

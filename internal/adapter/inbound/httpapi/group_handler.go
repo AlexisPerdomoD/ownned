@@ -234,7 +234,7 @@ func (h *GroupHandler) upsertGroupUsrHandler(w http.ResponseWriter, r *http.Requ
 
 	body, err := parseJSON[struct {
 		UsrID  uuid.UUID             `json:"usr_id" validate:"required"`
-		Access domain.GroupUsrAccess `json:"access" validate:"required,oneof=read_only_access write_access owner_access"`
+		Access domain.GroupUsrAccess `json:"access" validate:"required,oneof=read_only_access write_access write_delete_access owner_access"`
 	}](r.Body, validationStruct)
 	if err != nil {
 		resp := errView(err)
