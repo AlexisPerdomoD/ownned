@@ -14,6 +14,7 @@ DB_COMPOSE_FILE := db-docker-compose.yaml
 TEST_DB_COMPOSE_FILE := db-docker-compose.test.yaml
 # VARS 
 HTTP_SERVER_BINARY=bin/server
+CLI_BINARY=bin/owned-cli
 ################################################################################
 # LOCAL DB COMMANDS
 ################################################################################
@@ -96,12 +97,28 @@ build-http-lite:
 	@mkdir -p $(dir $(HTTP_SERVER_BINARY))
 	go build -o $(HTTP_SERVER_BINARY) ./cmd/server
 
+build-cli:
+	@mkdir -p $(dir $(CLI_BINARY))
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+	go build -ldflags="-s -w" -o $(CLI_BINARY) ./cmd/cli
+	@echo "CLI properly compiled!"
+
+build-all: build-server build-cli
+
+build-server: build-http
+
 start-http: build-http 
 	@echo "Starting running HTTP Server..."
 	@$(HTTP_SERVER_BINARY)
 
 superusr: 
-	GOTRACEBACK=all go run ./cmd/superusr $(ARGS)
+	GOTRACEBACK=all go run ./cmd/cli superusr $(ARGS)
 
 approot:
-	go run ./cmd/approot 
+	go run ./cmd/cli approot $(ARGS)
+
+migrate-up-cli:
+	go run ./cmd/cli migrate up
+
+migrate-down-cli:
+	go run ./cmd/cli migrate down $(ARGS) 
