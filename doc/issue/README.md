@@ -41,8 +41,6 @@ Fase 1 implementada y verificada (7 de 7 criterios `hecho`). Resumen en [`../his
 
 | ID | Título | Estado | Depende de |
 | --- | --- | --- | --- |
-| 15 | [Cerrar gestión básica de grupos](15.web_closure_fase2.web.app.grupos.md) | pendiente | 1.5, 1.3 |
-| 16 | [Endurecer subida/borrado de documentos](16.web_closure_fase2.web.app.docs_transfer.md) | pendiente | 1.1, 1.3; E2E requiere 1.9 |
 | 17 | [Normalizar operaciones de carpeta](17.web_closure_fase2.web.app.carpeta_ops.md) | pendiente | 1.3, 2.1 |
 
 ### Fase 3 — Explorador, paginación y compartición usable
