@@ -9,6 +9,8 @@
 
 ## Commits and scope
 
+- When the user explicitly lists the files (or directories) to include in a task, limit all edits, commits, and verification to exactly those files. Anything else observed in the working tree is an out-of-scope finding to report and stop on; never fold it into the plan, the commit, or the verification unless the user asks for it.
+
 - Use `type(scope): description` when it adds value: `feat` for capabilities, `fix` for bug fixes, `refactor` for behavior-preserving restructuring, `doc` for documentation, `test` for tests, and `chore` for maintenance. Choose the type that best describes the main change; do not over-engineer the scope.
 - Prefer atomic, independently verifiable commits when practical. Avoid elaborate commit plans that depend on staging individual hunks (such as `git add -p`); favor practical file-level grouping over forced commit boundaries.
 - During implementation or plan execution, if you find an unexpected issue outside the agreed scope, report its location and impact, then stop and wait for instructions. Do not decide to fix it automatically—for example, when adding a test, report and pause if you discover a bug in the existing implementation.
