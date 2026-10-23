@@ -1,6 +1,8 @@
 import { A, useLocation } from '@solidjs/router'
+import { Show } from 'solid-js'
 
 import { useAuth } from '@/features/auth/providers/AuthProvider'
+import { canManageUsrs } from '@/shared/authz'
 import { Avatar, Button } from '@/shared/ui'
 
 /**
@@ -10,7 +12,7 @@ import { Avatar, Button } from '@/shared/ui'
  */
 export function Navbar({ collapsed = false }) {
     const location = useLocation()
-    const { state, logout } = useAuth()
+    const { state, logout, role } = useAuth()
 
     const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/')
 
@@ -69,9 +71,10 @@ export function Navbar({ collapsed = false }) {
                     {!collapsed && <span>Groups</span>}
                 </A>
 
-                <A
-                    href="/usrs"
-                    class={`
+                <Show when={canManageUsrs(role())}>
+                    <A
+                        href="/usrs"
+                        class={`
                         flex items-center gap-2 px-3 py-2 rounded-[--radius-xs]
                         text-[--text-sm] font-light
                         transition-colors duration-[--ease-base]
@@ -81,10 +84,11 @@ export function Navbar({ collapsed = false }) {
                                 : 'text-[--color-ink] hover:bg-[--color-surface]'
                         }
                     `}
-                >
-                    <span style="font-size:16px">👤</span>
-                    {!collapsed && <span>Users</span>}
-                </A>
+                    >
+                        <span style="font-size:16px">👤</span>
+                        {!collapsed && <span>Users</span>}
+                    </A>
+                </Show>
             </div>
 
             <div class="flex items-center gap-3">

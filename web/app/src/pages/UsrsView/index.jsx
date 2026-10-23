@@ -1,9 +1,11 @@
-import { For, createSignal } from 'solid-js'
+import { For, Show, createSignal } from 'solid-js'
 
 import {
     useCreateUsr,
     usePaginateUsrs
 } from '@/features/usr/usecase'
+import { useAuth } from '@/features/auth/providers/AuthProvider'
+import { canManageUsrs } from '@/shared/authz'
 import {
     Badge,
     Button,
@@ -262,6 +264,7 @@ function CreateUsrForm(props) {
 }
 
 export function UsrsView() {
+    const auth = useAuth()
     const {
         usrs,
         page,
@@ -279,6 +282,17 @@ export function UsrsView() {
     const [showForm, setShowForm] = createSignal(false)
     const [searchInput, setSearchInput] = createSignal('')
 
+    if (!canManageUsrs(auth.role())) {
+        return (
+            <section class="flex flex-col p-6">
+                <PageHeader title="Users" subtitle="Access restricted." />
+                <p class="text-sm text-[--color-muted] mt-4">
+                    You do not have permission to manage users.
+                </p>
+            </section>
+        )
+    }
+
     const handleSearch = () => {
         setSearch(searchInput())
         goTo(1)
@@ -290,9 +304,11 @@ export function UsrsView() {
                 title="Users"
                 subtitle="Manage users."
                 actions={
-                    <Button onClick={() => setShowForm(true)}>
-                        + New User
-                    </Button>
+                    <Show when={canManageUsrs(auth.role())}>
+                        <Button onClick={() => setShowForm(true)}>
+                            + New User
+                        </Button>
+                    </Show>
                 }
             />
 
