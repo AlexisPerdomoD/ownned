@@ -41,7 +41,7 @@ Fase 1 implementada y verificada (7 de 7 criterios `hecho`). Resumen en [`../his
 
 | ID | Título | Estado | Depende de |
 | --- | --- | --- | --- |
-| 17 | [Normalizar operaciones de carpeta](17.web_closure_fase2.web.app.carpeta_ops.md) | pendiente | 1.3, 2.1 |
+
 
 ### Fase 3 — Explorador, paginación y compartición usable
 

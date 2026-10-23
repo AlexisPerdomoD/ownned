@@ -17,7 +17,14 @@ import {
     useGetNode,
     useUpdateNode
 } from '@/features/node/usecase'
-import { Button, PageHeader, Spinner, Tabs, toast } from '@/shared/ui'
+import {
+    Button,
+    ConfirmDialog,
+    PageHeader,
+    Spinner,
+    Tabs,
+    toast
+} from '@/shared/ui'
 import { useAuth } from '@/features/auth/providers/AuthProvider'
 import {
     canCommentOnNode,
@@ -167,6 +174,7 @@ export function NodeView() {
     const [showForm, setShowForm] = createSignal(false)
     const [editingNode, setEditingNode] = createSignal(null)
     const [showCreate, setShowCreate] = createSignal(false)
+    const [showDelete, setShowDelete] = createSignal(false)
     const [newName, setNewName] = createSignal('')
     const [newDesc, setNewDesc] = createSignal('')
     const [tab, setTab] = createSignal('contents')
@@ -186,12 +194,14 @@ export function NodeView() {
         setShowForm(true)
     }
 
-    const handleDelete = async () => {
-        if (confirm(`Delete "${node().name}"?`)) {
-            const [success] = await remove(node().id)
-            if (success) {
-                navigate('/nodes')
-            }
+    const handleDelete = () => {
+        setShowDelete(true)
+    }
+
+    const confirmDelete = async () => {
+        const [success] = await remove(node().id)
+        if (success) {
+            navigate('/nodes')
         }
     }
 
@@ -280,11 +290,7 @@ export function NodeView() {
 
                 <NodeOverview
                     node={nodeData()}
-                    onEdit={
-                        canEditNode(role(), accessLevel())
-                            ? handleEdit
-                            : undefined
-                    }
+                    onEdit={undefined}
                     onDelete={
                         canDeleteNode(role(), accessLevel())
                             ? handleDelete
@@ -434,6 +440,15 @@ export function NodeView() {
                         handleCreate()
                     }}
                     onClose={() => setShowCreate(false)}
+                />
+
+                <ConfirmDialog
+                    open={showDelete()}
+                    onClose={() => setShowDelete(false)}
+                    onConfirm={confirmDelete}
+                    title="Delete folder"
+                    description={`Delete "${nodeData()?.name}" and all its contents? This cannot be undone.`}
+                    confirmLabel="Delete"
                 />
             </Show>
         </section>
