@@ -4,7 +4,9 @@ import "ownned/internal/domain"
 
 type NodeLike interface {
 	Get() *domain.Node
+
 	GetDisplayPath() string
+
 	GetAccess() *domain.GroupUsrAccess
 }
 
@@ -29,5 +31,5 @@ type FileNode struct {
 
 type FolderNode struct {
 	NodeDisplay
-	Children []domain.Node
+	Children []NodeLike
 }

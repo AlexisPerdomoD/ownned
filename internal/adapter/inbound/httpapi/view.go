@@ -268,7 +268,7 @@ func nodeFolderViewFromDomain(n *node.FolderNode) NodeView {
 
 	chldrView := make([]NodeView, len(n.Children))
 	for i := range n.Children {
-		chldrView[i] = nodeViewFromDomain(&n.Children[i])
+		chldrView[i] = nodeViewFromNodeLike(n.Children[i])
 	}
 
 	return NodeView{

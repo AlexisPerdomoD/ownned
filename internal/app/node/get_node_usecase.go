@@ -61,6 +61,10 @@ func (uc *GetNodeUseCase) Execute(ctx context.Context, nodeID domain.NodeID) (No
 	wg := sync.WaitGroup{}
 	displayPath := new(string)
 
+	// Note: the display path is best-effort metadata. On failure this method
+	// warns and degrades gracefully: `displayPath` stays empty, so the node's
+	// DisplayPath resolves to "" and children build their own paths from that
+	// value instead of propagating the error and failing the whole operation.
 	wg.Go(func() {
 		path, err := uc.nodes.GetDisplayPathByID(ctx, node.ID)
 		if err != nil {
@@ -97,9 +101,57 @@ func (uc *GetNodeUseCase) Execute(ctx context.Context, nodeID domain.NodeID) (No
 	}
 
 	wg.Wait()
+
+	displayChildren := make([]NodeLike, len(children))
+	for i := range children {
+		child := children[i]
+		dp := *displayPath + "/" + child.Name
+
+		if child.Type == domain.FolderNodeType {
+
+			displayChildren[i] = &FolderNode{
+				Node:        child,
+				DisplayPath: dp,
+				access:      access,
+				Children:    nil, // Note: only include first level children folders
+			}
+
+			continue
+		}
+
+		dChild := &FileNode{
+			Node:        child,
+			DisplayPath: dp,
+			access:      access,
+		}
+
+		displayChildren[i] = dChild
+
+		wg.Go(func() {
+			doc, err := uc.docs.GetByNodeID(ctx, dChild.Get().ID)
+			if err != nil {
+				uc.log.WarnContext(ctx, "failed to get doc for node",
+					"nodeID", dChild.Get().ID,
+					"error", err)
+				return
+			}
+
+			if doc == nil {
+				uc.log.WarnContext(ctx,
+					fmt.Sprintf("Doc entity associated with node at path %s was not found",
+						dChild.GetDisplayPath()))
+				return
+			}
+
+			dChild.Doc = *doc
+		})
+	}
+
+	wg.Wait()
+
 	return &FolderNode{
 		Node:        *node,
-		Children:    children,
+		Children:    displayChildren,
 		DisplayPath: *displayPath,
 		access:      access,
 	}, nil

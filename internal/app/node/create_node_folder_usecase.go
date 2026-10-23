@@ -96,6 +96,6 @@ func (uc *CreateNodeFolderUseCase) Execute(
 	return &FolderNode{
 		Node:        *folder,
 		DisplayPath: displayPath,
-		Children:    make([]domain.Node, 0),
+		Children:    make([]NodeLike, 0),
 	}, nil
 }
