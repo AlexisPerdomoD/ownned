@@ -69,6 +69,11 @@ Todos los issues 12–17 en `hecho`. Resumen en `../history/web_closure_fase2_pa
 | 29 | [Verificación automatizada (Vitest + checklist)](29.web_closure_fase5.web.app.verificacion.md) | pendiente | D7 resuelta; fases 1–4 |
 | 30 | [Reporte final y actualización documental](30.web_closure_fase5.web.app.cierre_docs.md) | pendiente | todas las funcionales |
 
+## Épica: restructuración de `cmd/` (server + CLI unificado) — cerrada
+
+Implementación completada. Resumen técnico en [`../history/cmd_restructure.md`](../history/cmd_restructure.md).
+Propuesta: [`../proposal/cmd-restructure.md`](../proposal/cmd-restructure.md).
+
 ## Registro de ejecución Fase 1 (2026-10-22)
 
 Ver [`../history/web_closure_fase1.md`](../history/web_closure_fase1.md). Resúmenes backend/infra en `../history/`:
