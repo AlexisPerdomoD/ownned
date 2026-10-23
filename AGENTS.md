@@ -13,7 +13,7 @@
 - Each agent must stay focused on the scope explicitly defined by the dev for its assignment. If the scope is unclear, or an action appears to fall outside it, ask for clarification before doing anything.
 - Do not include unrelated in-progress changes in an agent's work, commits, or reports unless they have impact on its assigned scope; keep reports focused to avoid noise.
 - The web client closure agent's primary working directory is `doc/frontend/issues/`: issues and their implementation plans live there as repository files, orchestrated locally. They do not live in GitHub.
-- **For the current engagement, `internal/` is read-only for the web-client closure agent.** Backend code is never modified by this agent: inspect it freely to build accurate reports, but any backend change is the dev's to apply (or to explicitly delegate and authorize per change).
+- Scope is always what the dev explicitly asks for in the current conversation, engagement by engagement — there is no standing, silent scope carried across sessions. Where the dev does not state a boundary, inspect first and ask before touching anything questionable. (For reference: in the Fase-1 session, `internal/` was declared read-only for this agent; whether backend work is allowed in a later engagement depends solely on that engagement's explicit request.)
 
 ## Out-of-scope findings
 
@@ -24,7 +24,7 @@
 
 - Generated code must respect layer boundaries: the `internal/app` layer knows nothing about transport (`internal/adapter/inbound/httpapi`, HTTP, routes, methods, status codes, headers, handlers). Usecases, ports, and their comments must read as if the transport layer did not exist; transport-specific mapping happens only in the adapter.
 - Prefer self-explanatory code. Write comments only where there is genuine obscurity: a non-obvious invariant, constraint, or decision that future code would otherwise break (for example, which key a storage object lives under).
-- Comment form: `//Note:` for non-obvious context/constraints and `//TODO:` for pending work — exactly those lowercase forms, never `// NOTE:`, `// Note`, or variants. No prose paragraphs that restate what the code already says.
+- Comment form: `// NOTE:` for non-obvious context/constraints and `// TODO:` for pending work — exactly those uppercase forms with a space after `//`, never `//Note:` or other case/spelling variants. No prose paragraphs that restate what the code already says.
 - Never reference files, symbols, or endpoints in a comment without checking they exist and are current; stale references are worse than no comment.
 
 ## Commits and scope
