@@ -97,13 +97,21 @@ const formatRelativeDate = dateStr => {
  * Card component for displaying a document.
  *
  * @param {Object} props
- * @param {import('@entities/nodes').Doc} props.doc
+ * @param {import('@entities/nodes').Doc} doc()
  * @param {(doc: import('@entities/nodes').Doc) => void} [props.onClick] - Callback when card is clicked
  * @param {(doc: import('@entities/nodes').Doc) => void} [props.onDownload] - Callback for download action
  * @param {(doc: import('@entities/nodes').Doc) => void} [props.onDelete] - Callback for delete action
  * @param {string} [props.class]
  */
 export function DocCard(props) {
+    const doc = () =>
+        props.doc ?? {
+            title: props.node?.name ?? 'Document',
+            description: props.node?.description,
+            created_at: props.node?.created_at,
+            updated_at: props.node?.updated_at
+        }
+
     return (
         <Card
             hoverable={!!props.onClick}
@@ -113,7 +121,7 @@ export function DocCard(props) {
         >
             <Card.Body
                 class="flex items-start gap-3"
-                onClick={() => props.onClick?.(props.doc)}
+                onClick={() => props.onClick?.(doc())}
             >
                 <span class="flex items-center justify-center shrink-0 w-10 h-10 rounded-sm bg-accent-pale text-accent">
                     <DocumentIcon />
@@ -127,12 +135,12 @@ export function DocCard(props) {
                     </div>
 
                     <h3 class="font-serif text-base text-ink-dark truncate leading-snug">
-                        {props.doc.title}
+                        {doc().title}
                     </h3>
 
-                    {props.doc.description && (
+                    {doc().description && (
                         <p class="text-sm text-muted mt-1 leading-relaxed line-clamp-2">
-                            {props.doc.description}
+                            {doc().description}
                         </p>
                     )}
                 </div>
@@ -141,15 +149,15 @@ export function DocCard(props) {
             <Card.Footer>
                 <div class="flex items-center gap-3 text-xs text-muted">
                     <span
-                        title={`Created: ${formatDate(props.doc.created_at)}`}
+                        title={`Created: ${formatDate(doc().created_at)}`}
                     >
-                        Created {formatRelativeDate(props.doc.created_at)}
+                        Created {formatRelativeDate(doc().created_at)}
                     </span>
-                    {props.doc.updated_at !== props.doc.created_at && (
+                    {doc().updated_at !== doc().created_at && (
                         <span
-                            title={`Last updated: ${formatDate(props.doc.updated_at)}`}
+                            title={`Last updated: ${formatDate(doc().updated_at)}`}
                         >
-                            Edited {formatRelativeDate(props.doc.updated_at)}
+                            Edited {formatRelativeDate(doc().updated_at)}
                         </span>
                     )}
                 </div>
@@ -162,7 +170,7 @@ export function DocCard(props) {
                                 size="sm"
                                 onClick={e => {
                                     e.stopPropagation()
-                                    props.onDownload(props.doc)
+                                    props.onDownload(doc())
                                 }}
                                 class="p-1.5"
                                 title="Download"
@@ -176,7 +184,7 @@ export function DocCard(props) {
                                 size="sm"
                                 onClick={e => {
                                     e.stopPropagation()
-                                    props.onDelete(props.doc)
+                                    props.onDelete(doc())
                                 }}
                                 class="p-1.5 text-danger hover:bg-red-50 dark:hover:bg-red-950"
                                 title="Delete"
