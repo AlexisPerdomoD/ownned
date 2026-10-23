@@ -347,17 +347,6 @@ export function NodeView() {
 
                 <Show when={nodeData()?.type === 'folder'}>
                     <section class="mt-4">
-                        <h3 class="font-serif text-lg mb-2">
-                            {nodeData()?.name}'s contents
-                        </h3>
-                        <NodeList
-                            nodes={sortedFolders()}
-                            loading={loading()}
-                            onNodeClick={n => navigate(`/nodes/${n.id}`)}
-                        />
-                    </section>
-
-                    <section class="mt-4">
                         <h3 class="font-serif text-lg mb-2">Files</h3>
                         <Show
                             when={sortedFiles().length > 0}
