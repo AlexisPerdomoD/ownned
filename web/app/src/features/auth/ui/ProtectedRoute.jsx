@@ -1,6 +1,7 @@
 import { Show } from 'solid-js'
 
 import { Spinner } from '@/shared/ui/Atoms'
+import { ErrView } from '@/shared/ui/ErrView'
 import { Navigate } from '@solidjs/router'
 
 import { useAuth } from '../providers/AuthProvider'
@@ -11,16 +12,24 @@ import { useAuth } from '../providers/AuthProvider'
  * @returns {import('solid-js').JSX.Element}
  */
 export function ProtectedRoute(props) {
-    const { state } = useAuth()
+    const { state, retrySessionCheck } = useAuth()
 
     return (
-        <>
+        <Show
+            when={state.checked && !state.checking}
+            fallback={
+                <section class="flex items-center justify-center h-screen">
+                    <Spinner size="lg" />
+                </section>
+            }
+        >
             <Show
-                when={state.checked}
+                when={!state.error}
                 fallback={
-                    <section class="flex items-center justify-center h-screen">
-                        <Spinner size="lg" />
-                    </section>
+                    <ErrView
+                        error={state.error}
+                        onRetry={() => retrySessionCheck()}
+                    />
                 }
             >
                 <Show
@@ -30,6 +39,6 @@ export function ProtectedRoute(props) {
                     {props.children}
                 </Show>
             </Show>
-        </>
+        </Show>
     )
 }
