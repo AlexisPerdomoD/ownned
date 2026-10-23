@@ -159,7 +159,11 @@ func (r *docRepository) Paginate(ctx context.Context, p node.PaginateDoc) (*pagi
 			"\nAND EXISTS (SELECT 1 FROM fs.group_nodes gn WHERE gn.node_id = d.node_id AND gn.group_id = ANY($%d::uuid[]))",
 			len(params)+1)
 		where.WriteString(statement)
-		params = append(params, pq.Array(p.GroupIDs))
+		groupIDs := make([]string, 0, len(p.GroupIDs))
+		for _, g := range p.GroupIDs {
+			groupIDs = append(groupIDs, g.String())
+		}
+		params = append(params, pq.Array(groupIDs))
 	}
 
 	if p.Search != "" {

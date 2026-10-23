@@ -152,6 +152,7 @@ func (r *nodeRepository) GetDisplayPathByID(ctx context.Context, id domain.NodeI
 }
 
 func (r *nodeRepository) GetRootByGroupIDs(ctx context.Context, groups []domain.GroupID) ([]domain.Node, error) {
+	fmt.Printf("groups: %+v\n", groups)
 	if len(groups) == 0 {
 		detail := make(map[string]string)
 		detail["reason"] = "no groups provided for getting root nodes"
@@ -162,7 +163,7 @@ func (r *nodeRepository) GetRootByGroupIDs(ctx context.Context, groups []domain.
 	WITH candidate_nodes AS (
 		%s
 		INNER JOIN fs.group_nodes gn ON n.id=gn.node_id 
-		WHERE gn.group_id=ANY($1::uuid[])
+		WHERE gn.group_id=ANY($1)
 	)
 	SELECT n.* FROM candidate_nodes n
 		WHERE NOT EXISTS (
@@ -171,7 +172,12 @@ func (r *nodeRepository) GetRootByGroupIDs(ctx context.Context, groups []domain.
 			AND parent.id <> n.id
 		)`, getNodeQuery)
 
-	rows, err := r.db.QueryxContext(ctx, q, pq.Array(groups))
+	ids := make([]string, 0, len(groups))
+	for _, g := range groups {
+		ids = append(ids, g.String())
+	}
+
+	rows, err := r.db.QueryxContext(ctx, q, pq.Array(ids))
 	if err != nil {
 		return nil, err
 	}
@@ -180,6 +186,8 @@ func (r *nodeRepository) GetRootByGroupIDs(ctx context.Context, groups []domain.
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Printf("nodes: %+v\n", nodes)
 
 	return nodes, nil
 }
@@ -225,7 +233,11 @@ func (r *nodeRepository) Paginate(ctx context.Context, p node.PaginateNode) (*pa
 			"\nAND EXISTS (SELECT 1 FROM fs.group_nodes gn WHERE gn.node_id = n.id AND gn.group_id = ANY($%d::uuid[]))",
 			len(params)+1)
 		where.WriteString(statement)
-		params = append(params, pq.Array(p.GroupIDs))
+		groupIDs := make([]string, 0, len(p.GroupIDs))
+		for _, g := range p.GroupIDs {
+			groupIDs = append(groupIDs, g.String())
+		}
+		params = append(params, pq.Array(groupIDs))
 	}
 
 	if p.Search != "" {
