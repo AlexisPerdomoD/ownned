@@ -163,7 +163,7 @@ func (uc *CreateNodeFileUseCase) persist(ctx context.Context, node *domain.Node,
 		return nil
 	})
 	if err != nil {
-		_ = uc.storage.Delete(ctx, doc.ID)
+		_ = uc.storage.Delete(ctx, node.ID)
 		return err
 	}
 

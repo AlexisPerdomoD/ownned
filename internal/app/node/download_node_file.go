@@ -9,6 +9,19 @@ import (
 	"ownned/internal/domain"
 )
 
+// DownloadNodeFileInput identifies the document requested by download
+// (`GET /api/v1/nodes/docs/{docID}/download`) and the optional HTTP Range
+// window resolved by the handler.
+//
+// Size rules: the storage object key is the file node's ID, never the doc ID
+// (see `create_node_file.go`); this use case resolves docID -> node so callers
+// can keep using the public doc identifier.
+type DownloadNodeFileInput struct {
+	DocID  domain.DocID
+	Offset uint64
+	Limit  uint64
+}
+
 type DownloadNodeFileUseCase struct {
 	group.AccessChecker
 	nodes   NodeRepository
@@ -32,10 +45,23 @@ func NewDownloadDocUseCase(
 
 func (uc *DownloadNodeFileUseCase) Execute(
 	ctx context.Context,
-	cmd storage.DownloadCmd) (*domain.Doc, io.ReadCloser, error) {
+	in DownloadNodeFileInput) (*domain.Doc, io.ReadCloser, error) {
+	doc, err := uc.docs.GetByID(ctx, in.DocID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if doc == nil {
+		detail := make(map[string]string)
+		detail["reason"] = "Doc entity was not found"
+		return nil, nil, apperror.ErrNotFound(detail)
+	}
+
+	// NOTE: the storage object is keyed by the doc's node ID, so the access
+	// check and the download must both target that node, not the doc ID.
 	yes, err := uc.HasNodeAccessTo(
 		ctx,
-		cmd.Key,
+		doc.NodeID,
 		domain.GroupReadOnlyAccess)
 	if err != nil {
 		return nil, nil, err
@@ -47,16 +73,11 @@ func (uc *DownloadNodeFileUseCase) Execute(
 		return nil, nil, apperror.ErrForbidden(detail)
 	}
 
-	doc, err := uc.docs.GetByNodeID(ctx, cmd.Key)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if doc == nil {
-		return nil, nil, apperror.ErrIlegalDBState(nil)
-	}
-
-	file, err := uc.storage.Download(ctx, cmd)
+	file, err := uc.storage.Download(ctx, storage.DownloadCmd{
+		Key:    doc.NodeID,
+		Offset: in.Offset,
+		Limit:  in.Limit,
+	})
 	if err != nil {
 		return nil, nil, err
 	}

@@ -88,7 +88,8 @@ func (uc *DeleteNodeFileUseCase) Execute(
 		return nil, err
 	}
 
-	_ = uc.storage.Delete(ctx, doc.ID)
+	// NOTE: the storage object is keyed by the doc's node ID, not the doc ID.
+	_ = uc.storage.Delete(ctx, doc.NodeID)
 
 	return &FileNode{
 		Node:        *node,

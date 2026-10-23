@@ -9,7 +9,6 @@ import (
 
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/node"
-	"ownned/internal/app/storage"
 	"ownned/internal/domain"
 
 	"github.com/go-chi/chi/v5"
@@ -258,13 +257,13 @@ func (h *NodeHandler) downloadNodeFileHandler(w http.ResponseWriter, r *http.Req
 
 	}
 
-	cmd := storage.DownloadCmd{
-		Key:    docID,
+	in := node.DownloadNodeFileInput{
+		DocID:  docID,
 		Offset: offset,
 		Limit:  limit,
 	}
 
-	doc, file, err := h.downloadNodeFile.Execute(r.Context(), cmd)
+	doc, file, err := h.downloadNodeFile.Execute(r.Context(), in)
 	if err != nil {
 		resp := errView(err)
 		writeJSON(w, resp.Code, resp)
@@ -273,7 +272,7 @@ func (h *NodeHandler) downloadNodeFileHandler(w http.ResponseWriter, r *http.Req
 
 	defer func() { _ = file.Close() }()
 
-	if cmd.Offset >= doc.SizeInBytes {
+	if in.Offset >= doc.SizeInBytes {
 		w.Header().Set("Content-Range", fmt.Sprintf("bytes */%d", doc.SizeInBytes))
 		w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
 		return
@@ -281,10 +280,10 @@ func (h *NodeHandler) downloadNodeFileHandler(w http.ResponseWriter, r *http.Req
 
 	w.Header().Set("Content-Type", doc.MimeType)
 
-	if cmd.Offset > 0 || cmd.Limit > 0 {
-		startByte := cmd.Offset
-		endByte := cmd.Offset + cmd.Limit - 1
-		if cmd.Limit == 0 || endByte >= doc.SizeInBytes {
+	if in.Offset > 0 || in.Limit > 0 {
+		startByte := in.Offset
+		endByte := in.Offset + in.Limit - 1
+		if in.Limit == 0 || endByte >= doc.SizeInBytes {
 			endByte = doc.SizeInBytes - 1
 		}
 
