@@ -7,6 +7,13 @@
 - `make build-web` builds `web/app` and copies its output to generated `web/dist`; do not edit `web/dist` as source. Frontend architecture and SolidJS-specific rules are in `web/app/AGENTS.md`.
 - See `README.md` for setup and command details. Keep its API summary subordinate to the executable backend contracts.
 
+## Multi-agent scope discipline
+
+- The user normally works on several things at the same time with different agents running in parallel. Working-tree changes not belonging to one agent's assignment are expected and are that other agent's/div's responsibility; do not touch them.
+- Each agent must stay focused on the scope explicitly defined by the dev for its assignment. If the scope is unclear, or an action appears to fall outside it, ask for clarification before doing anything.
+- Do not include unrelated in-progress changes in an agent's work, commits, or reports unless they have impact on its assigned scope; keep reports focused to avoid noise.
+- The web client closure agent's primary working directory is `doc/frontend/issues/`: issues and their implementation plans live there as repository files, orchestrated locally. They do not live in GitHub.
+
 ## Commits and scope
 
 - When the user explicitly lists the files (or directories) to include in a task, limit all edits, commits, and verification to exactly those files. Anything else observed in the working tree is an out-of-scope finding to report and stop on; never fold it into the plan, the commit, or the verification unless the user asks for it.

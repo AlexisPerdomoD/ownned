@@ -11,13 +11,14 @@ Ownned is a self-hosted file management application for personal use and small-g
 ## Current capabilities
 
 - Hierarchical folders and files, with metadata stored in PostgreSQL.
-- File upload, download, and deletion; file contents are stored on the server's filesystem.
-- Comments on nodes.
+- File upload with contents stored on the server's filesystem. Download and individual deletion routes are registered, but their document/node storage-key mapping still needs correction for end-to-end reliability.
+- Backend comment operations on nodes; frontend route/body parity is still incomplete.
 - Groups with read-only, write, and owner access levels for sharing nodes.
 - Session authentication using JWT cookies, Argon2 password hashing, and super, normal, and limited user roles.
 - The HTTP server can serve the built web client from `web/dist` when `SERVE_WEB_APP` is enabled (the default).
 
 Some API paths are registered as contract stubs and currently return `501 Not Implemented`; these are identified below.
+Backend route registration is not a claim of end-to-end client coverage. See the [frontend contract matrix](doc/frontend/contract-coverage.md) for current parity and the [frontend plan](doc/frontend/product-plan.md) for gaps and progress.
 
 ## Tech stack
 
@@ -47,6 +48,8 @@ The server wires the adapters and use cases in `cmd/server`. Database migrations
 ## API
 
 All endpoints are under `/api/v1`. Except for login and logout, the routes below require authentication. User creation additionally requires a super user. There is no public registration endpoint.
+
+The handler registrations, request validation/use cases, and response views are the executable API sources of truth; this README is a summary.
 
 ### Authentication
 
@@ -90,18 +93,20 @@ All endpoints are under `/api/v1`. Except for login and logout, the routes below
 | `POST`   | `/nodes/{nodeID}/comments`        | Add a comment to a node            |
 | `PATCH`  | `/nodes/comments/{nodeCommentID}` | Update a comment                   |
 | `DELETE` | `/nodes/comments/{nodeCommentID}` | Delete a comment                   |
+| `GET`    | `/nodes/paginate`                 | Paginate nodes                     |
 | `POST`   | `/nodes/docs`                     | Upload a document                  |
 | `GET`    | `/nodes/docs/{docID}/download`    | Download a document                |
 | `DELETE` | `/nodes/docs/{docID}`             | Delete a document                  |
+| `GET`    | `/nodes/docs/paginate`            | Paginate documents                 |
 
-The following paths are registered but are placeholders that return `501 Not Implemented`:
+The following paths are registered as public contracts but currently return `501 Not Implemented`:
 
 | Method | Path                       | Intended operation |
 | ------ | -------------------------- | ------------------ |
 | `PUT`  | `/nodes/{nodeID}`          | Update a node      |
 | `GET`  | `/nodes/{nodeID}/download` | Download a folder  |
-| `GET`  | `/nodes/paginate`          | Paginate nodes     |
-| `GET`  | `/nodes/docs/paginate`     | Paginate documents |
+
+Node and document pagination have HTTP handlers and are not stubs. Their filters are defined in the backend handlers; see `doc/frontend/contract-coverage.md` for the current client-to-contract matrix and uncovered client flows.
 
 ## Getting started
 
@@ -137,6 +142,7 @@ Set a unique `SESSION_SECRET` in `.env` before using the application outside loc
 | Command                                   | Description                                          |
 | ----------------------------------------- | ---------------------------------------------------- |
 | `make db-local-up` / `make db-local-down` | Start or stop the local PostgreSQL container         |
+| `make test-local`                         | Start the test PostgreSQL (tmpfs), apply migrations, run tests, and stop |
 | `make migrate-up` / `make migrate-down`   | Apply or roll back migrations with the `migrate` CLI |
 | `make build-web`                          | Build the web client and copy it to `web/dist`       |
 | `make build-http-lite`                    | Build the HTTP server for the current platform       |
@@ -146,6 +152,12 @@ Set a unique `SESSION_SECRET` in `.env` before using the application outside loc
 | `go test ./...`                           | Run Go tests                                         |
 
 For the web client development server, run `pnpm install` and `pnpm dev` from `web/app/`. In local mode, the client targets the API at `http://localhost:3000`.
+
+Run modes: set `MODE=local` in `.env` for local HTTP (including the separate Vite dev server) — the server enables Vite CORS and non-secure local cookie settings only in this mode; use `MODE=dev` for a built client behind the server. The bundled `.env.example` is preconfigured with `MODE=local` for the local flow.
+
+## Frontend design and coverage
+
+The frontend follows the backend's public HTTP contract. `doc/frontend/contract-coverage.md` records each endpoint, its backend state, current client integration, and gaps. `doc/frontend/product-plan.md` records the UX direction, folder-upload evaluation, acceptance criteria, and progress. Frontend coding instructions are in `web/app/AGENTS.md`.
 
 ## Project structure
 
