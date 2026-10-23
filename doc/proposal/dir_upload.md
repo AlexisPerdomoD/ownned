@@ -100,4 +100,4 @@ Vale la pena **solo si** se detecta a futuro: (a) árboles con miles de archivos
 
 - Contrato carga de archivos: `internal/adapter/inbound/httpapi/node_handler.go` (rutas `POST /nodes` y `POST /nodes/{nodeID}/doc`).
 - Transporte de subida actual del cliente: `web/app/src/features/node/usecase/useCreateDoc.js` (a unificar en la issue 1.1).
-- Plan de cierre: `doc/frontend/issues/plan-cierre-cliente-web.md` (issues 1.1 y 5.1).
+- Plan de cierre: `doc/proposal/plan-cierre-cliente-web.md` (issues 1.1 y 5.1).

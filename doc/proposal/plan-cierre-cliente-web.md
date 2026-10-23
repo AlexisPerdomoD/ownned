@@ -1,7 +1,7 @@
 # Plan de cierre del cliente web — Issues por fases
 
 **Fecha de análisis:** 2026-10-22 · **Estado:** plan ejecutable por agentes en paralelo
-**Fuentes de verdad:** [`../canonical-flows.md`](../canonical-flows.md), [`../contract-coverage.md`](../contract-coverage.md), [`../product-plan.md`](../product-plan.md), [`../../README.md`](../../README.md), `web/app/AGENTS.md`
+**Fuentes de verdad:** [`../frontend/canonical-flows.md`](../frontend/canonical-flows.md), [`../frontend/contract-coverage.md`](../frontend/contract-coverage.md), [`../frontend/product-plan.md`](../frontend/product-plan.md), [`../README.md`](../README.md), `web/app/AGENTS.md`
 
 > Regla de uso: cada issue de este documento es autocontenida y puede copiarse tal cual a un
 > agente ejecutor o a GitHub. Ningún flujo se declara cerrado por tener UI: se cierra cuando
@@ -44,7 +44,7 @@
 
 - **D1 (resuelta):** `limited_usr_role` **no puede crear comentarios**. El frontend asume esta regla en su gating desde ya; el que el backend todavía permita comentar con solo lectura (`create_node_comment_usecase.go` exige solo `read_only_access`) es un fix backend posterior **fuera del alcance frontend**.
 - **D2 (resuelta):** `GET /nodes/{id}` ya embebe metadata por hijo. El ajuste en `internal/app/node/get_node_usecase.go` resuelve `doc` para archivos hijos (best-effort: si la lectura del doc falla, el hijo regresa sin doc útil) y `view.go` serializa por hijo `doc` (→ `DocView`), `display_path` y `access_level` (`nodeFileViewFromDomain`/`nodeFolderViewFromDomain`). `get_root_nodes` se mantiene como `NodeDisplay` sin metadata adicional: las tarjetas de raíces no deben depender de `doc` ni de el nombre real derivado de él.
-- **D4 (resuelta):** la subida de carpetas inicia desde el cliente (orquestación en navegador con los endpoints existentes). El reporte pro/contras de ambas propuestas vive en [`../../proposal/dir_upload.md`](../../proposal/dir_upload.md).
+- **D4 (resuelta):** la subida de carpetas inicia desde el cliente (orquestación en navegador con los endpoints existentes). El reporte pro/contras de ambas propuestas vive en [`./dir_upload.md`](./dir_upload.md).
 - **D7 (resuelta):** Vitest para lógica pura (`shared/authz` y validación de DTOs) + checklist E2E manual de los 9 flujos. Criterio: mínima superficie de dependencias con garantías explícitas de integridad sobre las decisiones de acceso.
 
 ### Decisiones aún abiertas
@@ -368,7 +368,7 @@ Fase 1 (paralela, 11 issues)
 #### `[ISSUE-5.1] Subida de carpetas completas`
 - **Tipo:** Módulo específico (flujo).
 - **Depende de:** D4 resuelta (cliente orquesta); fases 1–2.
-- **Objetivo / alcance:** implementar la estrategia acordada según [`../../proposal/dir_upload.md`](../../proposal/dir_upload.md) (recomendación: **Propuesta A — orquestación en cliente** con los endpoints existentes), con límites definidos (máx. archivos, profundidad, tamaño total), cola de subida con progreso por archivo, desduplicación por ruta relativa, cancelación y fallos parciales visibles. **No desarrollar backend batch en esta fase** (queda documentado como Propuesta B con criterios de migración).
+- **Objetivo / alcance:** implementar la estrategia acordada según [`./dir_upload.md`](./dir_upload.md) (recomendación: **Propuesta A — orquestación en cliente** con los endpoints existentes), con límites definidos (máx. archivos, profundidad, tamaño total), cola de subida con progreso por archivo, desduplicación por ruta relativa, cancelación y fallos parciales visibles. **No desarrollar backend batch en esta fase** (queda documentado como Propuesta B con criterios de migración).
 - **Archivos afectados:** `web/app/src/features/node/ui/UploadDropzone.jsx`, `web/app/src/features/node/usecase/*`, `web/app/src/entities/docs/api/*` (si el transporte de subida necesita un helper dedicado).
 - **Criterios de aceptación:** [ ] Subida de estructura de carpetas refleja el árbol. [ ] Fallo en un archivo no rompe el resto y el usuario sabe qué falló y puede reintentar la lista fallida. [ ] Límites y cancelación documentados en la propuesta y aplicados.
 - **Prompt:** "Implementa la subida de carpetas en `web/app` siguiendo la **Propuesta A** de `doc/proposal/dir_upload.md` (orquestación en el navegador con endpoints existentes): cola secuencial, desduplicación por ruta relativa, cancelación, reintento de la lista de archivos fallidos y los límites documentados. No inventes endpoints backend batch; eso es la Propuesta B del reporte y queda para decisión futura."

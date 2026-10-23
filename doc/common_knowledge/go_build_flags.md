@@ -36,7 +36,7 @@ file app
 
 ### Por qué importa para tu proyecto
 
-En `doc/sqlite/implementation_plan.md` la razón de elegir `modernc.org/sqlite` es precisamente esta: es SQLite **transpilado a Go**, así que funciona con `CGO_ENABLED=0`. Si usaras `mattn/go-sqlite3` (que envuelve el SQLite en C), necesitarías `CGO_ENABLED=1` y adiós binario estático.
+En `doc/proposal/sqlite_implementation_plan.md` la razón de elegir `modernc.org/sqlite` es precisamente esta: es SQLite **transpilado a Go**, así que funciona con `CGO_ENABLED=0`. Si usaras `mattn/go-sqlite3` (que envuelve el SQLite en C), necesitarías `CGO_ENABLED=1` y adiós binario estático.
 
 ### Lo que perdés con `0`
 
