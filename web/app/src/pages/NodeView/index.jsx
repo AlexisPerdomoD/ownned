@@ -5,7 +5,8 @@ import { CommentForm, CommentsList } from '@/features/comments/ui/CommentsList'
 import {
     useCreateComment,
     useDeleteComment,
-    useGetComments
+    useGetComments,
+    useUpdateComment
 } from '@/features/comments/usecase'
 import { DocCard, NodeList, UploadDropzone } from '@/features/node/ui'
 import {
@@ -19,6 +20,7 @@ import {
 import { Button, PageHeader, Spinner, Tabs, toast } from '@/shared/ui'
 import { useAuth } from '@/features/auth/providers/AuthProvider'
 import {
+    canCommentOnNode,
     canCreateFolder,
     canDeleteNode,
     canEditNode,
@@ -175,6 +177,7 @@ export function NodeView() {
         refresh: refreshComments
     } = useGetComments(() => params.id)
     const { create: addComment, loading: addingComment } = useCreateComment()
+    const { update: updateComment, loading: updatingComment } = useUpdateComment()
     const { remove: deleteComment, loading: deletingComment } =
         useDeleteComment()
 
@@ -234,6 +237,12 @@ export function NodeView() {
             return
         }
         toast({ type: 'success', message: 'File deleted successfully' })
+    }
+
+    const handleUpdateComment = async (commentId, content) => {
+        const [success] = await updateComment(commentId, content)
+        if (success) refreshComments()
+        return success
     }
 
     const nodeData = () => node()
@@ -374,23 +383,33 @@ export function NodeView() {
                         <CommentsList
                             comments={comments()}
                             loading={commentsLoading()}
+                            currentUsrId={auth.state.usr?.id}
+                            isSuper={auth.role() === 'super_usr_role'}
+                            onEdit={handleUpdateComment}
                             onDelete={cId =>
                                 deleteComment(cId).then(
                                     isSuccess => isSuccess && refreshComments()
                                 )
                             }
                         />
-                        <div class="mt-4">
-                            <CommentForm
-                                loading={addingComment()}
-                                onSubmit={content =>
-                                    addComment(node().id, content).then(
-                                        isSuccess =>
-                                            isSuccess && refreshComments()
-                                    )
-                                }
-                            />
-                        </div>
+                        <Show
+                            when={canCommentOnNode(
+                                auth.role(),
+                                nodeData()?.access_level
+                            )}
+                        >
+                            <div class="mt-4">
+                                <CommentForm
+                                    loading={addingComment()}
+                                    onSubmit={content =>
+                                        addComment(node().id, content).then(
+                                            isSuccess =>
+                                                isSuccess && refreshComments()
+                                        )
+                                    }
+                                />
+                            </div>
+                        </Show>
                     </section>
                 </Show>
 
