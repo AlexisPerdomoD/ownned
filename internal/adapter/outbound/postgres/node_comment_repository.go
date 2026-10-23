@@ -26,16 +26,17 @@ FROM fs.node_comments nc`
 
 const insertNodeCommentQuery string = `
 INSERT INTO fs.node_comments(
+	id,
 	node_id,
 	usr_id,
 	content,
 	created_at,
 	updated_at
-) VALUES ($1, $2, $3, $4, $5)`
+) VALUES ($1, $2, $3, $4, $5, $6)`
 
 const updateNodeCommentQuery string = `UPDATE fs.node_comments SET content = $1 WHERE id = $2`
 
-const deleteNodeCommentQuery string = `DELETE FROM node_comments WHERE id = $1`
+const deleteNodeCommentQuery string = `DELETE FROM fs.node_comments WHERE id = $1`
 
 type nodeCommentRow struct {
 	ID        domain.NodeCommentID `db:"id"`
@@ -102,6 +103,7 @@ func (r *nodeCommentRepository) Create(ctx context.Context, c *domain.NodeCommen
 	createdAt := time.Now().UTC()
 	updatedAt := createdAt
 	_, err := r.db.ExecContext(ctx, insertNodeCommentQuery,
+		c.ID,
 		c.NodeID,
 		c.UsrID,
 		c.Content,
