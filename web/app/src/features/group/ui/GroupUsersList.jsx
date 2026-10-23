@@ -21,23 +21,23 @@ const accessVariant = {
  * @param {(usrId: string) => void} [props.onRemove]
  * @returns {import('solid-js').JSX.Element}
  */
-export function GroupUsersList({ users, loading = false, onRemove }) {
+export function GroupUsersList(props) {
     return (
         <div class="flex flex-col gap-2">
-            <Show when={loading}>
+            <Show when={props.loading}>
                 <div class="py-4 text-center text-sm text-muted">
                     Loading...
                 </div>
             </Show>
 
-            <Show when={!loading && users.length === 0}>
-                <div class="py-4 text-center text-sm text-[--color-muted]">
+            <Show when={!props.loading && props.users.length === 0}>
+                <div class="py-4 text-center text-sm text-muted">
                     No users assigned yet.
                 </div>
             </Show>
 
-            <Show when={!loading && users.length > 0}>
-                <For each={users}>
+            <Show when={!props.loading && props.users.length > 0}>
+                <For each={props.users}>
                     {usr => (
                         <div class="flex items-center justify-between p-2 bg-bg-2 rounded-xs">
                             <div class="flex items-center gap-2">
@@ -47,12 +47,12 @@ export function GroupUsersList({ users, loading = false, onRemove }) {
                                         accessVariant[usr.access] ?? 'neutral'
                                     }
                                 >
-                                    {usr.access.replace('_', ' ')}
+                                    {usr.access.replaceAll('_', ' ')}
                                 </Badge>
                             </div>
                             <button
                                 type="button"
-                                onClick={() => onRemove?.(usr.usr_id)}
+                                onClick={() => props.onRemove?.(usr.usr_id)}
                                 class="text-xs text-danger hover:underline"
                             >
                                 Remove
@@ -72,16 +72,16 @@ export function GroupUsersList({ users, loading = false, onRemove }) {
  * @param {(usrId: string, access: string) => void} [props.onAdd]
  * @returns {import('solid-js').JSX.Element}
  */
-export function AddUserForm({ availableUsrs, loading = false, onAdd }) {
+export function AddUserForm(props) {
     let selectRef
     let accessRef
 
     const handleSubmit = e => {
         e.preventDefault()
-        const usrId = selectRef?.value
+        const userId = selectRef?.value
         const access = accessRef?.value
-        if (usrId && access) {
-            onAdd?.(usrId, access)
+        if (userId && access) {
+            props.onAdd?.(userId, access)
             selectRef.value = ''
             accessRef.value = 'read_only_access'
         }
@@ -90,31 +90,31 @@ export function AddUserForm({ availableUsrs, loading = false, onAdd }) {
     return (
         <form onSubmit={handleSubmit} class="flex items-center gap-2">
             <select
-                ref={selectRef}
+                ref={el => (selectRef = el)}
                 class="
                     flex-1 font-sans font-light text-sm
-                    text-[--color-ink-dark]
-                    bg-[--color-bg] border border-[--color-border] rounded-xs
+                    text-ink-dark
+                    bg-bg border border-border rounded-xs
                     px-2 py-1.5
-                    focus:outline-none focus:border-[--color-ink]
+                    focus:outline-none focus:border-ink
                 "
                 required
             >
                 <option value="">Select user...</option>
-                <For each={availableUsrs}>
+                <For each={props.availableUsrs}>
                     {usr => <option value={usr.id}>{usr.username}</option>}
                 </For>
             </select>
 
             <select
-                ref={accessRef}
+                ref={el => (accessRef = el)}
                 defaultValue="read_only_access"
                 class="
                     font-sans font-light text-sm
-                    text-[--color-ink-dark]
-                    bg-[--color-bg] border border-[--color-border] rounded-xs
+                    text-ink-dark
+                    bg-bg border border-border rounded-xs
                     px-2 py-1.5
-                    focus:outline-none focus:border-[--color-ink]
+                    focus:outline-none focus:border-ink
                 "
             >
                 <For each={accessOptions}>
@@ -122,7 +122,7 @@ export function AddUserForm({ availableUsrs, loading = false, onAdd }) {
                 </For>
             </select>
 
-            <Button type="submit" size="sm" loading={loading}>
+            <Button type="submit" size="sm" loading={props.loading}>
                 Add
             </Button>
         </form>
