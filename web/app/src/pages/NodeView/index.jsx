@@ -167,6 +167,16 @@ export function NodeView() {
     const { node, loading } = useGetNode(() => params.id)
     const pager = usePaginateNodes()
     const [searchInput, setSearchInput] = createSignal('')
+    const [sortBy, setSortBy] = createSignal('name')
+    const [sortDir, setSortDir] = createSignal('asc')
+    const [showDotfiles, setShowDotfiles] = createSignal(
+        localStorage.getItem('owned.showDotfiles') === 'true'
+    )
+
+    // persist dotfile preference (D6)
+    createEffect(() => {
+        localStorage.setItem('owned.showDotfiles', String(showDotfiles()))
+    })
     const { create, loading: creating } = useCreateFolder()
     const { update, loading: updating } = useUpdateNode()
     const { remove, loading: deleting } = useDeleteNode()
@@ -266,6 +276,32 @@ export function NodeView() {
     const fileChildren = () =>
         nodeData()?.children?.filter(n => n.type === 'file') ?? []
 
+    const sortNodes = list => {
+        const filtered = showDotfiles()
+            ? list
+            : list.filter(n => !String(n.name ?? '').startsWith('.'))
+        return [...filtered].sort((a, b) => {
+            let va
+            let vb
+            if (sortBy() === 'name') {
+                va = String(a.name ?? '')
+                vb = String(b.name ?? '')
+            } else if (sortBy() === 'created') {
+                va = a.created_at ?? ''
+                vb = b.created_at ?? ''
+            } else {
+                va = a.updated_at ?? ''
+                vb = b.updated_at ?? ''
+            }
+            if (va < vb) return sortDir() === 'asc' ? -1 : 1
+            if (va > vb) return sortDir() === 'asc' ? 1 : -1
+            return 0
+        })
+    }
+
+    const sortedFolders = () => sortNodes(folderChildren())
+    const sortedFiles = () => sortNodes(fileChildren())
+
     return (
         <section class="flex flex-col p-6">
             <Show
@@ -307,7 +343,7 @@ export function NodeView() {
                             {nodeData()?.name}'s contents
                         </h3>
                         <NodeList
-                            nodes={folderChildren()}
+                            nodes={sortedFolders()}
                             loading={loading()}
                             onNodeClick={n => navigate(`/nodes/${n.id}`)}
                         />
@@ -316,7 +352,7 @@ export function NodeView() {
                     <section class="mt-4">
                         <h3 class="font-serif text-lg mb-2">Files</h3>
                         <Show
-                            when={fileChildren().length > 0}
+                            when={sortedFiles().length > 0}
                             fallback={
                                 <p class="text-sm text-[--color-muted]">
                                     No files in this folder
@@ -324,7 +360,7 @@ export function NodeView() {
                             }
                         >
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {fileChildren().map(fileNode => (
+                                {sortedFiles().map(fileNode => (
                                     <DocCard
                                         doc={fileNode.doc}
                                         onDownload={handleDownload}
@@ -394,6 +430,40 @@ export function NodeView() {
                         </section>
                     </Show>
 
+                    <section class="mt-4 flex items-center gap-2 text-sm">
+                        <label>Sort:</label>
+                        <select
+                            value={sortBy()}
+                            onChange={e => setSortBy(e.target.value)}
+                            class="bg-surface border border-border rounded-xs px-2 py-1"
+                        >
+                            <option value="name">Name</option>
+                            <option value="created">Created</option>
+                            <option value="updated">Updated</option>
+                        </select>
+                        <button
+                            type="button"
+                            class="px-2 py-1 border border-border rounded-xs"
+                            onClick={() =>
+                                setSortDir(d =>
+                                    d === 'asc' ? 'desc' : 'asc'
+                                )
+                            }
+                        >
+                            {sortDir() === 'asc' ? '↑' : '↓'}
+                        </button>
+                        <label class="ml-4 flex items-center gap-1">
+                            <input
+                                type="checkbox"
+                                checked={showDotfiles()}
+                                onChange={e =>
+                                    setShowDotfiles(e.target.checked)
+                                }
+                            />
+                            Show dotfiles
+                        </label>
+                    </section>
+
                     <div class="mb-6 mt-6">
                         <Tabs
                             items={[
@@ -412,7 +482,7 @@ export function NodeView() {
                     <section class="mt-4">
                         <h3 class="font-serif text-lg mb-2">Folders</h3>
                         <NodeList
-                            nodes={folderChildren()}
+                            nodes={sortedFolders()}
                             loading={loading()}
                             onNodeClick={n => navigate(`/nodes/${n.id}`)}
                         />
