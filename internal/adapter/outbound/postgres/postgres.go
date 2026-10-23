@@ -3,15 +3,14 @@ package postgres
 
 import (
 	"database/sql"
+	"embed"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	migrationPg "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
@@ -20,6 +19,9 @@ var (
 	ErrInvalidArgument = errors.New("invalid argument provided")
 	ErrUsrDoesNotExist = errors.New("usr was not found")
 )
+
+//go:embed migration/*.sql
+var migrationDir embed.FS
 
 func NewDB(
 	dbName string,
@@ -50,24 +52,18 @@ func NewDB(
 }
 
 func MigrateUp(db *sql.DB) error {
-	timeout := 1 * time.Second
-	driver, err := migrationPg.WithInstance(db, &migrationPg.Config{StatementTimeout: timeout})
+	driver, err := migrationPg.WithInstance(db, &migrationPg.Config{StatementTimeout: time.Second})
 	if err != nil {
 		return err
 	}
 
-	wd, err := os.Getwd()
+	src, err := iofs.New(migrationDir, "migration")
+	command, err := migrate.NewWithInstance("iofs", src, "postgres", driver)
 	if err != nil {
 		return err
 	}
 
-	path := "file://" + filepath.Join(wd, "internal/adapter/outbound/postgres/migration")
-	m, err := migrate.NewWithDatabaseInstance(path, "postgres", driver)
-	if err != nil {
-		return err
-	}
-
-	err = m.Up()
+	err = command.Up()
 	if err != nil && err != migrate.ErrNoChange {
 		return err
 	}
