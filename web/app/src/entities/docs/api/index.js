@@ -1,5 +1,7 @@
 import z from 'zod'
 
+import { reqBlob, reqJSON } from '@/shared/api/client'
+
 export class CreateDocDTO {
     static #schema = z.strictObject({
         parent_id: z.uuid('Parent ID must be a string and a valid UUID.'),
@@ -48,21 +50,7 @@ export const buildCreateDocDTO = CreateDocDTO.build
  * @returns {Promise<import('@/entities/nodes').Doc>}
  */
 export async function apiDeleteDoc(docId) {
-    const res = await fetch(`/api/v1/nodes/docs/${docId}`, {
-        method: 'DELETE',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' }
-    })
-
-    if (!res.ok) {
-        const msg = await res
-            .json()
-            .then(r => r?.detail?.reason || r.message)
-            .catch(() => 'Delete failed')
-        throw new Error(msg)
-    }
-
-    return await res.json()
+    return await reqJSON(`/api/v1/nodes/docs/${docId}`, { method: 'DELETE' })
 }
 
 /**
@@ -70,20 +58,7 @@ export async function apiDeleteDoc(docId) {
  * @param {string} filename
  */
 export async function apiDownloadDoc(docId, filename) {
-    const res = await fetch(`/api/v1/nodes/docs/${docId}/download`, {
-        method: 'GET',
-        credentials: 'same-origin'
-    })
-
-    if (!res.ok) {
-        const msg = await res
-            .json()
-            .then(r => r?.detail?.reason || r.message)
-            .catch(() => 'Download failed')
-        throw new Error(msg)
-    }
-
-    const blob = await res.blob()
+    const blob = await reqBlob(`/api/v1/nodes/docs/${docId}/download`)
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url

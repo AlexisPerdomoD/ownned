@@ -1,6 +1,7 @@
 import { createSignal } from 'solid-js'
 
 import { buildCreateDocDTO } from '@/entities/docs/api'
+import { reqForm } from '@/shared/api/client'
 
 /**
  * @param {() => string} getParentId - function that returns the parent node ID
@@ -27,18 +28,7 @@ export function useCreateDoc(getParentId, onSuccess) {
             formData.append('size', String(file.size))
             formData.append('file', file)
 
-            const res = await fetch('/api/v1/nodes/docs', {
-                method: 'POST',
-                credentials: 'same-origin',
-                body: formData
-            })
-
-            if (!res.ok) {
-                const msg = await res.json().then(r => r?.detail?.reason || r.message).catch(() => 'Upload failed')
-                return [false, { general: msg }]
-            }
-
-            const doc = await res.json()
+            const doc = await reqForm('/api/v1/nodes/docs', formData)
             onSuccess?.()
             return [true, doc]
         } catch (e) {

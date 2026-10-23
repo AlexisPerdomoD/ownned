@@ -21,6 +21,12 @@ export class ApiNotFoundError extends ApiError {}
 
 export class ApiConflictError extends ApiError {}
 
+export class ApiPayloadTooLargeError extends ApiError {}
+
+export class ApiUnsupportedMediaTypeError extends ApiError {}
+
+export class ApiValidationError extends ApiError {}
+
 export class ApiRateLimitError extends ApiError {}
 
 export class ApiAbortedError extends ApiError {}
