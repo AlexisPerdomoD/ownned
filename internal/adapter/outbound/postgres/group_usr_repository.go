@@ -142,7 +142,7 @@ func (r *groupUsrRepository) GetGroupAccess(
 	usrID domain.UsrID,
 	groupID domain.GroupID,
 ) (domain.GroupUsrAccess, error) {
-	q := fmt.Sprintf("%s\nWHERE gu.usr_id=$1 AND gu.group_id=$2", getGroupAccessQuery)
+	q := getGroupAccessQuery
 	var access domain.GroupUsrAccess
 	err := r.db.QueryRowxContext(ctx, q, usrID, groupID).Scan(&access)
 	if err != nil {
