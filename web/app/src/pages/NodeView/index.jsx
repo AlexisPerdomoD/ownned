@@ -1,6 +1,6 @@
 import { Show, createEffect, createSignal } from 'solid-js'
 
-import { apiDownloadDoc } from '@/entities/docs/api'
+import { apiDownloadDoc, apiDownloadFolder } from '@/entities/docs/api'
 import { CommentForm, CommentsList } from '@/features/comments/ui/CommentsList'
 import {
     useCreateComment,
@@ -254,6 +254,18 @@ export function NodeView() {
         }
     }
 
+    const handleDownloadFolder = async () => {
+        try {
+            await apiDownloadFolder(nodeData()?.id)
+            toast({ type: 'success', message: 'Folder download started' })
+        } catch (e) {
+            toast({
+                type: 'error',
+                message: e.message ?? 'Folder download not available yet'
+            })
+        }
+    }
+
     const handleDeleteDoc = doc => {
         setDeleteDocTarget(doc)
         setShowDeleteDoc(true)
@@ -331,6 +343,14 @@ export function NodeView() {
                     <div class="mb-4">
                         <Button onClick={() => setShowCreate(true)}>
                             + New Folder
+                        </Button>
+                    </div>
+                </Show>
+
+                <Show when={nodeData()?.type === 'folder'}>
+                    <div class="mb-4">
+                        <Button variant="ghost" onClick={handleDownloadFolder}>
+                            Download folder
                         </Button>
                     </div>
                 </Show>

@@ -68,3 +68,7 @@ export async function apiDownloadDoc(docId, filename) {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
 }
+
+export async function apiDownloadFolder(nodeId) {
+    await reqBlob(`/api/v1/nodes/${nodeId}/download`)
+}
