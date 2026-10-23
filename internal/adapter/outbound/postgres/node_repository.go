@@ -50,7 +50,7 @@ INSERT INTO fs.nodes (
 	updated_at
 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
-const deleteNodeQuery string = `DELETE FROM nodes WHERE path <@ (SELECT path FROM nodes WHERE id = $1)`
+const deleteNodeQuery string = `DELETE FROM fs.nodes WHERE path <@ (SELECT path FROM nodes WHERE id = $1)`
 
 type nodeRow struct {
 	ID          domain.NodeID `db:"id"`
