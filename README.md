@@ -144,6 +144,7 @@ Set a unique `SESSION_SECRET` in `.env` before using the application outside loc
 | `make db-local-up` / `make db-local-down` | Start or stop the local PostgreSQL container         |
 | `make test-local`                         | Start the test PostgreSQL (tmpfs), apply migrations, run tests, and stop |
 | `make migrate-up` / `make migrate-down`   | Apply or roll back migrations with the `migrate` CLI |
+| `make migrate-up-cli` / `make migrate-down-cli` | Apply or roll back migrations with the built-in CLI (`owned-cli migrate ...`) |
 | `make build-web`                          | Build the web client and copy it to `web/dist`       |
 | `make build-http-lite`                    | Build the HTTP server for the current platform       |
 | `make start-http`                         | Build and run the Linux/amd64 HTTP server            |
@@ -164,8 +165,7 @@ The frontend follows the backend's public HTTP contract. `doc/frontend/contract-
 ```text
 cmd/
   server/                         HTTP server and dependency wiring
-  superusr/                       Super-user CLI
-  approot/                        Root-folder initialization CLI
+  cli/                            Operational CLI (superusr, approot, migrate, seed, admin)
 internal/
   app/                             Use cases, ports, and application errors
   domain/                          Domain entities and rules
