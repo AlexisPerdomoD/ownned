@@ -1,5 +1,5 @@
 import { A, useLocation } from '@solidjs/router'
-import { Show } from 'solid-js'
+import { Show, createEffect, createSignal } from 'solid-js'
 
 import { useAuth } from '@/features/auth/providers/AuthProvider'
 import { canManageUsrs } from '@/shared/authz'
@@ -13,6 +13,18 @@ import { Avatar, Button } from '@/shared/ui'
 export function Navbar({ collapsed = false }) {
     const location = useLocation()
     const { state, logout, role } = useAuth()
+
+    const initialTheme =
+        localStorage.getItem('owned.theme') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light')
+    const [theme, setTheme] = createSignal(initialTheme)
+
+    createEffect(() => {
+        document.documentElement.dataset.theme = theme()
+        localStorage.setItem('owned.theme', theme())
+    })
 
     const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/')
 
@@ -92,6 +104,16 @@ export function Navbar({ collapsed = false }) {
             </div>
 
             <div class="flex items-center gap-3">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                        setTheme(t => (t === 'dark' ? 'light' : 'dark'))
+                    }
+                    title="Toggle theme"
+                >
+                    {theme() === 'dark' ? '☀' : '☾'}
+                </Button>
                 <span class="text-[--text-sm] text-[--color-muted]">
                     {collapsed ? '' : state.usr?.username}
                 </span>
