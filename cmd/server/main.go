@@ -16,6 +16,7 @@ import (
 	"ownned/internal/app/node"
 	"ownned/internal/app/usr"
 	"ownned/internal/config"
+	"ownned/web"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -164,10 +165,7 @@ func main() {
 	).MountV1(r)
 
 	if cfg.ServeWebApp {
-		r.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/dist/assets"))))
-		r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, "web/dist/index.html")
-		}))
+		httpapi.RegisterFrontend(r, web.EmbeddedClient)
 	}
 
 	httpapi.PresentRouter(r)
