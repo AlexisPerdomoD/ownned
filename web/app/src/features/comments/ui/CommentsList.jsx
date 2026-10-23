@@ -150,13 +150,12 @@ export function CommentsList(props) {
 export function CommentForm({ loading = false, onSubmit }) {
     const [content, setContent] = createSignal('')
 
-    const handleSubmit = e => {
+    const handleSubmit = async e => {
         e.preventDefault()
         const text = content().trim()
-        if (text) {
-            onSubmit?.(text)
-            setContent('')
-        }
+        if (!text) return
+        const result = await onSubmit?.(text)
+        if (result !== false) setContent('')
     }
 
     return (

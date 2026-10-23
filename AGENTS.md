@@ -73,3 +73,10 @@
   3. Se actualiza `doc/issue/README.md` (tablero) reflejando el nuevo estado.
 - Cada issue cerrado equivale a un commit (Conventional Commits); antes de commitear se presenta al usuario el plan de commits a aprobar.
 - Las issues de verificación (31–37 y similares) también siguen este protocolo al cerrarse.
+
+## Revisión de issues (`revisión`)
+
+- Un issue en `revisión` se orquesta activamente: verificar sus criterios de aceptación contra la implementación actual.
+- Si todos los criterios se cumplen (build, tests, smoke/manual según aplique), marcar `hecho` y aplicar el protocolo de cierre.
+- Si algún criterio no se cumple o requiere una decisión de producto/arquitectura, **reportar al usuario y detenerse**; no marcar `hecho` ni improvisar la decisión.
+- No dejar issues en `revisión` sin verificación activa: o se cierran o se documenta el bloqueo.
