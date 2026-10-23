@@ -32,7 +32,7 @@ FROM fs.nodes n`
 
 const getNodeDisplayPathQuery string = `
 SELECT  
-	'/' + string_agg(ancestor.name, '/' ORDER BY nlevel(ancestor.path) ASC)
+	CONCAT('/', string_agg(ancestor.name, '/' ORDER BY nlevel(ancestor.path) ASC))
 FROM fs.nodes AS target
 JOIN fs.nodes AS ancestor
   ON target.path <@ ancestor.path
@@ -50,7 +50,7 @@ INSERT INTO fs.nodes (
 	updated_at
 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
-const deleteNodeQuery string = `DELETE FROM fs.nodes WHERE path <@ (SELECT path FROM nodes WHERE id = $1)`
+const deleteNodeQuery string = `DELETE FROM fs.nodes WHERE path <@ (SELECT path FROM fs.nodes WHERE id = $1)`
 
 type nodeRow struct {
 	ID          domain.NodeID `db:"id"`
@@ -152,7 +152,6 @@ func (r *nodeRepository) GetDisplayPathByID(ctx context.Context, id domain.NodeI
 }
 
 func (r *nodeRepository) GetRootByGroupIDs(ctx context.Context, groups []domain.GroupID) ([]domain.Node, error) {
-	fmt.Printf("groups: %+v\n", groups)
 	if len(groups) == 0 {
 		detail := make(map[string]string)
 		detail["reason"] = "no groups provided for getting root nodes"
@@ -186,8 +185,6 @@ func (r *nodeRepository) GetRootByGroupIDs(ctx context.Context, groups []domain.
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Printf("nodes: %+v\n", nodes)
 
 	return nodes, nil
 }
