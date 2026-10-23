@@ -7,12 +7,31 @@
 - `make build-web` builds `web/app` and copies its output to generated `web/dist`; do not edit `web/dist` as source. Frontend architecture and SolidJS-specific rules are in `web/app/AGENTS.md`.
 - See `README.md` for setup and command details. Keep its API summary subordinate to the executable backend contracts.
 
+## Documentation structure
+
+- `doc/common_knowledge/` — general reference docs (reading/research).
+- `doc/proposal/` — proposals and active plans for possible new features or improvements (e.g., `dir_upload.md`, `plan-cierre-cliente-web.md`, `sqlite_*`).
+- `doc/issue/` — single flat tracker for ALL issues. No nested phase directories. Filename convention:
+  `NN.<epic_or_operation>.<main_scope_folder>[.<package_folder>].<description>.md`
+  where `NN` is a zero-padded (2 digits) global sequential number assigned at creation time, never reused, used to reference the issue from `doc/history/` and other docs (e.g. `01.web_closure_fase1.web.app.unificar_transporte.md`).
+  Each issue is self-contained: objective, requirements, affected files, dependencies, acceptance checklist (closure criteria), out-of-scope, executor prompt.
+- `doc/history/` — concise summaries of closed features: technical decisions, rationale and justifications. Complements commit logs; not a duplicate of issue detail.
+- `doc/frontend/` — frontend-specific reference docs (`canonical-flows.md`, `contract-coverage.md`, `product-plan.md`).
+
+### Issue orchestration
+
+- The tracker lives in `doc/issue/` (formerly `doc/frontend/issues/`); issues and plans are repository files orchestrated locally, not in GitHub.
+- `doc/issue/README.md` is the board (phases/epics, states, dependencies); update it when a state changes.
+- States: `pendiente` → `en-progreso` → `revisión` → `hecho` (plus `bloqueado`, `no-planificado`).
+- Closed or almost-closed issues are removed after their summary is written to `doc/history/`; any pending verification/test becomes a dedicated issue (see `doc/issue/31..37`).
+- One issue = one commit (Conventional Commits). Verify acceptance criteria before marking `hecho`.
+
 ## Multi-agent scope discipline
 
 - The user normally works on several things at the same time with different agents running in parallel. Working-tree changes not belonging to one agent's assignment are expected and are that other agent's/div's responsibility; do not touch them.
 - Each agent must stay focused on the scope explicitly defined by the dev for its assignment. If the scope is unclear, or an action appears to fall outside it, ask for clarification before doing anything.
 - Do not include unrelated in-progress changes in an agent's work, commits, or reports unless they have impact on its assigned scope; keep reports focused to avoid noise.
-- The web client closure agent's primary working directory is `doc/frontend/issues/`: issues and their implementation plans live there as repository files, orchestrated locally. They do not live in GitHub.
+- The web client closure agent's primary working directory is `doc/issue/`: issues and their implementation plans live there as repository files, orchestrated locally. They do not live in GitHub. Closed/almost-closed items are summarized in `doc/history/`.
 - Scope is always what the dev explicitly asks for in the current conversation, engagement by engagement — there is no standing, silent scope carried across sessions. Where the dev does not state a boundary, inspect first and ask before touching anything questionable. (For reference: in the Fase-1 session, `internal/` was declared read-only for this agent; whether backend work is allowed in a later engagement depends solely on that engagement's explicit request.)
 
 ## Out-of-scope findings
