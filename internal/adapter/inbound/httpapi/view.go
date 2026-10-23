@@ -239,9 +239,9 @@ type NodeView struct {
 	DisplayPath string                 `json:"display_path"`
 	CreatedAt   time.Time              `json:"created_at"`
 	UpdatedAt   time.Time              `json:"updated_at"`
-	Access      *domain.GroupUsrAccess `json:"access_level,omitempty"` // Note: include only for specific usecases
-	Children    []NodeView             `json:"children"`               // Note: include only for specific usecases
-	Doc         *DocView               `json:"doc,omitempty"`          // Note: include only for specific usecases
+	Access      *domain.GroupUsrAccess `json:"access_level,omitempty"` // NOTE: include only for specific usecases
+	Children    []NodeView             `json:"children"`               // NOTE: include only for specific usecases
+	Doc         *DocView               `json:"doc,omitempty"`          // NOTE: include only for specific usecases
 }
 
 func nodeViewFromDomain(d *domain.Node) NodeView {

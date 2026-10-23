@@ -61,7 +61,7 @@ func (uc *GetNodeUseCase) Execute(ctx context.Context, nodeID domain.NodeID) (No
 	wg := sync.WaitGroup{}
 	displayPath := new(string)
 
-	// Note: the display path is best-effort metadata. On failure this method
+	// NOTE: the display path is best-effort metadata. On failure this method
 	// warns and degrades gracefully: `displayPath` stays empty, so the node's
 	// DisplayPath resolves to "" and children build their own paths from that
 	// value instead of propagating the error and failing the whole operation.
@@ -113,7 +113,7 @@ func (uc *GetNodeUseCase) Execute(ctx context.Context, nodeID domain.NodeID) (No
 				Node:        child,
 				DisplayPath: dp,
 				access:      access,
-				Children:    nil, // Note: only include first level children folders
+				Children:    nil, // NOTE: only include first level children folders
 			}
 
 			continue
