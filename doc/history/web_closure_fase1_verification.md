@@ -1,6 +1,6 @@
 # Verificación Fase 1 — Cliente web (2026-10-23)
 
-- **Estado:** 6 de 7 criterios de verificación cerrados (`hecho`: 31, 32, 33, 34, 36, 37). Issue 35 queda en `revisión` (smoke de Vite pendiente).
+- **Estado:** 7 de 7 criterios de verificación cerrados (`hecho`: 31, 32, 33, 34, 35, 36, 37).
 - **Referencias:** `../proposal/plan-cierre-cliente-web.md`, `../issue/README.md`.
 
 ## Verificaciones cerradas
@@ -11,6 +11,7 @@
   - `node_comment_repository.go` `Create` ahora persiste `id` (era null).
   - `deleteNodeCommentQuery` corregido a `fs.node_comments`.
 - **34 password:** rechazo `400` con motivo claro (sin dígito/símbolo); contraseña válida crea usuario (201).
+- **35 login Vite:** preflight CORS 200 y login 201 con `Access-Control-Allow-Origin: http://localhost:5173` y cookie `SameSite=Lax` en `MODE=local`; Vite dev server arranca en `:5173`.
 - **36 documentos:** download por `docID` retorna contenido correcto; delete → 200; re-download → 404; sin huérfanos en storage.
 - **37 borrado recursivo:** test de integración `TestNodeRepository_DeleteRecursive` (subárbol padre/hijo/nieto) en transacción con rollback; `make test-local` verde.
 
@@ -21,7 +22,7 @@
 
 ## Pendiente
 
-- Issue 35 (login/logout desde Vite): smoke manual en navegador pendiente. No bloquea Fase 2.
+- Ninguno. Fase 1 verificación completa.
 
 ## Lineamientos aplicados
 

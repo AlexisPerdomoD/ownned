@@ -32,11 +32,10 @@
 
 ### Fase 1 — Ajustes globales de contrato e infraestructura (cerrada; verificación pendiente en 31–37)
 
-Fase 1 implementada y verificada (6 de 7 criterios `hecho`; issue 35 en `revisión`). Resumen en [`../history/web_closure_fase1.md`](../history/web_closure_fase1.md) y [`../history/web_closure_fase1_verification.md`](../history/web_closure_fase1_verification.md).
+Fase 1 implementada y verificada (7 de 7 criterios `hecho`). Resumen en [`../history/web_closure_fase1.md`](../history/web_closure_fase1.md) y [`../history/web_closure_fase1_verification.md`](../history/web_closure_fase1_verification.md).
 
 | ID | Título | Estado | Depende de |
 | --- | --- | --- | --- |
-| 35 | [Verificación: login/logout desde Vite](35.web_closure_fase1.web.app.verify_login_vite.md) | revisión | 08 (implementado) |
 
 ### Fase 2 — Flujos críticos rotos
 
