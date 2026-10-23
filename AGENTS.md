@@ -57,3 +57,19 @@
 ## Communication
 
 - When presenting lists of findings, recommendations, or action items, number each item so the user can refer to it by number.
+
+## Database tests (postgres)
+
+- One `*_test.go` file per repository in `internal/adapter/outbound/postgres`.
+- Obtain the test DB via `newTestDB(t)` and wrap every operation in `newTestTx(t, db)` (rollback on cleanup).
+- Never persist test data; assume a migrated schema with clean records.
+- Prefer repository methods over direct SQL to build fixtures, so regressions in those methods are caught.
+
+## Cierre de issues (tracker en `doc/issue/`)
+
+- Un issue marcado `hecho` no se considera cerrado del todo hasta que:
+  1. Se escribe su resumen técnico en `doc/history/` (decisiones, justificación; no duplicar el detalle de la issue).
+  2. Se elimina el archivo de issue correspondiente de `doc/issue/`.
+  3. Se actualiza `doc/issue/README.md` (tablero) reflejando el nuevo estado.
+- Cada issue cerrado equivale a un commit (Conventional Commits); antes de commitear se presenta al usuario el plan de commits a aprobar.
+- Las issues de verificación (31–37 y similares) también siguen este protocolo al cerrarse.
