@@ -1,6 +1,5 @@
 export * from './getMe'
 export * from './paginateUsr'
 export * from './createUsr'
-export * from './deleteUsr'
 export * from './loginUsr'
 export * from './logout'

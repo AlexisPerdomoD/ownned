@@ -1,5 +1,5 @@
 import { createSignal, onMount } from 'solid-js'
-import { apiPaginateUsrs, apiCreateUsr, apiDeleteUsr, buildCreateUsrDTO } from '@/entities/usrs/api'
+import { apiPaginateUsrs, apiCreateUsr, buildCreateUsrDTO } from '@/entities/usrs/api'
 import { toast } from '@/shared/ui'
 
 export function usePaginateUsrs({ pageSize = 20 } = {}) {
@@ -47,8 +47,8 @@ export function usePaginateUsrs({ pageSize = 20 } = {}) {
 export function useCreateUsr() {
     const [loading, setLoading] = createSignal(false)
 
-    const create = async (username, password, firstname, lastname, role, access = []) => {
-        const [valid, dto] = buildCreateUsrDTO(username, password, firstname, lastname, role, access)
+    const create = async (username, password, firstname, lastname, role) => {
+        const [valid, dto] = buildCreateUsrDTO(username, password, firstname, lastname, role)
         if (!valid) {
             return [false, dto]
         }
@@ -66,24 +66,5 @@ export function useCreateUsr() {
     }
 
     return { create, loading }
-}
-
-export function useDeleteUsr() {
-    const [loading, setLoading] = createSignal(false)
-
-    const remove = async usrId => {
-        setLoading(true)
-        try {
-            await apiDeleteUsr(usrId)
-            toast({ type: 'success', message: 'User deleted.' })
-            return [true, null]
-        } catch (e) {
-            return [false, { general: e.message }]
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    return { remove, loading }
 }
 

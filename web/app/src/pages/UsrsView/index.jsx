@@ -2,7 +2,6 @@ import { For, createSignal } from 'solid-js'
 
 import {
     useCreateUsr,
-    useDeleteUsr,
     usePaginateUsrs
 } from '@/features/usr/usecase'
 import {
@@ -65,24 +64,6 @@ function UsrsTable(props) {
             header: 'Created',
             class: 'w-24',
             render: row => new Date(row.created_at).toLocaleDateString()
-        },
-        {
-            key: 'actions',
-            header: '',
-            class: 'w-16',
-            align: 'right',
-            render: row => (
-                <button
-                    type="button"
-                    onClick={e => {
-                        e.stopPropagation()
-                        props.onDelete?.(row)
-                    }}
-                    class="text-xs text-[--color-danger] hover:underline cursor-pointer"
-                >
-                    Delete
-                </button>
-            )
         }
     ]
 
@@ -294,7 +275,6 @@ export function UsrsView() {
         refresh
     } = usePaginateUsrs({ pageSize: 20 })
     const { create, loading: creating } = useCreateUsr()
-    const { remove, loading: deleting } = useDeleteUsr()
 
     const [showForm, setShowForm] = createSignal(false)
     const [searchInput, setSearchInput] = createSignal('')
@@ -302,15 +282,6 @@ export function UsrsView() {
     const handleSearch = () => {
         setSearch(searchInput())
         goTo(1)
-    }
-
-    const handleDelete = async usr => {
-        if (confirm(`Delete user "${usr.username}"?`)) {
-            const [success] = await remove(usr.id)
-            if (success) {
-                refresh()
-            }
-        }
     }
 
     return (
@@ -348,7 +319,6 @@ export function UsrsView() {
             <UsrsTable
                 usrs={usrs()}
                 loading={loading()}
-                onDelete={handleDelete}
             />
 
             <div class="mt-4">
