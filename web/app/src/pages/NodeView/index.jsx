@@ -15,6 +15,7 @@ import {
     useDeleteDoc,
     useDeleteNode,
     useGetNode,
+    usePaginateNodes,
     useUpdateNode
 } from '@/features/node/usecase'
 import {
@@ -164,6 +165,8 @@ export function NodeView() {
     const role = () => auth.role()
     const accessLevel = () => nodeData()?.access_level
     const { node, loading } = useGetNode(() => params.id)
+    const pager = usePaginateNodes()
+    const [searchInput, setSearchInput] = createSignal('')
     const { create, loading: creating } = useCreateFolder()
     const { update, loading: updating } = useUpdateNode()
     const { remove, loading: deleting } = useDeleteNode()
@@ -356,6 +359,41 @@ export function NodeView() {
                 </Show>
 
                 <Show when={nodeData()?.type === 'folder'}>
+                    <section class="mt-4 flex items-center gap-2">
+                        <input
+                            type="text"
+                            placeholder="Search in this folder..."
+                            value={searchInput()}
+                            onInput={e => setSearchInput(e.target.value)}
+                            class="flex-1 font-sans font-light text-sm text-[--color-ink-dark] bg-surface border border-border rounded-xs px-3 py-2 focus:outline-none focus:border-ink"
+                        />
+                        <Button
+                            size="sm"
+                            onClick={() =>
+                                pager.run(nodeData()?.id, {
+                                    page: 1,
+                                    limit: 10,
+                                    search: searchInput()
+                                })
+                            }
+                        >
+                            Search
+                        </Button>
+                    </section>
+
+                    <Show when={pager.results().length > 0}>
+                        <section class="mt-4">
+                            <h3 class="font-serif text-lg mb-2">
+                                Search results
+                            </h3>
+                            <NodeList
+                                nodes={pager.results()}
+                                loading={pager.loading()}
+                                onNodeClick={n => navigate(`/nodes/${n.id}`)}
+                            />
+                        </section>
+                    </Show>
+
                     <div class="mb-6 mt-6">
                         <Tabs
                             items={[
