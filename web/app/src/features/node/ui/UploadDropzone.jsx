@@ -65,18 +65,18 @@ export function UploadDropzone(props) {
     const handleDrop = e => {
         e.preventDefault()
         setDragOver(false)
-        const file = e.dataTransfer?.files?.[0]
-        if (file) {
-            setSelectedFile(file)
-            props.onUpload?.(file)
+        const files = Array.from(e.dataTransfer?.files ?? [])
+        if (files.length > 0) {
+            setSelectedFile(files[0])
+            files.forEach(f => props.onUpload?.(f))
         }
     }
 
     const handleFileSelect = e => {
-        const file = e.target?.files?.[0]
-        if (file) {
-            setSelectedFile(file)
-            props.onUpload?.(file)
+        const files = Array.from(e.target?.files ?? [])
+        if (files.length > 0) {
+            setSelectedFile(files[0])
+            files.forEach(f => props.onUpload?.(f))
         }
     }
 
@@ -99,6 +99,7 @@ export function UploadDropzone(props) {
         >
             <input
                 type="file"
+                multiple
                 class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 onChange={handleFileSelect}
                 disabled={props.loading}
