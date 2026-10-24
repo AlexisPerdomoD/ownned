@@ -367,30 +367,55 @@ export function NodeView() {
 
                 <Show when={nodeData()?.type === 'folder'}>
                     <section class="mt-4">
-                        <h3 class="font-serif text-lg mb-2">Files</h3>
+                        <h3 class="font-serif text-lg mb-2">Contents</h3>
                         <Show
-                            when={sortedFiles().length > 0}
+                            when={
+                                sortedFolders().length > 0 ||
+                                sortedFiles().length > 0
+                            }
                             fallback={
                                 <p class="text-sm text-[--color-muted]">
                                     No files in this folder
                                 </p>
                             }
                         >
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {sortedFiles().map(fileNode => (
-                                    <DocCard
-                                        doc={fileNode.doc}
-                                        onDownload={handleDownload}
-                                        onDelete={
-                                            canDeleteNode(
-                                                role(),
-                                                fileNode.access_level
-                                            )
-                                                ? handleDeleteDoc
-                                                : undefined
-                                        }
-                                    />
-                                ))}
+                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                                <For each={sortedFolders()}>
+                                    {nodeItem => (
+                                        <NodeCard
+                                            node={nodeItem}
+                                            onClick={n =>
+                                                navigate(`/nodes/${n.id}`)
+                                            }
+                                            onEdit={undefined}
+                                            onDelete={
+                                                canDeleteNode(
+                                                    role(),
+                                                    nodeItem.access_level
+                                                )
+                                                    ? handleDelete
+                                                    : undefined
+                                            }
+                                        />
+                                    )}
+                                </For>
+                                <For each={sortedFiles()}>
+                                    {fileNode => (
+                                        <DocCard
+                                            doc={fileNode.doc}
+                                            node={fileNode}
+                                            onDownload={handleDownload}
+                                            onDelete={
+                                                canDeleteNode(
+                                                    role(),
+                                                    fileNode.access_level
+                                                )
+                                                    ? handleDeleteDoc
+                                                    : undefined
+                                            }
+                                        />
+                                    )}
+                                </For>
                             </div>
                         </Show>
                     </section>
