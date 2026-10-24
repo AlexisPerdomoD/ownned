@@ -25,7 +25,7 @@ export function Select({
             {label && (
                 <label
                     for={selectId}
-                    class="text-[--text-xs] text-[--color-muted] tracking-wide uppercase"
+                    class="text-[--text-xs] text-muted tracking-wide uppercase"
                 >
                     {label}
                 </label>
@@ -37,20 +37,20 @@ export function Select({
                     class={`
                         w-full appearance-none
                         font-[--font-sans] font-light text-[--text-sm]
-                        text-[--color-ink-dark]
-                        bg-[--color-surface] border rounded-[--radius-xs]
+                        text-ink-dark
+                        bg-surface border rounded-[--radius-xs]
                         px-3 py-2 pr-8
                         transition-colors duration-[--ease-base]
-                        focus:outline-none focus:border-[--color-ink]
+                        focus:outline-none focus:border-ink
                         disabled:opacity-40 disabled:cursor-not-allowed
-                        ${error ? 'border-red-400' : 'border-[--color-border] hover:border-[--color-muted]'}
+                        ${error ? 'border-red-400' : 'border-border hover:border-muted'}
                     `}
                     {...props}
                 >
                     {children}
                 </select>
                 {/* chevron decorativo */}
-                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[--color-muted]">
+                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted">
                     <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
                         <path
                             d="M1 1l4 4 4-4"
@@ -65,7 +65,7 @@ export function Select({
 
             {error && <p class="text-[--text-xs] text-red-500">{error}</p>}
             {!error && hint && (
-                <p class="text-[--text-xs] text-[--color-muted]">{hint}</p>
+                <p class="text-[--text-xs] text-muted">{hint}</p>
             )}
         </div>
     )
@@ -102,7 +102,7 @@ export function Textarea({
             {label && (
                 <label
                     for={textareaId}
-                    class="text-[--text-xs] text-[--color-muted] tracking-wide uppercase"
+                    class="text-[--text-xs] text-muted tracking-wide uppercase"
                 >
                     {label}
                 </label>
@@ -114,20 +114,20 @@ export function Textarea({
                 class={`
                     w-full resize-y
                     font-[--font-sans] font-light text-[--text-sm]
-                    text-[--color-ink-dark] placeholder:text-[--color-muted]
-                    bg-[--color-surface] border rounded-[--radius-xs]
+                    text-ink-dark placeholder:text-muted
+                    bg-surface border rounded-[--radius-xs]
                     px-3 py-2
                     transition-colors duration-[--ease-base]
-                    focus:outline-none focus:border-[--color-ink]
+                    focus:outline-none focus:border-ink
                     disabled:opacity-40 disabled:cursor-not-allowed
-                    ${error ? 'border-red-400' : 'border-[--color-border] hover:border-[--color-muted]'}
+                    ${error ? 'border-red-400' : 'border-border hover:border-muted'}
                 `}
                 {...props}
             />
 
             {error && <p class="text-[--text-xs] text-red-500">{error}</p>}
             {!error && hint && (
-                <p class="text-[--text-xs] text-[--color-muted]">{hint}</p>
+                <p class="text-[--text-xs] text-muted">{hint}</p>
             )}
         </div>
     )
@@ -155,8 +155,8 @@ export function Checkbox({ label, hint, class: cls = '', id, ...props }) {
                 id={checkId}
                 class={`
                     mt-0.5 w-3.5 h-3.5 shrink-0
-                    rounded-[--radius-xs] border border-[--color-border]
-                    bg-[--color-surface]
+                    rounded-[--radius-xs] border border-border
+                    bg-surface
                     accent-[--color-ink-dark]
                     cursor-pointer
                     disabled:opacity-40 disabled:cursor-not-allowed
@@ -168,13 +168,13 @@ export function Checkbox({ label, hint, class: cls = '', id, ...props }) {
                     {label && (
                         <label
                             for={checkId}
-                            class="text-[--text-sm] text-[--color-ink] cursor-pointer leading-none"
+                            class="text-[--text-sm] text-ink cursor-pointer leading-none"
                         >
                             {label}
                         </label>
                     )}
                     {hint && (
-                        <p class="text-[--text-xs] text-[--color-muted]">
+                        <p class="text-[--text-xs] text-muted">
                             {hint}
                         </p>
                     )}

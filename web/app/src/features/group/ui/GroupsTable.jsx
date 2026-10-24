@@ -43,7 +43,7 @@ function ActionsCell({ row, onEdit, onDelete }) {
                     e.stopPropagation()
                     onEdit?.(row)
                 }}
-                class="text-xs text-[--color-accent] hover:underline cursor-pointer"
+                class="text-xs text-accent hover:underline cursor-pointer"
             >
                 Edit
             </button>
@@ -53,7 +53,7 @@ function ActionsCell({ row, onEdit, onDelete }) {
                     e.stopPropagation()
                     onDelete?.(row)
                 }}
-                class="text-xs text-[--color-danger] hover:underline cursor-pointer"
+                class="text-xs text-danger hover:underline cursor-pointer"
             >
                 Delete
             </button>
@@ -77,7 +77,7 @@ export function GroupsTable(props) {
             header: 'Name',
             class: 'w-40',
             render: row => (
-                <span class="font-medium text-[--color-ink-dark]">
+                <span class="font-medium text-ink-dark">
                     {row.name}
                 </span>
             )
@@ -86,7 +86,7 @@ export function GroupsTable(props) {
             key: 'description',
             header: 'Description',
             render: row => (
-                <span class="text-xs text-[--color-muted] line-clamp-1">
+                <span class="text-xs text-muted line-clamp-1">
                     {row.description || '-'}
                 </span>
             )

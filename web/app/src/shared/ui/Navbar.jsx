@@ -44,7 +44,7 @@ export function Navbar({ collapsed = false }) {
             class={`
                 flex items-center justify-between
                 h-14 px-4
-                bg-[--color-bg-2] border-b border-[--color-border]
+                bg-bg-2 border-b border-border
                 ${collapsed ? 'w-14 flex-col' : ''}
             `}
         >
@@ -57,8 +57,8 @@ export function Navbar({ collapsed = false }) {
                         transition-colors duration-[--ease-base]
                         ${
                             isActive('/nodes')
-                                ? 'bg-[--color-surface] text-[--color-ink-dark]'
-                                : 'text-[--color-ink] hover:bg-[--color-surface]'
+                                ? 'bg-surface text-ink-dark'
+                                : 'text-ink hover:bg-surface'
                         }
                     `}
                 >
@@ -74,8 +74,8 @@ export function Navbar({ collapsed = false }) {
                         transition-colors duration-[--ease-base]
                         ${
                             isActive('/groups')
-                                ? 'bg-[--color-surface] text-[--color-ink-dark]'
-                                : 'text-[--color-ink] hover:bg-[--color-surface]'
+                                ? 'bg-surface text-ink-dark'
+                                : 'text-ink hover:bg-surface'
                         }
                     `}
                 >
@@ -92,8 +92,8 @@ export function Navbar({ collapsed = false }) {
                         transition-colors duration-[--ease-base]
                         ${
                             isActive('/usrs')
-                                ? 'bg-[--color-surface] text-[--color-ink-dark]'
-                                : 'text-[--color-ink] hover:bg-[--color-surface]'
+                                ? 'bg-surface text-ink-dark'
+                                : 'text-ink hover:bg-surface'
                         }
                     `}
                     >
@@ -114,7 +114,7 @@ export function Navbar({ collapsed = false }) {
                 >
                     {theme() === 'dark' ? '☀' : '☾'}
                 </Button>
-                <span class="text-[--text-sm] text-[--color-muted]">
+                <span class="text-[--text-sm] text-muted">
                     {collapsed ? '' : state.usr?.username}
                 </span>
                 <Button variant="ghost" size="sm" onClick={handleLogout}>

@@ -116,10 +116,10 @@ function NodeForm({ open, node, loading, onSubmit, onClose }) {
                             maxLength={255}
                             class="
                                 w-full font-sans font-light text-sm
-                                text-[--color-ink-dark]
-                                bg-[--color-bg] border border-[--color-border] rounded-xs
+                                text-ink-dark
+                                bg-bg border border-border rounded-xs
                                 px-3 py-2
-                                focus:outline-none focus:border-[--color-ink]
+                                focus:outline-none focus:border-ink
                             "
                             required
                         />
@@ -136,10 +136,10 @@ function NodeForm({ open, node, loading, onSubmit, onClose }) {
                             maxLength={255}
                             class="
                                 w-full font-sans font-light text-sm
-                                text-[--color-ink-dark]
-                                bg-[--color-bg] border border-[--color-border] rounded-xs
+                                text-ink-dark
+                                bg-bg border border-border rounded-xs
                                 px-3 py-2 resize-none
-                                focus:outline-none focus:border-[--color-ink]
+                                focus:outline-none focus:border-ink
                             "
                         />
                     </div>
@@ -374,7 +374,7 @@ export function NodeView() {
                                 sortedFiles().length > 0
                             }
                             fallback={
-                                <p class="text-sm text-[--color-muted]">
+                                <p class="text-sm text-muted">
                                     No files in this folder
                                 </p>
                             }
@@ -443,7 +443,7 @@ export function NodeView() {
                             placeholder="Search in this folder..."
                             value={searchInput()}
                             onInput={e => setSearchInput(e.target.value)}
-                            class="flex-1 font-sans font-light text-sm text-[--color-ink-dark] bg-surface border border-border rounded-xs px-3 py-2 focus:outline-none focus:border-ink"
+                            class="flex-1 font-sans font-light text-sm text-ink-dark bg-surface border border-border rounded-xs px-3 py-2 focus:outline-none focus:border-ink"
                         />
                         <Button
                             size="sm"

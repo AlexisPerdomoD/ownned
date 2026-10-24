@@ -76,7 +76,7 @@ export function NodeList(props) {
                                     class="
                                     text-sm text-muted
                                     px-2 py-0.5 rounded-xs
-                                    bg-[--color-bg-2]
+                                    bg-bg-2
                                 "
                                 >
                                     {props.nodes.length}

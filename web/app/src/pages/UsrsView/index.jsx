@@ -34,7 +34,7 @@ function UsrsTable(props) {
             header: 'Email',
             class: 'w-48',
             render: row => (
-                <span class="font-medium text-[--color-ink-dark]">
+                <span class="font-medium text-ink-dark">
                     {row.username}
                 </span>
             )
@@ -143,8 +143,8 @@ function CreateUsrForm(props) {
                                     placeholder="email@example.com"
                                     class="
                                 w-full font-sans font-light text-sm
-                                text-[--color-ink-dark]
-                                bg-[--color-bg] border border-border rounded-xs
+                                text-ink-dark
+                                bg-bg border border-border rounded-xs
                                 px-3 py-2
                                 focus:outline-none focus:border-ink
                             "
@@ -163,10 +163,10 @@ function CreateUsrForm(props) {
                                         placeholder="John"
                                         class="
                                     w-full font-sans font-light text-sm
-                                    text-[--color-ink-dark]
-                                    bg-[--color-bg] border border-[--color-border] rounded-xs
+                                    text-ink-dark
+                                    bg-bg border border-border rounded-xs
                                     px-3 py-2
-                                    focus:outline-none focus:border-[--color-ink]
+                                    focus:outline-none focus:border-ink
                                 "
                                         required
                                     />
@@ -181,10 +181,10 @@ function CreateUsrForm(props) {
                                         placeholder="Doe"
                                         class="
                                     w-full font-sans font-light text-sm
-                                    text-[--color-ink-dark]
-                                    bg-[--color-bg] border border-[--color-border] rounded-xs
+                                    text-ink-dark
+                                    bg-bg border border-border rounded-xs
                                     px-3 py-2
-                                    focus:outline-none focus:border-[--color-ink]
+                                    focus:outline-none focus:border-ink
                                 "
                                         required
                                     />
@@ -200,10 +200,10 @@ function CreateUsrForm(props) {
                                     defaultValue="normal_usr_role"
                                     class="
                                 w-full font-sans font-light text-sm
-                                text-[--color-ink-dark]
-                                bg-[--color-bg] border border-[--color-border] rounded-xs
+                                text-ink-dark
+                                bg-bg border border-border rounded-xs
                                 px-3 py-2
-                                focus:outline-none focus:border-[--color-ink]
+                                focus:outline-none focus:border-ink
                             "
                                     required
                                 >
@@ -228,10 +228,10 @@ function CreateUsrForm(props) {
                                     placeholder="Min 8 characters"
                                     class="
                                 w-full font-sans font-light text-sm
-                                text-[--color-ink-dark]
-                                bg-[--color-bg] border border-[--color-border] rounded-xs
+                                text-ink-dark
+                                bg-bg border border-border rounded-xs
                                 px-3 py-2
-                                focus:outline-none focus:border-[--color-ink]
+                                focus:outline-none focus:border-ink
                             "
                                     required
                                 />
@@ -286,7 +286,7 @@ export function UsrsView() {
         return (
             <section class="flex flex-col p-6">
                 <PageHeader title="Users" subtitle="Access restricted." />
-                <p class="text-sm text-[--color-muted] mt-4">
+                <p class="text-sm text-muted mt-4">
                     You do not have permission to manage users.
                 </p>
             </section>
@@ -321,7 +321,7 @@ export function UsrsView() {
                     onKeyDown={e => e.key === 'Enter' && handleSearch()}
                     class="
                         w-64 font-sans font-light text-sm
-                        text-[--color-ink-dark] placeholder:text-muted
+                        text-ink-dark placeholder:text-muted
                         bg-surface border border-border rounded-xs
                         px-3 py-2
                         focus:outline-none focus:border-ink

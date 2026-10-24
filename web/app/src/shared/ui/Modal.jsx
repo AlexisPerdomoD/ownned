@@ -76,24 +76,24 @@ export function Modal({
                     <div
                         class={`
                             relative w-full ${sizes[size]}
-                            bg-[--color-surface] border border-[--color-border]
+                            bg-surface border border-border
                             rounded-[--radius-sm] shadow-sm
                             flex flex-col
                         `}
                     >
                         {/* Header */}
                         {(title || description) && (
-                            <div class="px-5 py-4 border-b border-[--color-border-subtle]">
+                            <div class="px-5 py-4 border-b border-border-subtle">
                                 {title && (
                                     <h2
                                         id="modal-title"
-                                        class="font-[--font-serif] text-[--text-lg] text-[--color-ink-dark] leading-snug"
+                                        class="font-[--font-serif] text-[--text-lg] text-ink-dark leading-snug"
                                     >
                                         {title}
                                     </h2>
                                 )}
                                 {description && (
-                                    <p class="mt-1 text-[--text-sm] text-[--color-muted]">
+                                    <p class="mt-1 text-[--text-sm] text-muted">
                                         {description}
                                     </p>
                                 )}
@@ -106,7 +106,7 @@ export function Modal({
                             aria-label="Cerrar"
                             class="
                                 absolute top-3.5 right-4
-                                text-[--color-muted] hover:text-[--color-ink]
+                                text-muted hover:text-ink
                                 transition-colors duration-[--ease-base]
                                 cursor-pointer
                             "
@@ -148,7 +148,7 @@ Modal.Footer = function ModalFooter({ class: cls = '', children, ...props }) {
         <div
             class={`
                 flex items-center justify-end gap-2
-                pt-3 mt-2 border-t border-[--color-border-subtle]
+                pt-3 mt-2 border-t border-border-subtle
                 ${cls}
             `}
             {...props}

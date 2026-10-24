@@ -9,10 +9,10 @@
 export function Divider({ orientation = 'horizontal', class: cls = '' }) {
     if (orientation === 'vertical') {
         return (
-            <span class={`inline-block w-px self-stretch bg-[--color-border-subtle] ${cls}`} role="separator" aria-orientation="vertical" />
+            <span class={`inline-block w-px self-stretch bg-border-subtle ${cls}`} role="separator" aria-orientation="vertical" />
         )
     }
-    return <hr class={`border-none border-t border-[--color-border-subtle] ${cls}`} role="separator" />
+    return <hr class={`border-none border-t border-border-subtle ${cls}`} role="separator" />
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,7 +46,7 @@ export function Avatar({ src, name = '', size = 'md', class: cls = '' }) {
             class={`
                 inline-flex items-center justify-center
                 rounded-full shrink-0 overflow-hidden
-                bg-[--color-accent-pale] text-[--color-accent]
+                bg-accent-pale text-accent
                 font-[--font-sans] font-normal select-none
                 ${avatarSizes[size]} ${cls}
             `}
@@ -79,7 +79,7 @@ export function Spinner({ size = 'md', class: cls = '' }) {
             aria-label="Cargando"
             class={`
                 inline-block rounded-full animate-spin
-                border-[--color-border] border-t-[--color-ink]
+                border-border border-t-[--color-ink]
                 ${spinnerSizes[size]} ${cls}
             `}
         />
@@ -108,9 +108,9 @@ export function EmptyState({ title = 'Sin resultados', description, action, icon
                 ${cls}
             `}
         >
-            {icon && <span class="text-[--color-border] mb-1 opacity-60">{icon}</span>}
-            <p class="font-[--font-serif] text-[--text-base] text-[--color-ink]">{title}</p>
-            {description && <p class="text-[--text-sm] text-[--color-muted] max-w-xs leading-relaxed">{description}</p>}
+            {icon && <span class="text-border mb-1 opacity-60">{icon}</span>}
+            <p class="font-[--font-serif] text-[--text-base] text-ink">{title}</p>
+            {description && <p class="text-[--text-sm] text-muted max-w-xs leading-relaxed">{description}</p>}
             {action && <div class="mt-2">{action}</div>}
         </div>
     )

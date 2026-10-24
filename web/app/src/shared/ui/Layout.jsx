@@ -24,7 +24,7 @@ import { Divider } from './Atoms'
  */
 export function AppShell({ class: cls = '', children }) {
     return (
-        <div class={`flex h-screen overflow-hidden bg-[--color-bg] ${cls}`}>
+        <div class={`flex h-screen overflow-hidden bg-bg ${cls}`}>
             {children}
         </div>
     )
@@ -50,15 +50,15 @@ AppShell.Sidebar = function Sidebar({
         <aside
             class={`
                 w-52 shrink-0 flex flex-col
-                bg-[--color-bg-2] border-r border-[--color-border]
+                bg-bg-2 border-r border-border
                 h-full overflow-y-auto
                 ${cls}
             `}
         >
             {/* Brand */}
             {brand && (
-                <div class="px-4 py-4 border-b border-[--color-border-subtle]">
-                    <span class="font-[--font-serif] text-[--text-base] text-[--color-ink-dark]">
+                <div class="px-4 py-4 border-b border-border-subtle">
+                    <span class="font-[--font-serif] text-[--text-base] text-ink-dark">
                         {brand}
                     </span>
                 </div>
@@ -120,8 +120,8 @@ export function NavItem({
         cursor-pointer
         ${
             active
-                ? 'bg-[--color-surface] text-[--color-ink-dark] border border-[--color-border] font-normal'
-                : 'text-[--color-ink] hover:bg-[--color-surface] hover:text-[--color-ink-dark]'
+                ? 'bg-surface text-ink-dark border border-border font-normal'
+                : 'text-ink hover:bg-surface hover:text-ink-dark'
         }
         ${cls}
     `
@@ -184,7 +184,7 @@ export function PageHeader({
                             <button
                                 type="button"
                                 onClick={onBack}
-                                class="text-[--text-sm] text-[--color-accent] hover:underline"
+                                class="text-[--text-sm] text-accent hover:underline"
                             >
                                 ← Back
                             </button>
@@ -192,7 +192,7 @@ export function PageHeader({
                         {backTo && !onBack && (
                             <a
                                 href={backTo}
-                                class="text-[--text-sm] text-[--color-accent] hover:underline"
+                                class="text-[--text-sm] text-accent hover:underline"
                             >
                                 ← Back
                             </a>
@@ -200,11 +200,11 @@ export function PageHeader({
                     </div>
                 )}
                 {breadcrumb}
-                <h1 class="font-[--font-serif] text-[--text-2xl] text-[--color-ink-dark] leading-tight">
+                <h1 class="font-[--font-serif] text-[--text-2xl] text-ink-dark leading-tight">
                     {title}
                 </h1>
                 {subtitle && (
-                    <p class="text-[--text-sm] text-[--color-muted]">
+                    <p class="text-[--text-sm] text-muted">
                         {subtitle}
                     </p>
                 )}

@@ -154,10 +154,10 @@ export function GroupView() {
                                     required
                                     class="
                                         flex-1 font-sans text-sm
-                                        text-[--color-ink-dark]
-                                        bg-[--color-bg] border border-[--color-border] rounded-xs
+                                        text-ink-dark
+                                        bg-bg border border-border rounded-xs
                                         px-3 py-2
-                                        focus:outline-none focus:border-[--color-ink]
+                                        focus:outline-none focus:border-ink
                                     "
                                 >
                                     <For each={availableNodes()}>

@@ -48,7 +48,7 @@ export function GroupForm(props) {
                         class="bg-surface border border-border rounded-md w-full max-w-md p-6"
                         onClick={e => e.stopPropagation()}
                     >
-                        <h3 class="font-serif text-lg text-[--color-ink-dark] mb-4">
+                        <h3 class="font-serif text-lg text-ink-dark mb-4">
                             {props.group ? 'Edit Group' : 'New Group'}
                         </h3>
 
@@ -59,7 +59,7 @@ export function GroupForm(props) {
                             <div class="flex flex-col gap-1">
                                 <label
                                     for="group-name"
-                                    class="text-xs text-[--color-muted] tracking-wide uppercase"
+                                    class="text-xs text-muted tracking-wide uppercase"
                                 >
                                     Name *
                                 </label>
@@ -96,11 +96,11 @@ export function GroupForm(props) {
                                     class="
                                 w-full
                                 font-sans font-light text-sm
-                                text-[--color-ink-dark] placeholder:text-[--color-muted]
-                                bg-[--color-bg] border border-[--color-border] rounded-xs
+                                text-ink-dark placeholder:text-muted
+                                bg-bg border border-border rounded-xs
                                 px-3 py-2 resize-none
-                                focus:outline-none focus:border-[--color-ink]
-                                hover:border-[--color-muted]
+                                focus:outline-none focus:border-ink
+                                hover:border-muted
                             "
                                 />
                             </div>
@@ -111,9 +111,9 @@ export function GroupForm(props) {
                                     onClick={props.onClose}
                                     class="
                                 px-4 py-2 text-sm font-normal
-                                text-[--color-ink] border border-[--color-border] rounded-xs
+                                text-ink border border-border rounded-xs
                                 bg-transparent
-                                hover:bg-[--color-bg-2]
+                                hover:bg-bg-2
                                 transition-colors duration-[--ease-base]
                             "
                                     disabled={props.loading}
@@ -125,8 +125,8 @@ export function GroupForm(props) {
                                     disabled={props.loading}
                                     class="
                                 px-4 py-2 text-sm font-normal
-                                bg-[--color-ink-dark] text-[--color-bg] border border-[--color-ink-dark] rounded-xs
-                                hover:bg-[--color-ink]
+                                bg-ink-dark text-bg border border-ink-dark rounded-xs
+                                hover:bg-ink
                                 transition-colors duration-[--ease-base]
                                 disabled:opacity-40 disabled:cursor-not-allowed
                             "

@@ -88,8 +88,8 @@ export function UploadDropzone(props) {
                 transition-colors duration-[--ease-base]
                 ${
                     dragOver()
-                        ? 'border-[--color-accent] bg-[--color-accent-pale]'
-                        : 'border-[--color-border] bg-[--color-bg] hover:border-[--color-ink]'
+                        ? 'border-accent bg-accent-pale'
+                        : 'border-border bg-bg hover:border-ink'
                 }
                 ${props.class ?? ''}
             `}
@@ -107,32 +107,32 @@ export function UploadDropzone(props) {
 
             <div class="flex flex-col items-center gap-3 text-center pointer-events-none">
                 <div
-                    class={`p-3 rounded-full ${dragOver() ? 'bg-[--color-accent] text-white' : 'bg-[--color-surface] text-[--color-ink]'}`}
+                    class={`p-3 rounded-full ${dragOver() ? 'bg-accent text-white' : 'bg-surface text-ink'}`}
                 >
                     <UploadIcon />
                 </div>
 
                 <div>
-                    <p class="text-sm font-medium text-[--color-ink-dark]">
+                    <p class="text-sm font-medium text-ink-dark">
                         {selectedFile()
                             ? selectedFile().name
                             : 'Drop a file here or click to browse'}
                     </p>
                     {selectedFile() && (
-                        <p class="text-xs text-[--color-muted] mt-1">
+                        <p class="text-xs text-muted mt-1">
                             {formatBytes(selectedFile().size)}
                         </p>
                     )}
                 </div>
 
-                <p class="text-xs text-[--color-muted]">
+                <p class="text-xs text-muted">
                     Any file type accepted
                 </p>
             </div>
 
             {props.loading && (
-                <div class="absolute inset-0 flex items-center justify-center bg-[--color-bg]/80 rounded-[--radius-md]">
-                    <div class="flex items-center gap-2 text-sm text-[--color-ink]">
+                <div class="absolute inset-0 flex items-center justify-center bg-bg/80 rounded-[--radius-md]">
+                    <div class="flex items-center gap-2 text-sm text-ink">
                         <span class="w-4 h-4 border border-current border-t-transparent rounded-full animate-spin" />
                         Uploading...
                     </div>

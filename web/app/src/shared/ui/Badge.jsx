@@ -1,7 +1,7 @@
 const variants = {
-    neutral: 'bg-[--color-bg-2] text-[--color-ink] border-[--color-border]',
-    accent: 'bg-[--color-accent-pale] text-[--color-accent] border-[--color-accent]',
-    dark: 'bg-[--color-ink-dark] text-[--color-bg] border-[--color-ink-dark]',
+    neutral: 'bg-bg-2 text-ink border-border',
+    accent: 'bg-accent-pale text-accent border-accent',
+    dark: 'bg-ink-dark text-bg border-ink-dark',
     success:
         'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800',
     warning:

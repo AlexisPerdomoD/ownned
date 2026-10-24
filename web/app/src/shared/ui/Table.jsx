@@ -36,7 +36,7 @@ export function Table(props) {
         <div class={`w-full overflow-x-auto ${props.class ?? ''}`}>
             <table class="w-full border-collapse font-[--font-sans] text-[--text-sm]">
                 <thead>
-                    <tr class="border-b border-[--color-border]">
+                    <tr class="border-b border-border">
                         <For each={props.columns}>
                             {col => (
                                 <th
@@ -83,7 +83,7 @@ export function Table(props) {
                             {row => (
                                 <tr
                                     class={`
-                                        border-b border-[--color-border-subtle]
+                                        border-b border-border-subtle
                                         transition-colors duration-[--ease-base]
                                         ${props.onRowClick ? 'hover:bg-bg-2 cursor-pointer' : 'hover:bg-bg-2/50'}
                                     `}
@@ -93,7 +93,7 @@ export function Table(props) {
                                         {col => (
                                             <td
                                                 class={`
-                                                    px-3 py-3 text-[--color-ink]
+                                                    px-3 py-3 text-ink
                                                     ${alignClass[col.align ?? 'left']}
                                                     ${col.class ?? ''}
                                                 `}

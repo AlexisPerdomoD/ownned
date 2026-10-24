@@ -11,13 +11,13 @@ export function GroupNodesList({ nodes, loading = false, onRemove }) {
     return (
         <div class="flex flex-col gap-2">
             <Show when={loading}>
-                <div class="py-4 text-center text-sm text-[--color-muted]">
+                <div class="py-4 text-center text-sm text-muted">
                     Loading...
                 </div>
             </Show>
 
             <Show when={!loading && nodes.length === 0}>
-                <div class="py-4 text-center text-sm text-[--color-muted]">
+                <div class="py-4 text-center text-sm text-muted">
                     No nodes shared yet.
                 </div>
             </Show>
