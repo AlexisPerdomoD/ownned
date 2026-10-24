@@ -1,4 +1,4 @@
-import { Show, createEffect, createSignal } from 'solid-js'
+import { For, Show, createEffect, createSignal } from 'solid-js'
 
 import { apiDownloadDoc, apiDownloadFolder } from '@/entities/docs/api'
 import { CommentForm, CommentsList } from '@/features/comments/ui/CommentsList'
@@ -8,7 +8,7 @@ import {
     useGetComments,
     useUpdateComment
 } from '@/features/comments/usecase'
-import { DocCard, NodeList, UploadDropzone } from '@/features/node/ui'
+import { DocCard, NodeCard, NodeList, UploadDropzone } from '@/features/node/ui'
 import {
     useCreateDoc,
     useCreateFolder,
