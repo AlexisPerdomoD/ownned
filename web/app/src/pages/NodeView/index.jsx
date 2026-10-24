@@ -469,6 +469,39 @@ export function NodeView() {
                                 loading={pager.loading()}
                                 onNodeClick={n => navigate(`/nodes/${n.id}`)}
                             />
+                            <div class="mt-2 flex items-center gap-2 text-sm">
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={pager.page() <= 1}
+                                    onClick={() =>
+                                        pager.run(nodeData()?.id, {
+                                            page: pager.page() - 1,
+                                            limit: 10,
+                                            search: searchInput()
+                                        })
+                                    }
+                                >
+                                    Prev
+                                </Button>
+                                <span>Page {pager.page()}</span>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={
+                                        pager.results().length < 10
+                                    }
+                                    onClick={() =>
+                                        pager.run(nodeData()?.id, {
+                                            page: pager.page() + 1,
+                                            limit: 10,
+                                            search: searchInput()
+                                        })
+                                    }
+                                >
+                                    Next
+                                </Button>
+                            </div>
                         </section>
                     </Show>
 
