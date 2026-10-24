@@ -51,6 +51,7 @@ Todos los issues 12–17 en `hecho`. Resumen en `../history/web_closure_fase2_pa
 | 21 | [Selector visual de nodos (grupos)](21.web_closure_fase3.web.app.selector_nodos.md) | pendiente | 2.4 |
 | 22 | [Consolidar vista de explorador](22.web_closure_fase3.web.app.explorador_refactor.md) | pendiente | 2.1, 2.2, 3.1 |
 | 23 | [Consolidar confirmaciones/modales](23.web_closure_fase3.web.app.dialogos.md) | pendiente | fases 2–3 estables |
+| 38 | [Vista de carpeta estilo Google Drive](38.web_closure_fase3.web.app.vista_drive.md) | pendiente | 3.1, 3.5 |
 
 ### Fase 4 — Consistencia global
 
