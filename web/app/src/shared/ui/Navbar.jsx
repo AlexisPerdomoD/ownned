@@ -15,10 +15,7 @@ export function Navbar({ collapsed = false }) {
     const { state, logout, role } = useAuth()
 
     const initialTheme =
-        localStorage.getItem('owned.theme') ||
-        (window.matchMedia('(prefers-color-scheme: dark)').matches
-            ? 'dark'
-            : 'light')
+        document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
     const [theme, setTheme] = createSignal(initialTheme)
 
     createEffect(() => {

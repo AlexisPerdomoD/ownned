@@ -212,7 +212,7 @@ Usuario cambia tema -> Guardar preferencia -> Próxima sesión
 Sistema: reduced motion -> Reducir/desactivar movimiento no esencial
 ```
 
-**Estado actual:** `src/index.css` centraliza tokens y tiene overrides para `[data-theme='dark']`, pero no se encontró toggle del usuario ni persistencia; las transiciones son puntuales y no hay política global de movimiento reducido. La adaptación responsive y contraste requieren verificación por flujo/dispositivo, no se infieren de que haya clases responsive.
+**Estado actual:** `index.html` aplica el tema guardado antes de montar la app y usa `prefers-color-scheme` solo como fallback. `Navbar` permite cambiarlo y persiste en `localStorage`; `src/index.css` contiene overrides dark y una regla global `prefers-reduced-motion`. Contraste y adaptación responsive aún requieren auditoría manual por flujo/dispositivo.
 
 **Cierre verificable:** selección/persistencia y precedencia de preferencia guardada frente al sistema están definidas; ambos temas mantienen contraste y foco legibles; `prefers-reduced-motion` desactiva movimiento no esencial.
 
@@ -223,7 +223,7 @@ Sistema: reduced motion -> Reducir/desactivar movimiento no esencial
 3. **Paginación y orden del explorador (resuelto):** las búsquedas usan la paginación API y sus filtros; el orden del contenido de `GET /nodes/{id}` se aplica localmente al conjunto completo, porque el contrato paginado no define `sort_by`/`sort_order`. El render se limita a 100 elementos por página.
 4. **Subida de carpetas:** decidir navegadores/plataformas soportados, límites, duplicados, cancelación/reintentos, tratamiento de fallos parciales y si basta orquestación cliente o hace falta batch backend.
 5. **Borrado de usuario:** retirar la acción sin soporte o diseñar operación backend (método, autorización y consecuencias).
-6. **Preferencias locales:** persistencia y precedencia del tema y de «mostrar ocultos»; backend no publica preferencias de usuario.
+6. **Preferencias locales (resuelto):** tema y «mostrar ocultos» persisten en `localStorage`; la preferencia de tema guardada prevalece sobre la del sistema.
 7. **Verificación automatizada:** acordar estrategia de pruebas de flujos API/navegador; el frontend no declara actualmente un framework/script de pruebas.
 
 ## Paquetes de trabajo que se desprenden de los flujos

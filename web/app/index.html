@@ -5,6 +5,28 @@
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>app</title>
+        <script>
+            ;(() => {
+                let theme
+                try {
+                    const stored = localStorage.getItem('owned.theme')
+                    theme =
+                        stored === 'light' || stored === 'dark'
+                            ? stored
+                            : null
+                } catch {
+                    theme = null
+                }
+                if (!theme) {
+                    theme = window.matchMedia?.(
+                        '(prefers-color-scheme: dark)'
+                    ).matches
+                        ? 'dark'
+                        : 'light'
+                }
+                document.documentElement.dataset.theme = theme
+            })()
+        </script>
     </head>
     <body>
         <div id="root"></div>

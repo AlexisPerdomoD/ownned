@@ -50,9 +50,10 @@ Issues 18–23 y 38 cerradas; resúmenes técnicos en `../history/web_closure_fa
 
 ### Fase 4 — Consistencia global
 
+Issue 24 cerrada; resumen técnico en [`../history/web_closure_fase4_theme.md`](../history/web_closure_fase4_theme.md). D6 queda resuelta para preferencias locales.
+
 | ID | Título | Estado | Depende de |
 | --- | --- | --- | --- |
-| 24 | [Tema persistente y movimiento reducido](24.web_closure_fase4.web.app.tema.md) | revisión | D6 por defecto; coordinar con 3.5 |
 | 25 | [Tokens semánticos (limpieza de clases)](25.web_closure_fase4.web.app.tokens.md) | revisión | fase 3 |
 | 26 | [Auditoría de accesibilidad](26.web_closure_fase4.web.app.accesibilidad.md) | revisión | 3.5, 4.1 |
 
