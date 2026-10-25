@@ -1,6 +1,7 @@
 export * from './useGetNode'
 export * from './useGetRoot'
 export * from './usePaginateNode'
+export * from './usePaginateDocs'
 export * from './useCreateFolder'
 export * from './useUpdateNode'
 export * from './useDeleteNode'

@@ -15,6 +15,7 @@ import {
     useDeleteDoc,
     useDeleteNode,
     useGetNode,
+    usePaginateDocs,
     usePaginateNodes,
     useUpdateNode
 } from '@/features/node/usecase'
@@ -23,7 +24,6 @@ import {
     ConfirmDialog,
     PageHeader,
     Spinner,
-    Tabs,
     toast
 } from '@/shared/ui'
 import { useAuth } from '@/features/auth/providers/AuthProvider'
@@ -31,7 +31,6 @@ import {
     canCommentOnNode,
     canCreateFolder,
     canDeleteNode,
-    canEditNode,
     canUploadDoc
 } from '@/shared/authz'
 import { useNavigate, useParams } from '@solidjs/router'
@@ -68,40 +67,36 @@ function NodeOverview({ node, onEdit, onDelete }) {
     )
 }
 
-function NodeForm({ open, node, loading, onSubmit, onClose }) {
+function NodeForm(props) {
     const [name, setName] = createSignal('')
     const [description, setDescription] = createSignal('')
 
     createEffect(() => {
-        if (open && node) {
-            setName(node.name ?? '')
-            setDescription(node.description ?? '')
-        } else if (open) {
-            setName('')
-            setDescription('')
+        if (props.open) {
+            setName(props.node?.name ?? '')
+            setDescription(props.node?.description ?? '')
         }
     })
 
     const handleSubmit = e => {
         e.preventDefault()
         if (name().trim()) {
-            onSubmit?.(name().trim(), description().trim())
+            props.onSubmit?.(name().trim(), description().trim())
         }
     }
 
-    if (!open) return null
-
     return (
-        <div
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-            onClick={onClose}
-        >
+        <Show when={props.open}>
+            <div
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+                onClick={() => props.onClose?.()}
+            >
             <div
                 class="bg-surface border border-border rounded-md w-full max-w-md p-6"
                 onClick={e => e.stopPropagation()}
             >
                 <h3 class="font-serif text-lg text-ink-dark mb-4">
-                    {node ? 'Edit Node' : 'New Folder'}
+                    {props.node ? 'Edit Node' : 'New Folder'}
                 </h3>
 
                 <form onSubmit={handleSubmit} class="flex flex-col gap-4">
@@ -145,16 +140,21 @@ function NodeForm({ open, node, loading, onSubmit, onClose }) {
                     </div>
 
                     <div class="flex justify-end gap-2">
-                        <Button type="button" variant="ghost" onClick={onClose}>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => props.onClose?.()}
+                        >
                             Cancel
                         </Button>
-                        <Button type="submit" loading={loading}>
-                            {node ? 'Update' : 'Create'}
+                        <Button type="submit" loading={props.loading}>
+                            {props.node ? 'Update' : 'Create'}
                         </Button>
                     </div>
                 </form>
             </div>
-        </div>
+            </div>
+        </Show>
     )
 }
 
@@ -167,6 +167,7 @@ export function NodeView() {
     const role = () => auth.role()
     const accessLevel = () => nodeData()?.access_level
     const pager = usePaginateNodes()
+    const docsPager = usePaginateDocs()
     const [searchInput, setSearchInput] = createSignal('')
     const [searchScope, setSearchScope] = createSignal('folder') // 'folder' | 'global'
     const [showAdvanced, setShowAdvanced] = createSignal(false)
@@ -184,18 +185,41 @@ export function NodeView() {
         localStorage.setItem('owned.showDotfiles', String(showDotfiles()))
     })
 
-    // debounce node search
+    // debounce search; advanced mode queries docs (mimetype/size filters)
+    const runSearch = async page => {
+        const q = searchInput().trim()
+        const rootId =
+            searchScope() === 'global' ? undefined : nodeData()?.id
+        if (searchScope() === 'folder' && !rootId) return
+        if (showAdvanced()) {
+            await docsPager.run(rootId, {
+                page,
+                limit: 10,
+                search: q,
+                mimetype: docMime().trim() || undefined,
+                minSize: docMinSize() || undefined,
+                maxSize: docMaxSize() || undefined
+            })
+        } else {
+            await pager.run(rootId, { page, limit: 10, search: q })
+        }
+    }
+
     createEffect(() => {
-        const q = searchInput()
+        const q = searchInput().trim()
         const scope = searchScope()
+        const mime = docMime()
+        const minS = docMinSize()
+        const maxS = docMaxSize()
+        const advanced = showAdvanced()
         const rootId = scope === 'global' ? undefined : nodeData()?.id
         const timer = setTimeout(() => {
-            if (q.trim()) {
-                pager.run(rootId, { page: 1, limit: 10, search: q.trim() })
-            } else {
-                // clear results when query empty
-                // pager has no clear; set results via run with empty search? skip
+            if (!q) {
+                pager.clear()
+                docsPager.clear()
+                return
             }
+            if (rootId || scope === 'global') runSearch(1)
         }, 300)
         return () => clearTimeout(timer)
     })
@@ -210,11 +234,11 @@ export function NodeView() {
     const [editingNode, setEditingNode] = createSignal(null)
     const [showCreate, setShowCreate] = createSignal(false)
     const [showDelete, setShowDelete] = createSignal(false)
+    const [deleteTarget, setDeleteTarget] = createSignal(null)
     const [deleteDocTarget, setDeleteDocTarget] = createSignal(null)
     const [showDeleteDoc, setShowDeleteDoc] = createSignal(false)
     const [newName, setNewName] = createSignal('')
     const [newDesc, setNewDesc] = createSignal('')
-    const [tab, setTab] = createSignal('contents')
 
     const {
         comments,
@@ -231,15 +255,18 @@ export function NodeView() {
         setShowForm(true)
     }
 
-    const handleDelete = () => {
+    const handleDelete = target => {
+        setDeleteTarget(target ?? nodeData())
         setShowDelete(true)
     }
 
     const confirmDelete = async () => {
-        const [success] = await remove(node().id)
-        if (success) {
-            navigate('/nodes')
-        }
+        const target = deleteTarget()
+        if (!target) return
+        const [success] = await remove(target.id)
+        if (!success) return
+        if (target.id === nodeData()?.id) navigate('/nodes')
+        else refresh()
     }
 
     const handleUpdate = async (name, description) => {
@@ -307,7 +334,10 @@ export function NodeView() {
         } catch (e) {
             toast({
                 type: 'error',
-                message: e.message ?? 'Folder download not available yet'
+                message:
+                    e?.message ||
+                    e?.detail?.reason ||
+                    'Folder download not available yet'
             })
         }
     }
@@ -333,6 +363,7 @@ export function NodeView() {
             return
         }
         toast({ type: 'success', message: 'File deleted successfully' })
+        refresh()
     }
 
     const handleUpdateComment = async (commentId, content) => {
@@ -340,8 +371,6 @@ export function NodeView() {
         if (success) refreshComments()
         return success
     }
-
-    const canEdit = () => nodeData()?.type === 'folder'
 
     const folderChildren = () =>
         nodeData()?.children?.filter(n => n.type === 'folder') ?? []
@@ -412,7 +441,7 @@ export function NodeView() {
                     onEdit={undefined}
                     onDelete={
                         canDeleteNode(role(), accessLevel())
-                            ? handleDelete
+                            ? () => handleDelete()
                             : undefined
                     }
                 />
@@ -445,7 +474,7 @@ export function NodeView() {
                                                     role(),
                                                     nodeItem.access_level
                                                 )
-                                                    ? handleDelete
+                                                    ? () => handleDelete(nodeItem)
                                                     : undefined
                                             }
                                         />
@@ -541,44 +570,99 @@ export function NodeView() {
                         </Show>
                     </section>
 
-                    <Show when={pager.results().length > 0}>
+                    <Show
+                        when={
+                            showAdvanced()
+                                ? docsPager.results().length > 0
+                                : pager.results().length > 0
+                        }
+                    >
                         <section class="mt-4">
                             <h3 class="font-serif text-lg mb-2">
                                 Search results
+                                <span class="text-sm font-normal text-muted ml-2">
+                                    {showAdvanced()
+                                        ? 'documents'
+                                        : 'nodes'}
+                                </span>
                             </h3>
-                            <NodeList
-                                nodes={pager.results()}
-                                loading={pager.loading()}
-                                onNodeClick={n => navigate(`/nodes/${n.id}`)}
-                            />
+                            <Show
+                                when={!showAdvanced()}
+                                fallback={
+                                    <div class="flex flex-col divide-y divide-border-subtle">
+                                        <For
+                                            each={docsPager.results()}
+                                        >
+                                            {singleDoc => (
+                                                <button
+                                                    type="button"
+                                                    class="text-left px-3 py-2 hover:bg-bg-2"
+                                                    onClick={() =>
+                                                        navigate(
+                                                            `/nodes/${singleDoc.node_id}`
+                                                        )
+                                                    }
+                                                >
+                                                    <div class="text-sm text-ink-dark truncate">
+                                                        {singleDoc.title}
+                                                    </div>
+                                                    <div class="text-xs text-muted truncate">
+                                                        {singleDoc.filename}
+                                                        {' · '}
+                                                        {singleDoc.mime_type}
+                                                        {' · '}
+                                                        {singleDoc.size_in_bytes}{' '}
+                                                        bytes
+                                                    </div>
+                                                </button>
+                                            )}
+                                        </For>
+                                    </div>
+                                }
+                            >
+                                <NodeList
+                                    nodes={pager.results()}
+                                    loading={pager.loading()}
+                                    onNodeClick={n =>
+                                        navigate(`/nodes/${n.id}`)
+                                    }
+                                />
+                            </Show>
                             <div class="mt-2 flex items-center gap-2 text-sm">
                                 <Button
                                     size="sm"
                                     variant="ghost"
-                                    disabled={pager.page() <= 1}
+                                    disabled={(showAdvanced() ? docsPager.page() : pager.page()) <= 1}
                                     onClick={() =>
-                                        pager.run(nodeData()?.id, {
-                                            page: pager.page() - 1,
-                                            limit: 10,
-                                            search: searchInput()
-                                        })
+                                        runSearch(
+                                            (showAdvanced()
+                                                ? docsPager.page()
+                                                : pager.page()) - 1
+                                        )
                                     }
                                 >
                                     Prev
                                 </Button>
-                                <span>Page {pager.page()}</span>
+                                <span>
+                                    Page{' '}
+                                    {showAdvanced()
+                                        ? docsPager.page()
+                                        : pager.page()}
+                                </span>
                                 <Button
                                     size="sm"
                                     variant="ghost"
                                     disabled={
-                                        pager.results().length < 10
+                                        (showAdvanced()
+                                            ? docsPager.results()
+                                            : pager.results()).length < 10
                                     }
                                     onClick={() =>
-                                        pager.run(nodeData()?.id, {
-                                            page: pager.page() + 1,
-                                            limit: 10,
-                                            search: searchInput()
-                                        })
+                                        runSearch(
+                                            (showAdvanced()
+                                                ? docsPager.page()
+                                                : pager.page()) + 1
+                                        )
                                     }
                                 >
                                     Next
@@ -621,34 +705,6 @@ export function NodeView() {
                         </label>
                     </section>
 
-                    <div class="mb-6 mt-6">
-                        <Tabs
-                            items={[
-                                { key: 'contents', label: 'Contents' },
-                                { key: 'comments', label: 'Comments' }
-                            ]}
-                            active={tab()}
-                            onChange={setTab}
-                        />
-                    </div>
-                </Show>
-
-                <Show
-                    when={nodeData()?.type === 'folder' && tab() === 'contents'}
-                >
-                    <section class="mt-4">
-                        <h3 class="font-serif text-lg mb-2">Folders</h3>
-                        <NodeList
-                            nodes={sortedFolders()}
-                            loading={loading()}
-                            onNodeClick={n => navigate(`/nodes/${n.id}`)}
-                        />
-                    </section>
-                </Show>
-
-                <Show
-                    when={nodeData()?.type === 'folder' && tab() === 'comments'}
-                >
                     <section class="mt-4">
                         <h3 class="font-serif text-lg mb-2">Comments</h3>
                         <CommentsList
@@ -659,7 +715,10 @@ export function NodeView() {
                             onEdit={handleUpdateComment}
                             onDelete={cId =>
                                 deleteComment(cId).then(
-                                    isSuccess => isSuccess && refreshComments()
+                                    isSuccess => {
+                                        if (isSuccess) refreshComments()
+                                        return isSuccess
+                                    }
                                 )
                             }
                         />
@@ -672,12 +731,25 @@ export function NodeView() {
                             <div class="mt-4">
                                 <CommentForm
                                     loading={addingComment()}
-                                    onSubmit={content =>
-                                        addComment(node().id, content).then(
-                                            isSuccess =>
-                                                isSuccess && refreshComments()
-                                        )
-                                    }
+                                    onSubmit={async content => {
+                                        const [success, err] =
+                                            await addComment(
+                                                nodeData()?.id,
+                                                content
+                                            )
+                                        if (!success) {
+                                            toast({
+                                                type: 'error',
+                                                message:
+                                                    err?.general ||
+                                                    err?.message ||
+                                                    err?.detail?.reason ||
+                                                    'Comment failed'
+                                            })
+                                            return false
+                                        }
+                                        refreshComments()
+                                    }}
                                 />
                             </div>
                         </Show>
@@ -712,7 +784,7 @@ export function NodeView() {
                     onClose={() => setShowDelete(false)}
                     onConfirm={confirmDelete}
                     title="Delete folder"
-                    description={`Delete "${nodeData()?.name}" and all its contents? This cannot be undone.`}
+                    description={`Delete "${deleteTarget()?.name}" and all its contents? This cannot be undone.`}
                     confirmLabel="Delete"
                 />
 

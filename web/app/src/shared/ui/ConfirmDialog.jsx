@@ -34,23 +34,15 @@ import { Modal } from './Modal'
  * @param {'danger' | 'accent' | 'primary'} [props.confirmVariant='danger']
  * @returns {import('solid-js').JSX.Element}
  */
-export function ConfirmDialog({
-    open,
-    onClose,
-    onConfirm,
-    title = '¿Estás seguro?',
-    description,
-    confirmLabel = 'Confirmar',
-    cancelLabel = 'Cancelar',
-    confirmVariant = 'danger'
-}) {
+export function ConfirmDialog(props) {
+    // NOTE: props no se destructuran para que open reaccione (Solid).
     const [loading, setLoading] = createSignal(false)
 
     const handleConfirm = async () => {
         setLoading(true)
         try {
-            await onConfirm?.()
-            onClose()
+            await props.onConfirm?.()
+            props.onClose?.()
         } finally {
             setLoading(false)
         }
@@ -58,10 +50,10 @@ export function ConfirmDialog({
 
     return (
         <Modal
-            open={open}
-            onClose={onClose}
-            title={title}
-            description={description}
+            open={props.open}
+            onClose={props.onClose}
+            title={props.title ?? '¿Estás seguro?'}
+            description={props.description}
             size="sm"
             closeOnBackdrop={!loading()}
         >
@@ -69,18 +61,18 @@ export function ConfirmDialog({
                 <Button
                     variant="ghost"
                     size="sm"
-                    onClick={onClose}
+                    onClick={() => props.onClose?.()}
                     disabled={loading()}
                 >
-                    {cancelLabel}
+                    {props.cancelLabel ?? 'Cancelar'}
                 </Button>
                 <Button
-                    variant={confirmVariant}
+                    variant={props.confirmVariant ?? 'danger'}
                     size="sm"
                     loading={loading()}
                     onClick={handleConfirm}
                 >
-                    {confirmLabel}
+                    {props.confirmLabel ?? 'Confirmar'}
                 </Button>
             </Modal.Footer>
         </Modal>

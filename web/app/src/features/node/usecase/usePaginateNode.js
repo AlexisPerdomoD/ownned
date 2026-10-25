@@ -28,5 +28,18 @@ export function usePaginateNodes() {
         }
     }
 
-    return { results, loading, page, total, search, setSearch, setPage, run }
+    return {
+        results,
+        loading,
+        page,
+        total,
+        search,
+        setSearch,
+        setPage,
+        run,
+        clear: () => {
+            setResults([])
+            setPage(1)
+        }
+    }
 }

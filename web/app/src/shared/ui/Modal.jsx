@@ -35,19 +35,12 @@ const sizes = {
  * @param {import('solid-js').JSX.Element} props.children
  * @returns {import('solid-js').JSX.Element}
  */
-export function Modal({
-    open,
-    onClose,
-    title,
-    description,
-    size = 'md',
-    closeOnBackdrop = true,
-    children
-}) {
+export function Modal(props) {
+    // NOTE: props no se destructuran: open/onClose/title se leen reactivamente desde props.
     createEffect(() => {
-        if (!open) return
+        if (!props.open) return
         const onKey = e => {
-            if (e.key === 'Escape') onClose()
+            if (e.key === 'Escape') props.onClose?.()
         }
         document.addEventListener('keydown', onKey)
         document.body.style.overflow = 'hidden'
@@ -59,42 +52,45 @@ export function Modal({
 
     return (
         <Portal>
-            <Show when={open}>
+            <Show when={props.open}>
                 {/* Backdrop */}
                 <div
                     class="fixed inset-0 z-50 flex items-center justify-center p-4"
                     style="background: rgba(42, 37, 32, 0.5)"
                     onClick={e => {
-                        if (closeOnBackdrop && e.target === e.currentTarget)
-                            onClose()
+                        if (
+                            props.closeOnBackdrop !== false &&
+                            e.target === e.currentTarget
+                        )
+                            props.onClose?.()
                     }}
                     role="dialog"
                     aria-modal="true"
-                    aria-labelledby={title ? 'modal-title' : undefined}
+                    aria-labelledby={props.title ? 'modal-title' : undefined}
                 >
                     {/* Panel */}
                     <div
                         class={`
-                            relative w-full ${sizes[size]}
+                            relative w-full ${sizes[props.size ?? 'md']}
                             bg-surface border border-border
                             rounded-[--radius-sm] shadow-sm
                             flex flex-col
                         `}
                     >
                         {/* Header */}
-                        {(title || description) && (
+                        {(props.title || props.description) && (
                             <div class="px-5 py-4 border-b border-border-subtle">
-                                {title && (
+                                {props.title && (
                                     <h2
                                         id="modal-title"
                                         class="font-[--font-serif] text-[--text-lg] text-ink-dark leading-snug"
                                     >
-                                        {title}
+                                        {props.title}
                                     </h2>
                                 )}
-                                {description && (
+                                {props.description && (
                                     <p class="mt-1 text-[--text-sm] text-muted">
-                                        {description}
+                                        {props.description}
                                     </p>
                                 )}
                             </div>
@@ -102,7 +98,7 @@ export function Modal({
 
                         {/* Close button */}
                         <button
-                            onClick={onClose}
+                            onClick={() => props.onClose?.()}
                             aria-label="Cerrar"
                             class="
                                 absolute top-3.5 right-4
@@ -127,7 +123,7 @@ export function Modal({
                         </button>
 
                         {/* Body */}
-                        <div class="px-5 py-4 flex-1">{children}</div>
+                        <div class="px-5 py-4 flex-1">{props.children}</div>
                     </div>
                 </div>
             </Show>

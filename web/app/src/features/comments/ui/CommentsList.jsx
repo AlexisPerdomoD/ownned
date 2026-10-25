@@ -147,14 +147,15 @@ export function CommentsList(props) {
  * @param {(content: string) => void} [props.onSubmit]
  * @returns {import('solid-js').JSX.Element}
  */
-export function CommentForm({ loading = false, onSubmit }) {
+export function CommentForm(props) {
+    // NOTE: props no se destructuran; loading se lee reactivamente desde props.
     const [content, setContent] = createSignal('')
 
     const handleSubmit = async e => {
         e.preventDefault()
         const text = content().trim()
         if (!text) return
-        const result = await onSubmit?.(text)
+        const result = await props.onSubmit?.(text)
         if (result !== false) setContent('')
     }
 
@@ -178,7 +179,7 @@ export function CommentForm({ loading = false, onSubmit }) {
                 <Button
                     type="submit"
                     size="sm"
-                    loading={loading}
+                    loading={props.loading}
                     disabled={!content().trim()}
                 >
                     Add Comment
