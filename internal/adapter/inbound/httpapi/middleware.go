@@ -2,12 +2,42 @@ package httpapi
 
 import (
 	"errors"
+	"log"
 	"net/http"
+	"os"
+	"time"
+
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/identity"
 	"ownned/internal/domain"
 )
+
+var requestLogger = log.New(os.Stdout, "", log.Ltime)
+
+func RequestLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		startedAt := time.Now()
+		wrapped := chimiddleware.NewWrapResponseWriter(w, r.ProtoMajor)
+
+		defer func() {
+			status := wrapped.Status()
+			if status == 0 {
+				status = http.StatusOK
+			}
+
+			requestLogger.Printf("%s %s %s %s",
+				colorRequestMethod(r.Method),
+				ansiCyan+r.URL.Path+ansiReset,
+				colorRequestStatus(status),
+				time.Since(startedAt),
+			)
+		}()
+
+		next.ServeHTTP(wrapped, r)
+	})
+}
 
 type TokenValidator interface {
 	ValidateAccessToken(token string) (*identity.Identity, error)

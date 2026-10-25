@@ -3,10 +3,43 @@ package httpapi
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
+
+const (
+	ansiReset = "\033[0m"
+	ansiBold  = "\033[1m"
+	ansiCyan  = "\033[36m"
+	ansiWhite = "\033[37m"
+)
+
+func colorRequestMethod(method string) string {
+	color, ok := methodColors[method]
+	if !ok {
+		color = ansiWhite
+	}
+
+	return color + ansiBold + method + ansiReset
+}
+
+func colorRequestStatus(status int) string {
+	color := ansiWhite
+	switch {
+	case status >= 200 && status < 300:
+		color = "\033[32m"
+	case status >= 300 && status < 400:
+		color = ansiCyan
+	case status >= 400 && status < 500:
+		color = "\033[33m"
+	case status >= 500:
+		color = "\033[31m"
+	}
+
+	return color + strconv.Itoa(status) + ansiReset
+}
 
 var methodColors = map[string]string{
 	"GET":    "\033[32m", // verde
