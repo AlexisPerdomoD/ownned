@@ -1,6 +1,7 @@
 import { createSignal } from 'solid-js'
 
 import { buildUpsertGroupNodeDTO, apiUpsertGroupNode } from '@/entities/groups/api'
+import { ApiForbiddenError, getErrorMessage } from '@/shared/errors'
 import { toast } from '@/shared/ui'
 
 export function useUpsertGroupNode() {
@@ -18,7 +19,10 @@ export function useUpsertGroupNode() {
             toast.success('Node added to group.')
             return [true, null]
         } catch (e) {
-            return [false, { general: e.message }]
+            if (e instanceof ApiForbiddenError) {
+                return [false, { general: 'You cannot share this node.' }]
+            }
+            return [false, { general: getErrorMessage(e, 'Could not share node.') }]
         } finally {
             setLoading(false)
         }

@@ -1,6 +1,7 @@
 import { createSignal } from 'solid-js'
 
-import { buildUpsertGroupNodeDTO, apiDeleteGroupNode } from '@/entities/groups/api'
+import { apiDeleteGroupNode } from '@/entities/groups/api'
+import { getErrorMessage } from '@/shared/errors'
 import { toast } from '@/shared/ui'
 
 export function useDeleteGroupNode() {
@@ -13,7 +14,7 @@ export function useDeleteGroupNode() {
             toast.success('Node removed from group.')
             return [true, null]
         } catch (e) {
-            return [false, { general: e.message }]
+            return [false, { general: getErrorMessage(e, 'Could not remove node.') }]
         } finally {
             setLoading(false)
         }

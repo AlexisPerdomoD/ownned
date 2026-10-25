@@ -19,7 +19,7 @@ Este es el plan vivo para alinear el cliente SolidJS con el contrato público de
 
 - Login y consulta del usuario de sesión; logout en la barra de navegación.
 - Home con nodos raíz y vista de carpeta/nodo con controles para contenido, comentarios, creación de subcarpeta, edición/eliminación de nodo y operaciones de documento. Algunas acciones tienen brechas de contrato documentadas abajo, por lo que la presencia del control no significa que el flujo esté funcional.
-- Lista y detalle de grupos: CRUD, membresía/roles de acceso y asociación de nodos.
+- Lista y detalle de grupos: CRUD, membresía/roles de acceso y asociación de nodos mediante selector navegable/buscable.
 - Listado/paginación y creación de usuarios.
 - Componentes compartidos de UI, formularios, tabla, navegación, modal, toast y estados de carga/error.
 

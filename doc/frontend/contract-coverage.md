@@ -76,8 +76,8 @@ Para la UI, mostrar `display_path` como contexto de ubicación y no exponer UUID
 | `DELETE /api/v1/groups/{groupID}` | Implementado con autorización de rol y acceso owner | UI/API | Integrado; asegurar que el affordance de borrar refleje el permiso efectivo y trate `403`. |
 | `POST /api/v1/groups/{groupID}/users` | Implementado | UI/API | Alineado en ruta y cuerpo (`usr_id`, `access`). Limited users solo pueden recibir acceso de lectura; superusers no se asignan manualmente. |
 | `DELETE /api/v1/groups/{groupID}/users/{usrID}` | Implementado | UI/API | Alineado; los permisos dependen del rol y acceso al grupo. |
-| `POST /api/v1/groups/{groupID}/nodes` | Implementado | UI/API | Ruta/cuerpo alineados; el UI solicita UUID manual en lugar de selección navegable. Requiere acceso owner al grupo y al nodo. |
-| `DELETE /api/v1/groups/{groupID}/nodes/{nodeID}` | Implementado | UI/API | Integrado; tratar respuestas de permisos y errores de forma consistente. |
+| `POST /api/v1/groups/{groupID}/nodes` | Implementado | `GroupNodePicker` + API | Ruta/cuerpo alineados; selector navega raíces/carpetas y busca nodos accesibles. Un `403` se muestra como “You cannot share this node.” El servidor sigue siendo autoridad. |
+| `DELETE /api/v1/groups/{groupID}/nodes/{nodeID}` | Implementado | `GroupNodesList` + API | Integrado; tras quitar o asociar se refresca el grupo y la relación visible; fallos se muestran como notificación. |
 
 ### Nodos, documentos y comentarios
 

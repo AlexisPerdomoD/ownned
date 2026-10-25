@@ -7,37 +7,39 @@ import { For, Show } from 'solid-js'
  * @param {(nodeId: string) => void} [props.onRemove]
  * @returns {import('solid-js').JSX.Element}
  */
-export function GroupNodesList({ nodes, loading = false, onRemove }) {
+export function GroupNodesList(props) {
     return (
         <div class="flex flex-col gap-2">
-            <Show when={loading}>
+            <Show when={props.loading}>
                 <div class="py-4 text-center text-sm text-muted">
                     Loading...
                 </div>
             </Show>
 
-            <Show when={!loading && nodes.length === 0}>
+            <Show when={!props.loading && props.nodes.length === 0}>
                 <div class="py-4 text-center text-sm text-muted">
                     No nodes shared yet.
                 </div>
             </Show>
 
-            <Show when={!loading && nodes.length > 0}>
-                <For each={nodes}>
+            <Show when={!props.loading && props.nodes.length > 0}>
+                <For each={props.nodes}>
                     {node => (
                         <div class="flex items-center justify-between p-2 bg-bg-2 rounded-xs">
                             <div class="flex items-center gap-2">
                                 <span class="text-sm">
-                                    {node.display_path ?? node.node_id}
+                                    {node.display_path ?? node.name ?? 'Shared node'}
                                 </span>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => onRemove?.(node.node_id)}
-                                class="text-xs text-danger hover:underline"
-                            >
-                                Remove
-                            </button>
+                            <Show when={props.onRemove}>
+                                <button
+                                    type="button"
+                                    onClick={() => props.onRemove?.(node.node_id)}
+                                    class="text-xs text-danger hover:underline"
+                                >
+                                    Remove
+                                </button>
+                            </Show>
                         </div>
                     )}
                 </For>
