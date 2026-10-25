@@ -15,6 +15,8 @@ const (
 )
 const NodePathSeparator = "."
 
+const NodePathSeparatorDisplay = "/"
+
 var ErrNodePathInvalid = errors.New("invalid node path")
 
 func (p NodePath) NewChildPath(nodeID uuid.UUID) NodePath {
@@ -22,9 +24,13 @@ func (p NodePath) NewChildPath(nodeID uuid.UUID) NodePath {
 	return NodePath(rawPath)
 }
 
-func (p NodePath) String() string {
+func (p NodePath) Raw() string {
+	return string(p)
+}
+
+func (p NodePath) Display() string {
 	s := strings.ReplaceAll(string(p), "_", "-")
-	return "/" + strings.ReplaceAll(s, NodePathSeparator, "/")
+	return NodePathSeparatorDisplay + strings.ReplaceAll(s, NodePathSeparator, NodePathSeparatorDisplay)
 }
 
 func (p NodePath) IsRoot() bool {
@@ -32,7 +38,7 @@ func (p NodePath) IsRoot() bool {
 }
 
 func (p NodePath) IsParentOf(child NodePath) bool {
-	return strings.HasPrefix(child.String(), p.String()+"/")
+	return strings.HasPrefix(child.Raw(), p.Raw()+NodePathSeparator)
 }
 
 func (p NodePath) IsChildOf(parent NodePath) bool {
