@@ -1,6 +1,7 @@
 package node
 
 import (
+	"cmp"
 	"context"
 	"io"
 	"log/slog"
@@ -122,14 +123,14 @@ func (uc *CreateNodeFileUseCase) Execute(ctx context.Context, dto CreateNodeFile
 		UsrID:       &usr.ID,
 		Type:        domain.FileNodeType,
 		Description: dto.Description,
-		Name:        title,
+		Name:        dto.Filename,
 		Path:        path,
 	}
 	doc := &domain.Doc{
 		ID:          docID,
 		NodeID:      nodeID,
 		MimeType:    dto.Mimetype,
-		Title:       title,
+		Title:       cmp.Or(title, dto.Filename),
 		Filename:    dto.Filename,
 		Description: dto.Description,
 		SizeInBytes: size,
