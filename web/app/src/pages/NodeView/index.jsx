@@ -8,7 +8,7 @@ import {
     useGetComments,
     useUpdateComment
 } from '@/features/comments/usecase'
-import { DocCard, NodeCard, NodeList, UploadDropzone } from '@/features/node/ui'
+import { DocCard, NodeCard, NodeList } from '@/features/node/ui'
 import {
     useCreateDoc,
     useCreateFolder,
@@ -16,13 +16,11 @@ import {
     useDeleteNode,
     useGetNode,
     usePaginateDocs,
-    usePaginateNodes,
-    useUpdateNode
+    usePaginateNodes
 } from '@/features/node/usecase'
 import {
     Button,
     ConfirmDialog,
-    PageHeader,
     Spinner,
     toast
 } from '@/shared/ui'
@@ -35,37 +33,7 @@ import {
 } from '@/shared/authz'
 import { useNavigate, useParams } from '@solidjs/router'
 
-function NodeOverview({ node, onEdit, onDelete }) {
-    return (
-        <section class="flex flex-col items-center">
-            <section class="max-w-md w-full">
-                <section class="mb-4 py-4">
-                    <h1 class="text-2xl font-semibold text-center font-serif pb-2">
-                        {node.name}
-                    </h1>
-                    <h3 class="text-sm text-center font-serif pb-2">
-                        {node.type === 'folder' ? 'Folder' : 'File'}
-                    </h3>
-                    <p class="text-sm text-center">{node.description}</p>
-                    <p class="text-sm text-center">Created {node.created_at}</p>
-                    <Show when={node.updated_at !== node.created_at}>
-                        <p class="text-sm text-center">
-                            Last updated {node.updated_at}
-                        </p>
-                    </Show>
-                </section>
-                <section class="flex justify-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={onEdit}>
-                        Edit
-                    </Button>
-                    <Button variant="danger" size="sm" onClick={onDelete}>
-                        Delete
-                    </Button>
-                </section>
-            </section>
-        </section>
-    )
-}
+const MIN_SEARCH_CHARS = 2
 
 function NodeForm(props) {
     const [name, setName] = createSignal('')
@@ -91,68 +59,68 @@ function NodeForm(props) {
                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
                 onClick={() => props.onClose?.()}
             >
-            <div
-                class="bg-surface border border-border rounded-md w-full max-w-md p-6"
-                onClick={e => e.stopPropagation()}
-            >
-                <h3 class="font-serif text-lg text-ink-dark mb-4">
-                    {props.node ? 'Edit Node' : 'New Folder'}
-                </h3>
+                <div
+                    class="bg-surface border border-border rounded-md w-full max-w-md p-6"
+                    onClick={e => e.stopPropagation()}
+                >
+                    <h3 class="font-serif text-lg text-ink-dark mb-4">
+                        {props.node ? 'Edit Node' : 'New Folder'}
+                    </h3>
 
-                <form onSubmit={handleSubmit} class="flex flex-col gap-4">
-                    <div class="flex flex-col gap-1">
-                        <label class="text-xs text-muted uppercase tracking-wide">
-                            Name *
-                        </label>
-                        <input
-                            type="text"
-                            value={name()}
-                            onInput={e => setName(e.target.value)}
-                            maxLength={255}
-                            class="
-                                w-full font-sans font-light text-sm
-                                text-ink-dark
-                                bg-bg border border-border rounded-xs
-                                px-3 py-2
-                                focus:outline-none focus:border-ink
-                            "
-                            required
-                        />
-                    </div>
+                    <form onSubmit={handleSubmit} class="flex flex-col gap-4">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs text-muted uppercase tracking-wide">
+                                Name *
+                            </label>
+                            <input
+                                type="text"
+                                value={name()}
+                                onInput={e => setName(e.target.value)}
+                                maxLength={255}
+                                class="
+                                    w-full font-sans font-light text-sm
+                                    text-ink-dark
+                                    bg-bg border border-border rounded-xs
+                                    px-3 py-2
+                                    focus:outline-none focus:border-ink
+                                "
+                                required
+                            />
+                        </div>
 
-                    <div class="flex flex-col gap-1">
-                        <label class="text-xs text-muted uppercase tracking-wide">
-                            Description
-                        </label>
-                        <textarea
-                            value={description()}
-                            onInput={e => setDescription(e.target.value)}
-                            rows={2}
-                            maxLength={255}
-                            class="
-                                w-full font-sans font-light text-sm
-                                text-ink-dark
-                                bg-bg border border-border rounded-xs
-                                px-3 py-2 resize-none
-                                focus:outline-none focus:border-ink
-                            "
-                        />
-                    </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs text-muted uppercase tracking-wide">
+                                Description
+                            </label>
+                            <textarea
+                                value={description()}
+                                onInput={e => setDescription(e.target.value)}
+                                rows={2}
+                                maxLength={255}
+                                class="
+                                    w-full font-sans font-light text-sm
+                                    text-ink-dark
+                                    bg-bg border border-border rounded-xs
+                                    px-3 py-2 resize-none
+                                    focus:outline-none focus:border-ink
+                                "
+                            />
+                        </div>
 
-                    <div class="flex justify-end gap-2">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => props.onClose?.()}
-                        >
-                            Cancel
-                        </Button>
-                        <Button type="submit" loading={props.loading}>
-                            {props.node ? 'Update' : 'Create'}
-                        </Button>
-                    </div>
-                </form>
-            </div>
+                        <div class="flex justify-end gap-2">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => props.onClose?.()}
+                            >
+                                Cancel
+                            </Button>
+                            <Button type="submit" loading={props.loading}>
+                                {props.node ? 'Update' : 'Create'}
+                            </Button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </Show>
     )
@@ -166,6 +134,12 @@ export function NodeView() {
     const nodeData = () => node()
     const role = () => auth.role()
     const accessLevel = () => nodeData()?.access_level
+    const isFolderNode = () => nodeData()?.type === 'folder'
+
+    const [fileInput, setFileInput] = createSignal(null)
+    const [folderInput, setFolderInput] = createSignal(null)
+    const [showComments, setShowComments] = createSignal(false)
+
     const pager = usePaginateNodes()
     const docsPager = usePaginateDocs()
     const [searchInput, setSearchInput] = createSignal('')
@@ -185,9 +159,10 @@ export function NodeView() {
         localStorage.setItem('owned.showDotfiles', String(showDotfiles()))
     })
 
-    // debounce search; advanced mode queries docs (mimetype/size filters)
+    // debounce search (>=300ms, min 2 chars); advanced mode queries docs
     const runSearch = async page => {
         const q = searchInput().trim()
+        if (q.length < MIN_SEARCH_CHARS) return
         const rootId =
             searchScope() === 'global' ? undefined : nodeData()?.id
         if (searchScope() === 'folder' && !rootId) return
@@ -208,13 +183,14 @@ export function NodeView() {
     createEffect(() => {
         const q = searchInput().trim()
         const scope = searchScope()
-        const mime = docMime()
-        const minS = docMinSize()
-        const maxS = docMaxSize()
-        const advanced = showAdvanced()
+        // subscribed so the debounce restarts when filters change
+        const _mime = docMime()
+        const _minSize = docMinSize()
+        const _maxSize = docMaxSize()
+        const _advanced = showAdvanced()
         const rootId = scope === 'global' ? undefined : nodeData()?.id
         const timer = setTimeout(() => {
-            if (!q) {
+            if (q.length < MIN_SEARCH_CHARS) {
                 pager.clear()
                 docsPager.clear()
                 return
@@ -223,15 +199,13 @@ export function NodeView() {
         }, 300)
         return () => clearTimeout(timer)
     })
+
     const { create, loading: creating } = useCreateFolder()
-    const { update, loading: updating } = useUpdateNode()
     const { remove, loading: deleting } = useDeleteNode()
 
     const { upload, loading: uploading } = useCreateDoc(() => params.id)
     const { remove: deleteDoc, loading: deletingDoc } = useDeleteDoc()
 
-    const [showForm, setShowForm] = createSignal(false)
-    const [editingNode, setEditingNode] = createSignal(null)
     const [showCreate, setShowCreate] = createSignal(false)
     const [showDelete, setShowDelete] = createSignal(false)
     const [deleteTarget, setDeleteTarget] = createSignal(null)
@@ -250,11 +224,6 @@ export function NodeView() {
     const { remove: deleteComment, loading: deletingComment } =
         useDeleteComment()
 
-    const handleEdit = () => {
-        setEditingNode(node())
-        setShowForm(true)
-    }
-
     const handleDelete = target => {
         setDeleteTarget(target ?? nodeData())
         setShowDelete(true)
@@ -263,22 +232,24 @@ export function NodeView() {
     const confirmDelete = async () => {
         const target = deleteTarget()
         if (!target) return
-        const [success] = await remove(target.id)
-        if (!success) return
+        const [success, err] = await remove(target.id)
+        if (!success) {
+            toast({
+                type: 'error',
+                message:
+                    err?.general ||
+                    err?.message ||
+                    err?.detail?.reason ||
+                    'Delete failed'
+            })
+            return
+        }
         if (target.id === nodeData()?.id) navigate('/nodes')
         else refresh()
     }
 
-    const handleUpdate = async (name, description) => {
-        const [success] = await update(node().id, name, description)
-        if (success) {
-            setShowForm(false)
-            setEditingNode(null)
-        }
-    }
-
     const handleCreate = async () => {
-        const [success, err] = await create(node().id, newName(), newDesc())
+        const [success, err] = await create(nodeData()?.id, newName(), newDesc())
         if (!success) {
             toast({
                 type: 'error',
@@ -311,6 +282,61 @@ export function NodeView() {
         }
         toast({ type: 'success', message: 'File uploaded successfully' })
         refresh()
+    }
+
+    const handleFilePickerChange = e => {
+        const files = Array.from(e.target?.files ?? [])
+        if (files.length) {
+            // sequential to keep feed order and avoid parallel server state races
+            files.reduce(async (acc, f) => {
+                await acc
+                return handleUpload(f)
+            }, Promise.resolve())
+        }
+        e.target.value = ''
+    }
+
+    // NOTE: subcarpetas locales se recrean como carpetas hijas del nivel 1
+    // (webkitRelativePath); el backend no expone recursividad de subidas.
+    const handleFolderPickerChange = async e => {
+        const files = Array.from(e.target?.files ?? [])
+        e.target.value = ''
+        const parentId = nodeData()?.id
+        if (!parentId) return
+
+        const groups = {}
+        const looseFiles = []
+        for (const singleFile of files) {
+            const rel = singleFile.webkitRelativePath || singleFile.name
+            const first = rel.split('/')[0]
+            if (first && first !== singleFile.name) {
+                groups[first] = groups[first] ?? []
+                groups[first].push(singleFile)
+            } else {
+                looseFiles.push(singleFile)
+            }
+        }
+
+        let created = 0
+        for (const [name, fileList] of Object.entries(groups)) {
+            const [ok, createdNode] = await create(parentId, name, '')
+            if (!ok) {
+                toast({ type: 'error', message: `Could not create "${name}"` })
+                continue
+            }
+            created += 1
+            for (const singleFile of fileList) {
+                await upload(singleFile, '', createdNode.id)
+            }
+        }
+        for (const singleFile of looseFiles) {
+            await upload(singleFile)
+        }
+        refresh()
+        toast({
+            type: 'success',
+            message: `Uploaded ${created} folder${created === 1 ? '' : 's'}`
+        })
     }
 
     const handleDownload = async doc => {
@@ -403,123 +429,150 @@ export function NodeView() {
     const sortedFolders = () => sortNodes(folderChildren())
     const sortedFiles = () => sortNodes(fileChildren())
 
+    const formatDate = dateStr =>
+        new Date(dateStr).toLocaleDateString('es-ES', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })
+    const displayName = () =>
+        nodeData()?.name || nodeData()?.display_path || 'Node'
+
+    const searchResultItems = () =>
+        showAdvanced() ? docsPager.results() : pager.results()
+    const searchPage = () => (showAdvanced() ? docsPager.page() : pager.page())
+
     return (
-        <section class="flex flex-col p-6">
+        <section class="flex flex-col p-4 sm:p-6">
             <Show
                 when={!loading()}
                 fallback={<Spinner size="lg" class="mx-auto mt-20" />}
             >
-                <PageHeader
-                    title={nodeData()?.display_path ?? nodeData()?.name ?? 'Node'}
-                    subtitle={nodeData()?.type}
-                    backTo="/nodes"
-                />
-
-                <Show
-                    when={
-                        nodeData()?.type === 'folder' &&
-                        canCreateFolder(role(), accessLevel())
-                    }
-                >
-                    <div class="mb-4">
-                        <Button onClick={() => setShowCreate(true)}>
-                            + New Folder
-                        </Button>
-                    </div>
-                </Show>
-
-                <Show when={nodeData()?.type === 'folder'}>
-                    <div class="mb-4">
-                        <Button variant="ghost" onClick={handleDownloadFolder}>
-                            Download folder
-                        </Button>
-                    </div>
-                </Show>
-
-                <NodeOverview
-                    node={nodeData()}
-                    onEdit={undefined}
-                    onDelete={
-                        canDeleteNode(role(), accessLevel())
-                            ? () => handleDelete()
-                            : undefined
-                    }
-                />
-
-                <Show when={nodeData()?.type === 'folder'}>
-                    <section class="mt-4">
-                        <h3 class="font-serif text-lg mb-2">Contents</h3>
-                        <Show
-                            when={
-                                sortedFolders().length > 0 ||
-                                sortedFiles().length > 0
-                            }
-                            fallback={
-                                <p class="text-sm text-muted">
-                                    No files in this folder
-                                </p>
-                            }
-                        >
-                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                                <For each={sortedFolders()}>
-                                    {nodeItem => (
-                                        <NodeCard
-                                            node={nodeItem}
-                                            onClick={n =>
-                                                navigate(`/nodes/${n.id}`)
-                                            }
-                                            onEdit={undefined}
-                                            onDelete={
-                                                canDeleteNode(
-                                                    role(),
-                                                    nodeItem.access_level
-                                                )
-                                                    ? () => handleDelete(nodeItem)
-                                                    : undefined
-                                            }
-                                        />
-                                    )}
-                                </For>
-                                <For each={sortedFiles()}>
-                                    {fileNode => (
-                                        <DocCard
-                                            doc={fileNode.doc}
-                                            node={fileNode}
-                                            onDownload={handleDownload}
-                                            onDelete={
-                                                canDeleteNode(
-                                                    role(),
-                                                    fileNode.access_level
-                                                )
-                                                    ? handleDeleteDoc
-                                                    : undefined
-                                            }
-                                        />
-                                    )}
-                                </For>
-                            </div>
-                        </Show>
-                    </section>
-
-                    <Show
-                        when={canUploadDoc(role(), accessLevel())}
+                {/* ── Header: título/descr/metas a la izquierda, acciones a la derecha ── */}
+                <header class="mb-6">
+                    <a
+                        href="/nodes"
+                        class="text-sm text-accent hover:underline"
                     >
-                        <section class="mt-4">
-                            <UploadDropzone
-                                onUpload={handleUpload}
-                                loading={uploading()}
+                        ← Back
+                    </a>
+                    <div class="mt-2 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div class="min-w-0">
+                            <h1 class="font-serif text-2xl text-ink-dark truncate">
+                                {displayName()}
+                            </h1>
+                            <p class="text-sm text-muted mt-1">
+                                {isFolderNode() ? 'Folder' : 'File'}
+                                {' · '}
+                                Created {formatDate(nodeData()?.created_at)}
+                                <Show
+                                    when={
+                                        nodeData()?.updated_at !==
+                                        nodeData()?.created_at
+                                    }
+                                >
+                                    {' · '}
+                                    Updated{' '}
+                                    {formatDate(nodeData()?.updated_at)}
+                                </Show>
+                            </p>
+                            <Show when={nodeData()?.description}>
+                                <p class="text-sm text-ink mt-1">
+                                    {nodeData()?.description}
+                                </p>
+                            </Show>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <Show when={isFolderNode()}>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() =>
+                                        setShowComments(v => !v)
+                                    }
+                                >
+                                    💬 Comments ({comments().length})
+                                </Button>
+                            </Show>
+                            <Show
+                                when={canDeleteNode(role(), accessLevel())}
+                            >
+                                <Button
+                                    size="sm"
+                                    variant="danger"
+                                    onClick={() => handleDelete()}
+                                >
+                                    Delete
+                                </Button>
+                            </Show>
+                        </div>
+                    </div>
+                </header>
+
+                <Show when={isFolderNode()}>
+                    {/* ── Toolbar: acciones agrupadas ── */}
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <Show when={canCreateFolder(role(), accessLevel())}>
+                            <Button
+                                size="sm"
+                                onClick={() => setShowCreate(true)}
+                            >
+                                + New Folder
+                            </Button>
+                        </Show>
+                        <Show when={canUploadDoc(role(), accessLevel())}>
+                            <input
+                                type="file"
+                                multiple
+                                hidden
+                                ref={setFileInput}
+                                onChange={handleFilePickerChange}
                             />
-                        </section>
-                    </Show>
-                </Show>
+                            <Button
+                                size="sm"
+                                onClick={() => fileInput()?.click()}
+                            >
+                                ⬆ Upload file
+                            </Button>
+                            <input
+                                type="file"
+                                multiple
+                                hidden
+                                webkitdirectory="true"
+                                directory=""
+                                ref={setFolderInput}
+                                onChange={handleFolderPickerChange}
+                            />
+                            <Show when={role() === 'super_usr_role'}>
+                                <Button
+                                    size="sm"
+                                    onClick={() => folderInput()?.click()}
+                                >
+                                    📁 Upload folder
+                                </Button>
+                            </Show>
+                        </Show>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={handleDownloadFolder}
+                        >
+                            ⬇ Download folder
+                        </Button>
+                    </div>
 
-                <Show when={nodeData()?.type === 'file'}>
-                    <DocCard doc={nodeData()?.doc} />
-                </Show>
-
-                <Show when={nodeData()?.type === 'folder'}>
-                    <section class="mt-4 flex flex-col gap-2">
-                        <div class="flex items-center gap-2">
+                    {/* ── Search en la parte superior ── */}
+                    <section class="mb-5 flex flex-col gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <input
+                                type="text"
+                                placeholder={`Search nodes (min ${MIN_SEARCH_CHARS} characters)...`}
+                                value={searchInput()}
+                                onInput={e => setSearchInput(e.target.value)}
+                                class="flex-1 min-w-48 font-sans font-light text-sm text-ink-dark bg-surface border border-border rounded-xs px-3 py-2 focus:outline-none focus:border-ink"
+                            />
                             <select
                                 value={searchScope()}
                                 onChange={e => setSearchScope(e.target.value)}
@@ -528,23 +581,19 @@ export function NodeView() {
                                 <option value="folder">This folder</option>
                                 <option value="global">Global</option>
                             </select>
-                            <input
-                                type="text"
-                                placeholder="Search nodes..."
-                                value={searchInput()}
-                                onInput={e => setSearchInput(e.target.value)}
-                                class="flex-1 font-sans font-light text-sm text-ink-dark bg-surface border border-border rounded-xs px-3 py-2 focus:outline-none focus:border-ink"
-                            />
+                            <button
+                                type="button"
+                                class="text-xs text-muted underline"
+                                onClick={() => setShowAdvanced(v => !v)}
+                            >
+                                {showAdvanced()
+                                    ? 'Hide'
+                                    : 'Show'}{' '}
+                                advanced document search
+                            </button>
                         </div>
-                        <button
-                            type="button"
-                            class="text-xs text-muted underline self-start"
-                            onClick={() => setShowAdvanced(v => !v)}
-                        >
-                            {showAdvanced() ? 'Hide' : 'Show'} advanced document search
-                        </button>
                         <Show when={showAdvanced()}>
-                            <div class="flex items-center gap-2 text-sm">
+                            <div class="flex flex-wrap items-center gap-2 text-sm">
                                 <input
                                     type="text"
                                     placeholder="mimetype"
@@ -554,49 +603,48 @@ export function NodeView() {
                                 />
                                 <input
                                     type="number"
-                                    placeholder="min size"
+                                    placeholder="min size (bytes)"
                                     value={docMinSize()}
                                     onInput={e => setDocMinSize(e.target.value)}
-                                    class="bg-surface border border-border rounded-xs px-2 py-1 w-24"
+                                    class="bg-surface border border-border rounded-xs px-2 py-1 w-32"
                                 />
                                 <input
                                     type="number"
-                                    placeholder="max size"
+                                    placeholder="max size (bytes)"
                                     value={docMaxSize()}
                                     onInput={e => setDocMaxSize(e.target.value)}
-                                    class="bg-surface border border-border rounded-xs px-2 py-1 w-24"
+                                    class="bg-surface border border-border rounded-xs px-2 py-1 w-32"
                                 />
                             </div>
                         </Show>
                     </section>
 
+                    {/* ── Resultados de búsqueda (debajo, solo si hay query) ── */}
                     <Show
                         when={
-                            showAdvanced()
-                                ? docsPager.results().length > 0
-                                : pager.results().length > 0
+                            searchInput().trim().length >= MIN_SEARCH_CHARS &&
+                            searchResultItems().length > 0
                         }
                     >
-                        <section class="mt-4">
-                            <h3 class="font-serif text-lg mb-2">
+                        <section class="mb-5">
+                            <h4 class="text-sm font-medium text-muted mb-1">
                                 Search results
-                                <span class="text-sm font-normal text-muted ml-2">
+                                <span class="ml-2">
                                     {showAdvanced()
                                         ? 'documents'
-                                        : 'nodes'}
+                                        : 'nodes'}{' '}
+                                    · page {searchPage()}
                                 </span>
-                            </h3>
+                            </h4>
                             <Show
                                 when={!showAdvanced()}
                                 fallback={
-                                    <div class="flex flex-col divide-y divide-border-subtle">
-                                        <For
-                                            each={docsPager.results()}
-                                        >
+                                    <div class="flex flex-col divide-y divide-border-subtle border border-border rounded-sm">
+                                        <For each={docsPager.results()}>
                                             {singleDoc => (
                                                 <button
                                                     type="button"
-                                                    class="text-left px-3 py-2 hover:bg-bg-2"
+                                                    class="text-left px-3 py-2 hover:bg-bg-2 focus-visible:bg-bg-2 focus-visible:outline-none"
                                                     onClick={() =>
                                                         navigate(
                                                             `/nodes/${singleDoc.node_id}`
@@ -632,37 +680,19 @@ export function NodeView() {
                                 <Button
                                     size="sm"
                                     variant="ghost"
-                                    disabled={(showAdvanced() ? docsPager.page() : pager.page()) <= 1}
+                                    disabled={searchPage() <= 1}
                                     onClick={() =>
-                                        runSearch(
-                                            (showAdvanced()
-                                                ? docsPager.page()
-                                                : pager.page()) - 1
-                                        )
+                                        runSearch(searchPage() - 1)
                                     }
                                 >
                                     Prev
                                 </Button>
-                                <span>
-                                    Page{' '}
-                                    {showAdvanced()
-                                        ? docsPager.page()
-                                        : pager.page()}
-                                </span>
                                 <Button
                                     size="sm"
                                     variant="ghost"
-                                    disabled={
-                                        (showAdvanced()
-                                            ? docsPager.results()
-                                            : pager.results()).length < 10
-                                    }
+                                    disabled={searchResultItems().length < 10}
                                     onClick={() =>
-                                        runSearch(
-                                            (showAdvanced()
-                                                ? docsPager.page()
-                                                : pager.page()) + 1
-                                        )
+                                        runSearch(searchPage() + 1)
                                     }
                                 >
                                     Next
@@ -671,20 +701,21 @@ export function NodeView() {
                         </section>
                     </Show>
 
-                    <section class="mt-4 flex items-center gap-2 text-sm">
-                        <label>Sort:</label>
+                    {/* ── Sort/dotfiles: fila compacta ── */}
+                    <div class="flex flex-wrap items-center gap-2 text-sm mb-2">
                         <select
                             value={sortBy()}
                             onChange={e => setSortBy(e.target.value)}
                             class="bg-surface border border-border rounded-xs px-2 py-1"
                         >
-                            <option value="name">Name</option>
-                            <option value="created">Created</option>
-                            <option value="updated">Updated</option>
+                            <option value="name">Sort by: Name</option>
+                            <option value="created">Sort by: Created</option>
+                            <option value="updated">Sort by: Updated</option>
                         </select>
                         <button
                             type="button"
-                            class="px-2 py-1 border border-border rounded-xs"
+                            aria-label="Toggle sort direction"
+                            class="px-2 py-1 border border-border rounded-xs hover:bg-bg-2"
                             onClick={() =>
                                 setSortDir(d =>
                                     d === 'asc' ? 'desc' : 'asc'
@@ -693,7 +724,7 @@ export function NodeView() {
                         >
                             {sortDir() === 'asc' ? '↑' : '↓'}
                         </button>
-                        <label class="ml-4 flex items-center gap-1">
+                        <label class="flex items-center gap-1 text-muted">
                             <input
                                 type="checkbox"
                                 checked={showDotfiles()}
@@ -701,34 +732,117 @@ export function NodeView() {
                                     setShowDotfiles(e.target.checked)
                                 }
                             />
-                            Show dotfiles
+                            Dotfiles
                         </label>
+                    </div>
+
+                    {/* ── Grid principal único ── */}
+                    <section class="flex-1">
+                        <Show
+                            when={
+                                sortedFolders().length > 0 ||
+                                sortedFiles().length > 0
+                            }
+                            fallback={
+                                <p class="text-sm text-muted">
+                                    This folder is empty
+                                </p>
+                            }
+                        >
+                            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
+                                <For each={sortedFolders()}>
+                                    {nodeItem => (
+                                        <NodeCard
+                                            node={nodeItem}
+                                            onClick={n =>
+                                                navigate(`/nodes/${n.id}`)
+                                            }
+                                            onDelete={
+                                                canDeleteNode(
+                                                    role(),
+                                                    nodeItem.access_level
+                                                )
+                                                    ? () => handleDelete(nodeItem)
+                                                    : undefined
+                                            }
+                                        />
+                                    )}
+                                </For>
+                                <For each={sortedFiles()}>
+                                    {fileNode => (
+                                        <DocCard
+                                            node={fileNode}
+                                            doc={fileNode.doc}
+                                            onDownload={handleDownload}
+                                            onDelete={
+                                                canDeleteNode(
+                                                    role(),
+                                                    fileNode.access_level
+                                                )
+                                                    ? handleDeleteDoc
+                                                    : undefined
+                                            }
+                                        />
+                                    )}
+                                </For>
+                            </div>
+                        </Show>
                     </section>
 
-                    <section class="mt-4">
-                        <h3 class="font-serif text-lg mb-2">Comments</h3>
-                        <CommentsList
-                            comments={comments()}
-                            loading={commentsLoading()}
-                            currentUsrId={auth.state.usr?.id}
-                            isSuper={auth.role() === 'super_usr_role'}
-                            onEdit={handleUpdateComment}
-                            onDelete={cId =>
-                                deleteComment(cId).then(
-                                    isSuccess => {
+                    <Show when={!isFolderNode()}>
+                        <DocCard doc={nodeData()?.doc} />
+                    </Show>
+                </Show>
+
+                <Show when={!isFolderNode() && nodeData()?.type === 'file'}>
+                    <DocCard doc={nodeData()?.doc} />
+                </Show>
+
+                {/* ── Comentarios: drawer lateral con toggle ── */}
+                <Show when={showComments() && isFolderNode()}>
+                    <div
+                        class="fixed inset-0 z-40 bg-black/30 sm:hidden"
+                        onClick={() => setShowComments(false)}
+                        aria-hidden="true"
+                    />
+                    <aside
+                        role="complementary"
+                        aria-label="Comments"
+                        class="fixed top-0 right-0 h-full w-full sm:w-96 z-50 bg-surface border-l border-border shadow-md flex flex-col overflow-hidden"
+                    >
+                        <div class="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+                            <h3 class="font-serif text-lg text-ink-dark">
+                                Comments
+                            </h3>
+                            <button
+                                type="button"
+                                aria-label="Close comments"
+                                class="text-muted hover:text-ink px-1 text-lg cursor-pointer"
+                                onClick={() => setShowComments(false)}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+                            <CommentsList
+                                comments={comments()}
+                                loading={commentsLoading()}
+                                currentUsrId={auth.state.usr?.id}
+                                isSuper={auth.role() === 'super_usr_role'}
+                                onEdit={handleUpdateComment}
+                                onDelete={cId =>
+                                    deleteComment(cId).then(isSuccess => {
                                         if (isSuccess) refreshComments()
                                         return isSuccess
-                                    }
-                                )
-                            }
-                        />
-                        <Show
-                            when={canCommentOnNode(
-                                auth.role(),
-                                nodeData()?.access_level
-                            )}
-                        >
-                            <div class="mt-4">
+                                    })
+                                }
+                            />
+                            <Show
+                                when={canCommentOnNode(
+                                    auth.role(),
+                                    nodeData()?.access_level
+                                )}
+                            >
                                 <CommentForm
                                     loading={addingComment()}
                                     onSubmit={async content => {
@@ -751,21 +865,10 @@ export function NodeView() {
                                         refreshComments()
                                     }}
                                 />
-                            </div>
-                        </Show>
-                    </section>
+                            </Show>
+                        </div>
+                    </aside>
                 </Show>
-
-                <NodeForm
-                    open={showForm()}
-                    node={editingNode()}
-                    loading={updating() || deleting()}
-                    onSubmit={handleUpdate}
-                    onClose={() => {
-                        setShowForm(false)
-                        setEditingNode(null)
-                    }}
-                />
 
                 <NodeForm
                     open={showCreate()}

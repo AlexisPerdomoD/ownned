@@ -1,3 +1,5 @@
+import { splitProps } from 'solid-js'
+
 const variants = {
     primary: 'bg-ink-dark text-bg border-ink-dark hover:bg-ink',
     ghost: 'bg-transparent text-ink border-border hover:bg-bg-2',
@@ -23,18 +25,19 @@ const sizes = {
  * @param {import('solid-js').JSX.ButtonHTMLAttributes<HTMLButtonElement>} props
  * @returns {import('solid-js').JSX.Element}
  */
-export function Button({
-    variant = 'ghost',
-    size = 'md',
-    loading = false,
-    class: cls = '',
-    disabled,
-    children,
-    ...props
-}) {
+export function Button(props) {
+    // NOTE: no se destructuran props: disabled/loading podrían cambiar en runtime.
+    const [own, rest] = splitProps(props, [
+        'variant',
+        'size',
+        'loading',
+        'class',
+        'disabled',
+        'children'
+    ])
     return (
         <button
-            disabled={disabled || loading}
+            disabled={own.disabled || own.loading}
             class={`
                 inline-flex items-center justify-center gap-2
                 font-sans font-normal tracking-wide
@@ -42,14 +45,14 @@ export function Button({
                 transition-all duration-base
                 cursor-pointer select-none
                 disabled:opacity-40 disabled:cursor-not-allowed
-                ${variants[variant]} ${sizes[size]} ${cls}
+                ${variants[own.variant ?? 'ghost']} ${sizes[own.size ?? 'md']} ${own.class ?? ''}
             `}
-            {...props}
+            {...rest}
         >
-            {loading && (
+            {own.loading && (
                 <span class="w-3.5 h-3.5 border border-current border-t-transparent rounded-full animate-spin" />
             )}
-            {children}
+            {own.children}
         </button>
     )
 }

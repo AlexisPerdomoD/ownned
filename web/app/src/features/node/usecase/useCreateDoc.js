@@ -6,13 +6,13 @@ import { reqForm } from '@/shared/api/client'
 /**
  * @param {() => string} getParentId - function that returns the parent node ID
  * @param {() => void} [onSuccess] - callback when upload succeeds
- * @returns {{ upload: (file: File, description?: string) => Promise<[boolean, any]>, loading: () => boolean }}
+ * @returns {{ upload: (file: File, description?: string, parentIdOverride?: string) => Promise<[boolean, any]>, loading: () => boolean }}
  */
 export function useCreateDoc(getParentId, onSuccess) {
     const [loading, setLoading] = createSignal(false)
 
-    const upload = async (file, description = '') => {
-        const parentId = getParentId()
+    const upload = async (file, description = '', parentIdOverride) => {
+        const parentId = parentIdOverride ?? getParentId()
         if (!parentId) return [false, { general: 'No parent folder selected' }]
 
         const [valid, dto] = buildCreateDocDTO(parentId, description)
@@ -32,7 +32,13 @@ export function useCreateDoc(getParentId, onSuccess) {
             onSuccess?.()
             return [true, doc]
         } catch (e) {
-            return [false, { general: e.message }]
+            return [
+                false,
+                {
+                    general:
+                        e?.message || e?.detail?.reason || 'Upload failed'
+                }
+            ]
         } finally {
             setLoading(false)
         }

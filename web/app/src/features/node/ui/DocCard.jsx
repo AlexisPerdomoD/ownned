@@ -1,9 +1,9 @@
-import { Badge, Button, Card } from '@shared/ui'
+import { Show, splitProps } from 'solid-js'
 
 const DocumentIcon = () => (
     <svg
-        width="18"
-        height="18"
+        width="32"
+        height="32"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -13,24 +13,8 @@ const DocumentIcon = () => (
     >
         <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
         <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-        <path d="M10 9H8" />
-        <path d="M16 13H8" />
-        <path d="M16 17H8" />
-    </svg>
-)
-
-const EditIcon = () => (
-    <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-    >
-        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+        <line x1="9" y1="13" x2="15" y2="13" />
+        <line x1="9" y1="17" x2="13" y2="17" />
     </svg>
 )
 
@@ -46,7 +30,7 @@ const TrashIcon = () => (
         stroke-linejoin="round"
     >
         <path d="M3 6h18" />
-        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-2-2-2V6" />
         <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
     </svg>
 )
@@ -68,133 +52,95 @@ const DownloadIcon = () => (
     </svg>
 )
 
-const formatDate = dateStr => {
-    if (!dateStr) return ''
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
-    })
-}
-
-const formatRelativeDate = dateStr => {
-    if (!dateStr) return ''
-    const date = new Date(dateStr)
-    const now = new Date()
-    const diffMs = now - date
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-    if (diffDays === 0) return 'Today'
-    if (diffDays === 1) return 'Yesterday'
-    if (diffDays < 7) return `${diffDays} days ago`
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`
-    return formatDate(dateStr)
-}
-
 /**
- * Card component for displaying a document.
+ * Tile compacto estilo Drive para un documento.
  *
  * @param {Object} props
- * @param {import('@entities/nodes').Doc} doc()
- * @param {(doc: import('@entities/nodes').Doc) => void} [props.onClick] - Callback when card is clicked
- * @param {(doc: import('@entities/nodes').Doc) => void} [props.onDownload] - Callback for download action
- * @param {(doc: import('@entities/nodes').Doc) => void} [props.onDelete] - Callback for delete action
+ * @param {import('@entities/nodes').Doc} props.doc
+ * @param {(doc: import('@entities/nodes').Doc) => void} [props.onClick]
+ * @param {(doc: import('@entities/nodes').Doc) => void} [props.onDownload]
+ * @param {(doc: import('@entities/nodes').Doc) => void} [props.onDelete]
  * @param {string} [props.class]
  */
 export function DocCard(props) {
+    const [own, rest] = splitProps(props, [
+        'doc',
+        'node',
+        'onClick',
+        'onDownload',
+        'onDelete'
+    ])
+
     const doc = () =>
-        props.doc ?? {
-            title: props.node?.name ?? 'Document',
-            description: props.node?.description,
-            created_at: props.node?.created_at,
-            updated_at: props.node?.updated_at
+        own.doc ?? {
+            title: own.node?.name ?? 'Document',
+            description: own.node?.description,
+            created_at: own.node?.created_at,
+            updated_at: own.node?.updated_at
         }
 
     return (
-        <Card
-            hoverable={!!props.onClick}
-            class={`aspect-square flex flex-col items-center justify-center ${props.cls}`}
-            role={props.onClick ? 'button' : undefined}
-            tabIndex={props.onClick ? 0 : undefined}
+        <div
+            role="button"
+            tabIndex={0}
+            aria-label={doc().title ?? 'Document'}
+            onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    own.onClick?.(doc())
+                }
+            }}
+            class="group relative aspect-square flex flex-col items-center justify-center gap-2 p-3 text-center bg-surface border border-border rounded-sm cursor-pointer transition-colors duration-base hover:border-accent hover:bg-bg-2 focus-visible:outline-none focus-visible:border-accent"
+            onClick={() => own.onClick?.(doc())}
+            {...rest}
         >
-            <Card.Body
-                class="flex items-start gap-3"
-                onClick={() => props.onClick?.(doc())}
-            >
-                <span class="flex items-center justify-center shrink-0 w-10 h-10 rounded-sm bg-accent-pale text-accent">
-                    <DocumentIcon />
-                </span>
-
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2 mb-1">
-                        <Badge variant="accent" dot>
-                            Document
-                        </Badge>
-                    </div>
-
-                    <h3 class="font-serif text-base text-ink-dark truncate leading-snug">
-                        {doc().title}
-                    </h3>
-
-                    {doc().description && (
-                        <p class="text-sm text-muted mt-1 leading-relaxed line-clamp-2">
-                            {doc().description}
-                        </p>
-                    )}
-                </div>
-            </Card.Body>
-
-            <Card.Footer>
-                <div class="flex items-center gap-3 text-xs text-muted">
-                    <span
-                        title={`Created: ${formatDate(doc().created_at)}`}
+            <div class="absolute top-1.5 right-1.5 flex gap-0.5">
+                <Show when={own.onDownload}>
+                    <button
+                        type="button"
+                        aria-label="Download"
+                        title="Download"
+                        class="p-1.5 rounded-xs text-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-ink transition-opacity"
+                        onClick={e => {
+                            e.stopPropagation()
+                            own.onDownload(doc())
+                        }}
                     >
-                        Created {formatRelativeDate(doc().created_at)}
-                    </span>
-                    {doc().updated_at !== doc().created_at && (
-                        <span
-                            title={`Last updated: ${formatDate(doc().updated_at)}`}
-                        >
-                            Edited {formatRelativeDate(doc().updated_at)}
-                        </span>
-                    )}
-                </div>
+                        <DownloadIcon />
+                    </button>
+                </Show>
+                <Show when={own.onDelete}>
+                    <button
+                        type="button"
+                        aria-label="Delete"
+                        title="Delete"
+                        class="p-1.5 rounded-xs text-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-danger hover:bg-red-50 dark:hover:bg-red-950 transition-opacity"
+                        onClick={e => {
+                            e.stopPropagation()
+                            own.onDelete(doc())
+                        }}
+                    >
+                        <TrashIcon />
+                    </button>
+                </Show>
+            </div>
 
-                {(props.onDownload || props.onDelete) && (
-                    <div class="flex items-center gap-1">
-                        {props.onDownload && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={e => {
-                                    e.stopPropagation()
-                                    props.onDownload(doc())
-                                }}
-                                class="p-1.5"
-                                title="Download"
-                            >
-                                <DownloadIcon />
-                            </Button>
-                        )}
-                        {props.onDelete && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={e => {
-                                    e.stopPropagation()
-                                    props.onDelete(doc())
-                                }}
-                                class="p-1.5 text-danger hover:bg-red-50 dark:hover:bg-red-950"
-                                title="Delete"
-                            >
-                                <TrashIcon />
-                            </Button>
-                        )}
-                    </div>
-                )}
-            </Card.Footer>
-        </Card>
+            <span class="flex items-center justify-center w-12 h-12 rounded-sm bg-accent-pale text-accent shrink-0">
+                <DocumentIcon />
+            </span>
+
+            <h3
+                class="w-full font-serif text-sm text-ink-dark leading-snug line-clamp-2 break-words"
+                title={doc().title}
+            >
+                {doc().title || 'Untitled'}
+            </h3>
+
+            <p class="w-full text-[11px] text-muted truncate">
+                {doc().mime_type ?? 'Document'}
+            </p>
+        </div>
     )
 }
+
+export default DocCard
