@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 	"uuid"
 
@@ -158,21 +159,109 @@ var sqlConstraintReasons = map[string]string{
 	"group_usrs_pk":        "user already has access to this group",
 }
 
+// extractSQLConflictValue pulls the conflicting key/row shown by PostgreSQL in
+// its DETAIL field (e.g. "Key (name)=(foo) already exists."). Best-effort: it
+// returns "" when the format is not recognized.
+func extractSQLConflictValue(detail string) string {
+	if i := strings.Index(detail, "Key ("); i >= 0 {
+		if j := strings.Index(detail[i:], ")=("); j >= 0 {
+			start := i + j + len(")=(")
+			if end := strings.LastIndex(detail, ")"); end > start {
+				return detail[start:end]
+			}
+		}
+	}
+
+	const failingRow = "Failing row contains ("
+	if i := strings.Index(detail, failingRow); i >= 0 {
+		start := i + len(failingRow)
+		if end := strings.LastIndex(detail, ")"); end > start {
+			return detail[start:end]
+		}
+	}
+
+	return ""
+}
+
+// lastTupleValue returns the last element of a PostgreSQL DETAIL key tuple
+// like "parent, name" (used by ux_nodes_parent_name to reach the node name).
+func lastTupleValue(tuple string) string {
+	if i := strings.LastIndex(tuple, ", "); i >= 0 {
+		return strings.TrimSpace(tuple[i+len(", "):])
+	}
+	return strings.TrimSpace(tuple)
+}
+
+func isUUIDValue(s string) bool {
+	_, err := uuid.Parse(strings.TrimSpace(s))
+	return err == nil
+}
+
+// sqlIDReason returns the generic user-facing message for conflicts driven by
+// resource ids, where echoing the value back adds no information.
+func sqlIDReason(constraint string) string {
+	switch {
+	case strings.HasSuffix(constraint, "_fk"):
+		return "other resources depend on this one and prevent the operation"
+	case strings.HasSuffix(constraint, "_pk"):
+		return "a resource with this id already exists"
+	default:
+		return "a resource conflict was detected"
+	}
+}
+
 func sqlErrorView(err *pq.Error) *ErrView {
 	mapping, ok := sqlErrorMap[string(err.Code)]
 	if !ok {
 		mapping = sqlErrorMapping{Code: http.StatusInternalServerError, Message: "internal error"}
 	}
 
-	reason := err.Message
-	if r, ok := sqlConstraintReasons[err.Constraint]; ok {
-		reason = r
-	} else if err.Detail != "" {
-		reason = err.Detail
+	reason, _ := sqlConstraintReasons[err.Constraint]
+
+	// NOTE: PostgreSQL exposes the conflicting key/row in its DETAIL field;
+	// surface that value in the user-facing reason unless it is a resource id.
+	conflictingValue := extractSQLConflictValue(err.Detail)
+	conflictingValueIsID := conflictingValue != "" &&
+		(strings.HasSuffix(err.Constraint, "_pk") ||
+			strings.HasSuffix(err.Constraint, "_fk") ||
+			isUUIDValue(lastTupleValue(conflictingValue)))
+
+	var conflictingValueShown bool
+	switch {
+	case conflictingValue == "":
+		// no conflicting value to show
+
+	case conflictingValueIsID:
+		// ids are noise for the client; keep a generic reason
+		if reason == "" {
+			reason = sqlIDReason(err.Constraint)
+		}
+
+	case err.Constraint == "ux_nodes_parent_name":
+		reason = fmt.Sprintf("a node with name %q already exists in the same directory", lastTupleValue(conflictingValue))
+		conflictingValueShown = true
+
+	default:
+		if reason == "" {
+			reason = err.Message
+		}
+		reason = fmt.Sprintf("%s (%s)", reason, conflictingValue)
+		conflictingValueShown = true
+	}
+
+	if reason == "" {
+		if err.Detail != "" {
+			reason = err.Detail
+		} else {
+			reason = err.Message
+		}
 	}
 
 	detail := make(map[string]string)
 	detail["reason"] = reason
+	if conflictingValueShown {
+		detail["conflicting_value"] = conflictingValue
+	}
 	if err.Code != "" {
 		detail["sql_state"] = string(err.Code)
 		if name := err.Code.Name(); name != "" {
@@ -199,6 +288,25 @@ func sqlErrorView(err *pq.Error) *ErrView {
 		elog.Error("sql error happened", "err", err, "stack", debug.Stack())
 	}
 
+	return view
+}
+
+func errView(err error) *ErrView {
+	if err == nil {
+		elog.Warn("empty error provided", "stack", debug.Stack())
+		return &ErrView{}
+	}
+
+	if errors.Is(err, auth.ErrExpiredToken) || errors.Is(err, auth.ErrInvalidToken) {
+		detail := make(map[string]string)
+		detail["reason"] = err.Error()
+		return &ErrView{
+			Code:    http.StatusUnauthorized,
+			Message: "invalid credentials",
+			Detail:  detail,
+		}
+	}
+
 	if errors.Is(err, sql.ErrNoRows) {
 		detail := make(map[string]string)
 		detail["reason"] = "resource not found"
@@ -215,25 +323,6 @@ func sqlErrorView(err *pq.Error) *ErrView {
 		return &ErrView{
 			Code:    http.StatusServiceUnavailable,
 			Message: "service unavailable",
-			Detail:  detail,
-		}
-	}
-
-	return view
-}
-
-func errView(err error) *ErrView {
-	if err == nil {
-		elog.Warn("empty error provided", "stack", debug.Stack())
-		return &ErrView{}
-	}
-
-	if errors.Is(err, auth.ErrExpiredToken) || errors.Is(err, auth.ErrInvalidToken) {
-		detail := make(map[string]string)
-		detail["reason"] = err.Error()
-		return &ErrView{
-			Code:    http.StatusUnauthorized,
-			Message: "invalid credentials",
 			Detail:  detail,
 		}
 	}
