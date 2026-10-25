@@ -16,7 +16,8 @@ export function usePaginateNodes() {
                 rootId,
                 page: opts.page ?? page(),
                 limit: opts.limit ?? 10,
-                search: opts.search ?? search()
+                search: opts.search ?? search(),
+                type: opts.type
             })
             setResults(res.data ?? res.items ?? [])
             setTotal(res.total ?? 0)

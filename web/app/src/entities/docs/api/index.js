@@ -1,6 +1,7 @@
 import z from 'zod'
 
 import { reqBlob, reqJSON } from '@/shared/api/client'
+import { APP_MODE } from '@/shared/config/env'
 
 export class CreateDocDTO {
     static #schema = z.strictObject({
@@ -71,4 +72,10 @@ export async function apiDownloadDoc(docId, filename) {
 
 export async function apiDownloadFolder(nodeId) {
     await reqBlob(`/api/v1/nodes/${nodeId}/download`)
+}
+
+/** URL directa de descarga (para abrir en otra pestaña; la cookie añade auth). */
+export function apiDocURL(docId) {
+    const base = APP_MODE === 'local' ? 'http://localhost:3000' : undefined
+    return new URL(`/api/v1/nodes/docs/${docId}/download`, base).toString()
 }

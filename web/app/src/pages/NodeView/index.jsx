@@ -1,6 +1,10 @@
 import { For, Show, createEffect, createSignal } from 'solid-js'
 
-import { apiDownloadDoc, apiDownloadFolder } from '@/entities/docs/api'
+import {
+    apiDocURL,
+    apiDownloadDoc,
+    apiDownloadFolder
+} from '@/entities/docs/api'
 import { CommentForm, CommentsList } from '@/features/comments/ui/CommentsList'
 import {
     useCreateComment,
@@ -8,7 +12,7 @@ import {
     useGetComments,
     useUpdateComment
 } from '@/features/comments/usecase'
-import { DocCard, NodeCard, NodeList } from '@/features/node/ui'
+import { DocCard, NodeCard } from '@/features/node/ui'
 import {
     useCreateDoc,
     useCreateFolder,
@@ -34,6 +38,128 @@ import {
 import { useNavigate, useParams } from '@solidjs/router'
 
 const MIN_SEARCH_CHARS = 2
+
+const isViewableMime = mime =>
+    /^(image\/|text\/|application\/pdf)/.test(mime ?? '')
+
+const formatBytes = bytes => {
+    if (!bytes) return '0 B'
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
+}
+
+const formatRelativeDate = dateStr => {
+    if (!dateStr) return ''
+    const diffDays = Math.floor((new Date() - new Date(dateStr)) / 86400000)
+    if (diffDays <= 0) return 'Today'
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 30)
+        return new Date(dateStr).toLocaleDateString('es-ES', {
+            month: 'short',
+            day: 'numeric'
+        })
+    return new Date(dateStr).toLocaleDateString('es-ES', {
+        month: 'short',
+        year: 'numeric'
+    })
+}
+
+const FolderRowIcon = () => (
+    <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+    >
+        <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
+    </svg>
+)
+
+const FileRowIcon = () => (
+    <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+    >
+        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+        <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+    </svg>
+)
+
+const TrashRowIcon = () => (
+    <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+    >
+        <path d="M3 6h18" />
+        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-2-2-2V6" />
+        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+    </svg>
+)
+
+const DownloadRowIcon = () => (
+    <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+    >
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+)
+
+/**
+ * Fila compacta estilo lista (search dropdown y vista lista).
+ *
+ * @param {Object} props
+ * @param {import('solid-js').JSX.Element} props.icon
+ * @param {import('solid-js').JSX.Element} props.title
+ * @param {import('solid-js').JSX.Element} [props.subtitle]
+ * @param {() => void} [props.onOpen]
+ * @param {import('solid-js').JSX.Element} [props.actions]
+ */
+function CompactItemRow(props) {
+    return (
+        <div
+            class="group flex items-center gap-3 px-3 py-2 border-b border-border-subtle last:border-b-0 hover:bg-bg-2 cursor-pointer"
+            onClick={() => props.onOpen?.()}
+        >
+            <span class="shrink-0 text-muted">{props.icon}</span>
+            <div class="min-w-0 flex-1">
+                <div class="text-sm text-ink-dark truncate">{props.title}</div>
+                <Show when={props.subtitle}>
+                    <div class="text-xs text-muted truncate">
+                        {props.subtitle}
+                    </div>
+                </Show>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">{props.actions}</div>
+        </div>
+    )
+}
 
 function NodeForm(props) {
     const [name, setName] = createSignal('')
@@ -139,12 +265,16 @@ export function NodeView() {
     const [fileInput, setFileInput] = createSignal(null)
     const [folderInput, setFolderInput] = createSignal(null)
     const [showComments, setShowComments] = createSignal(false)
+    const [viewMode, setViewMode] = createSignal(
+        localStorage.getItem('owned.viewMode') ?? 'grid'
+    )
 
     const pager = usePaginateNodes()
     const docsPager = usePaginateDocs()
     const [searchInput, setSearchInput] = createSignal('')
     const [searchScope, setSearchScope] = createSignal('folder') // 'folder' | 'global'
     const [showAdvanced, setShowAdvanced] = createSignal(false)
+    const [searchOpen, setSearchOpen] = createSignal(false)
     const [docMime, setDocMime] = createSignal('')
     const [docMinSize, setDocMinSize] = createSignal('')
     const [docMaxSize, setDocMaxSize] = createSignal('')
@@ -154,12 +284,20 @@ export function NodeView() {
         localStorage.getItem('owned.showDotfiles') === 'true'
     )
 
-    // persist dotfile preference (D6)
+    // persist preferences (D6)
     createEffect(() => {
         localStorage.setItem('owned.showDotfiles', String(showDotfiles()))
     })
+    createEffect(() => {
+        localStorage.setItem('owned.viewMode', viewMode())
+    })
 
-    // debounce search (>=300ms, min 2 chars); advanced mode queries docs
+    // NOTE: en paginación el backend no envía display_path; se usa el name.
+    // Cuando el backend lo incluya la UI lo consumirá sin cambios.
+    const parentPath = () =>
+        nodeData()?.display_path || nodeData()?.name || ''
+
+    // debounce search (>=300ms, min 2 chars folders-only in node mode)
     const runSearch = async page => {
         const q = searchInput().trim()
         if (q.length < MIN_SEARCH_CHARS) return
@@ -176,7 +314,12 @@ export function NodeView() {
                 maxSize: docMaxSize() || undefined
             })
         } else {
-            await pager.run(rootId, { page, limit: 10, search: q })
+            await pager.run(rootId, {
+                page,
+                limit: 10,
+                search: q,
+                type: 'folder'
+            })
         }
     }
 
@@ -280,14 +423,13 @@ export function NodeView() {
             })
             return
         }
-        toast({ type: 'success', message: 'File uploaded successfully' })
         refresh()
     }
 
     const handleFilePickerChange = e => {
         const files = Array.from(e.target?.files ?? [])
         if (files.length) {
-            // sequential to keep feed order and avoid parallel server state races
+            // sequential to avoid parallel server state races
             files.reduce(async (acc, f) => {
                 await acc
                 return handleUpload(f)
@@ -437,12 +579,61 @@ export function NodeView() {
             hour: '2-digit',
             minute: '2-digit'
         })
-    const displayName = () =>
-        nodeData()?.name || nodeData()?.display_path || 'Node'
 
     const searchResultItems = () =>
         showAdvanced() ? docsPager.results() : pager.results()
     const searchPage = () => (showAdvanced() ? docsPager.page() : pager.page())
+    const hasSearchQuery = () => searchInput().trim().length >= MIN_SEARCH_CHARS
+
+    // rows for list view and search dropdown
+    const folderRowActions = folderNode => (
+        <Show when={canDeleteNode(role(), folderNode.access_level)}>
+            <button
+                type="button"
+                aria-label={`Delete ${folderNode.name}`}
+                class="p-1.5 rounded-xs text-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-danger transition-opacity"
+                onClick={e => {
+                    e.stopPropagation()
+                    handleDelete(folderNode)
+                }}
+            >
+                <TrashRowIcon />
+            </button>
+        </Show>
+    )
+
+    const fileRowActions = fileNode => (
+        <>
+            <Show when={fileNode.doc}>
+                <button
+                    type="button"
+                    aria-label="Download"
+                    title="Download"
+                    class="p-1.5 rounded-xs text-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-ink transition-opacity"
+                    onClick={e => {
+                        e.stopPropagation()
+                        handleDownload(fileNode.doc)
+                    }}
+                >
+                    <DownloadRowIcon />
+                </button>
+            </Show>
+            <Show when={canDeleteNode(role(), fileNode.access_level)}>
+                <button
+                    type="button"
+                    aria-label="Delete"
+                    title="Delete"
+                    class="p-1.5 rounded-xs text-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-danger transition-opacity"
+                    onClick={e => {
+                        e.stopPropagation()
+                        handleDeleteDoc(fileNode.doc ?? fileNode)
+                    }}
+                >
+                    <TrashRowIcon />
+                </button>
+            </Show>
+        </>
+    )
 
     return (
         <section class="flex flex-col p-4 sm:p-6">
@@ -450,7 +641,7 @@ export function NodeView() {
                 when={!loading()}
                 fallback={<Spinner size="lg" class="mx-auto mt-20" />}
             >
-                {/* ── Header: título/descr/metas a la izquierda, acciones a la derecha ── */}
+                {/* ── Header: título (+ ruta), metas y acciones ── */}
                 <header class="mb-6">
                     <a
                         href="/nodes"
@@ -461,8 +652,13 @@ export function NodeView() {
                     <div class="mt-2 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div class="min-w-0">
                             <h1 class="font-serif text-2xl text-ink-dark truncate">
-                                {displayName()}
+                                {nodeData()?.name || 'Node'}
                             </h1>
+                            <Show when={parentPath()}>
+                                <p class="text-xs text-muted mt-0.5 truncate">
+                                    {parentPath()}
+                                </p>
+                            </Show>
                             <p class="text-sm text-muted mt-1">
                                 {isFolderNode() ? 'Folder' : 'File'}
                                 {' · '}
@@ -563,145 +759,281 @@ export function NodeView() {
                         </Button>
                     </div>
 
-                    {/* ── Search en la parte superior ── */}
-                    <section class="mb-5 flex flex-col gap-2">
+                    {/* ── Search flotante ── */}
+                    <section class="relative z-30 mb-5">
                         <div class="flex flex-wrap items-center gap-2">
                             <input
                                 type="text"
-                                placeholder={`Search nodes (min ${MIN_SEARCH_CHARS} characters)...`}
+                                placeholder={`Search folders (min ${MIN_SEARCH_CHARS} characters)...`}
                                 value={searchInput()}
                                 onInput={e => setSearchInput(e.target.value)}
-                                class="flex-1 min-w-48 font-sans font-light text-sm text-ink-dark bg-surface border border-border rounded-xs px-3 py-2 focus:outline-none focus:border-ink"
+                                onFocus={() => setSearchOpen(true)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Escape')
+                                        setSearchOpen(false)
+                                }}
+                                class="w-full max-w-xl font-sans font-light text-sm text-ink-dark bg-surface border border-border rounded-xs px-3 py-2 focus:outline-none focus:border-ink"
                             />
-                            <select
-                                value={searchScope()}
-                                onChange={e => setSearchScope(e.target.value)}
-                                class="bg-surface border border-border rounded-xs px-2 py-2 text-sm"
-                            >
-                                <option value="folder">This folder</option>
-                                <option value="global">Global</option>
-                            </select>
-                            <button
-                                type="button"
-                                class="text-xs text-muted underline"
-                                onClick={() => setShowAdvanced(v => !v)}
-                            >
-                                {showAdvanced()
-                                    ? 'Hide'
-                                    : 'Show'}{' '}
-                                advanced document search
-                            </button>
+                            <div class="flex items-center rounded-xs border border-border overflow-hidden shrink-0 text-sm">
+                                <button
+                                    type="button"
+                                    class={`px-3 py-1.5 cursor-pointer transition-colors ${
+                                        searchScope() === 'folder'
+                                            ? 'bg-bg-2 text-ink'
+                                            : 'text-muted hover:bg-bg-2'
+                                    }`}
+                                    onClick={() => setSearchScope('folder')}
+                                    title="Search inside the current folder"
+                                >
+                                    📂 Current folder
+                                </button>
+                                <button
+                                    type="button"
+                                    class={`px-3 py-1.5 cursor-pointer border-l border-border transition-colors ${
+                                        searchScope() === 'global'
+                                            ? 'bg-bg-2 text-ink'
+                                            : 'text-muted hover:bg-bg-2'
+                                    }`}
+                                    onClick={() => setSearchScope('global')}
+                                    title="Search everywhere"
+                                >
+                                    🌐 Everywhere
+                                </button>
+                            </div>
                         </div>
+                        <button
+                            type="button"
+                            class="mt-1.5 text-xs text-muted underline self-start"
+                            onClick={() => setShowAdvanced(v => !v)}
+                        >
+                            {showAdvanced()
+                                ? 'Hide filters'
+                                : 'Search documents with filters'}
+                        </button>
+
+                        {/* Filtros avanzados organizados */}
                         <Show when={showAdvanced()}>
-                            <div class="flex flex-wrap items-center gap-2 text-sm">
-                                <input
-                                    type="text"
-                                    placeholder="mimetype"
-                                    value={docMime()}
-                                    onInput={e => setDocMime(e.target.value)}
-                                    class="bg-surface border border-border rounded-xs px-2 py-1"
-                                />
-                                <input
-                                    type="number"
-                                    placeholder="min size (bytes)"
-                                    value={docMinSize()}
-                                    onInput={e => setDocMinSize(e.target.value)}
-                                    class="bg-surface border border-border rounded-xs px-2 py-1 w-32"
-                                />
-                                <input
-                                    type="number"
-                                    placeholder="max size (bytes)"
-                                    value={docMaxSize()}
-                                    onInput={e => setDocMaxSize(e.target.value)}
-                                    class="bg-surface border border-border rounded-xs px-2 py-1 w-32"
-                                />
+                            <div class="mt-2 flex flex-wrap items-end gap-3 max-w-xl bg-bg-2 border border-border-subtle rounded-sm px-3 py-2">
+                                <label class="flex flex-col gap-0.5 text-xs text-muted">
+                                    Mimetype
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. application/pdf"
+                                        value={docMime()}
+                                        onInput={e =>
+                                            setDocMime(e.target.value)
+                                        }
+                                        class="bg-surface border border-border rounded-xs px-2 py-1 text-sm w-48"
+                                    />
+                                </label>
+                                <label class="flex flex-col gap-0.5 text-xs text-muted">
+                                    Min size
+                                    <input
+                                        type="number"
+                                        placeholder="0"
+                                        min="0"
+                                        value={docMinSize()}
+                                        onInput={e =>
+                                            setDocMinSize(e.target.value)
+                                        }
+                                        class="bg-surface border border-border rounded-xs px-2 py-1 text-sm w-24"
+                                    />
+                                </label>
+                                <label class="flex flex-col gap-0.5 text-xs text-muted">
+                                    Max size
+                                    <input
+                                        type="number"
+                                        placeholder="∞"
+                                        min="0"
+                                        value={docMaxSize()}
+                                        onInput={e =>
+                                            setDocMaxSize(e.target.value)
+                                        }
+                                        class="bg-surface border border-border rounded-xs px-2 py-1 text-sm w-24"
+                                    />
+                                </label>
+                                <button
+                                    type="button"
+                                    class="text-xs text-muted underline pb-1"
+                                    onClick={() => {
+                                        setDocMime('')
+                                        setDocMinSize('')
+                                        setDocMaxSize('')
+                                    }}
+                                >
+                                    Clear
+                                </button>
+                            </div>
+                        </Show>
+
+                        {/* Dropdown flotante de resultados */}
+                        <Show
+                            when={
+                                searchOpen() &&
+                                hasSearchQuery() &&
+                                searchResultItems().length > 0
+                            }
+                        >
+                            <div
+                                class="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-sm shadow-lg max-h-96 overflow-y-auto"
+                                role="listbox"
+                                aria-label="Search results"
+                            >
+                                <div class="sticky top-0 bg-surface border-b border-border-subtle flex items-center justify-between px-3 py-1.5 z-10">
+                                    <span class="text-xs text-muted">
+                                        {showAdvanced()
+                                            ? 'Documents'
+                                            : 'Folders'}
+                                        {' · '}
+                                        page {searchPage()}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        aria-label="Close results"
+                                        class="text-muted hover:text-ink text-sm cursor-pointer"
+                                        onClick={() => setSearchOpen(false)}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                                <Show
+                                    when={!showAdvanced()}
+                                    fallback={
+                                        <>
+                                            <For each={docsPager.results()}>
+                                                {singleDoc => (
+                                                    <CompactItemRow
+                                                        icon={<FileRowIcon />}
+                                                        title={singleDoc.title}
+                                                        subtitle={`${singleDoc.filename} · ${singleDoc.mime_type} · ${formatBytes(singleDoc.size_in_bytes)}`}
+                                                        onOpen={() => {
+                                                            setSearchOpen(false)
+                                                            navigate(
+                                                                `/nodes/${singleDoc.node_id}`
+                                                            )
+                                                        }}
+                                                        actions={
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    aria-label="Download"
+                                                                    title="Download"
+                                                                    class="p-1.5 rounded-xs text-muted hover:text-ink transition-colors"
+                                                                    onClick={e => {
+                                                                        e.stopPropagation()
+                                                                        handleDownload(
+                                                                            singleDoc
+                                                                        )
+                                                                    }}
+                                                                >
+                                                                    <DownloadRowIcon />
+                                                                </button>
+                                                                <Show
+                                                                    when={isViewableMime(
+                                                                        singleDoc.mime_type
+                                                                    )}
+                                                                >
+                                                                    <a
+                                                                        href={apiDocURL(
+                                                                            singleDoc.id
+                                                                        )}
+                                                                        target="_blank"
+                                                                        rel="noopener"
+                                                                        aria-label="Open in browser"
+                                                                        title="Open in browser"
+                                                                        class="p-1.5 rounded-xs text-muted hover:text-ink text-xs"
+                                                                        onClick={e =>
+                                                                            e.stopPropagation()
+                                                                        }
+                                                                    >
+                                                                        ↗
+                                                                    </a>
+                                                                </Show>
+                                                            </>
+                                                        }
+                                                    />
+                                                )}
+                                            </For>
+                                            <div class="flex items-center gap-2 px-3 py-1.5 border-t border-border-subtle text-xs">
+                                                <button
+                                                    type="button"
+                                                    class="text-accent disabled:opacity-40 hover:underline"
+                                                    disabled={searchPage() <= 1}
+                                                    onClick={() =>
+                                                        runSearch(
+                                                            searchPage() - 1
+                                                        )
+                                                    }
+                                                >
+                                                    ← Prev
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="text-accent disabled:opacity-40 hover:underline"
+                                                    disabled={
+                                                        docsPager.results()
+                                                            .length < 10
+                                                    }
+                                                    onClick={() =>
+                                                        runSearch(
+                                                            searchPage() + 1
+                                                        )
+                                                    }
+                                                >
+                                                    Next →
+                                                </button>
+                                            </div>
+                                        </>
+                                    }
+                                >
+                                    <For each={pager.results()}>
+                                        {folderResult => (
+                                            <CompactItemRow
+                                                icon={<FolderRowIcon />}
+                                                title={folderResult.name}
+                                                subtitle={`Folder · updated ${formatRelativeDate(folderResult.updated_at)}`}
+                                                onOpen={() => {
+                                                    setSearchOpen(false)
+                                                    navigate(
+                                                        `/nodes/${folderResult.id}`
+                                                    )
+                                                }}
+                                                actions={folderRowActions(
+                                                    folderResult
+                                                )}
+                                            />
+                                        )}
+                                    </For>
+                                    <div class="flex items-center gap-2 px-3 py-1.5 border-t border-border-subtle text-xs">
+                                        <button
+                                            type="button"
+                                            class="text-accent disabled:opacity-40 disabled:hover:no-underline hover:underline"
+                                            disabled={searchPage() <= 1}
+                                            onClick={() =>
+                                                runSearch(searchPage() - 1)
+                                            }
+                                        >
+                                            ← Prev
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="text-accent disabled:opacity-40 hover:underline"
+                                            disabled={
+                                                pager.results().length < 10
+                                            }
+                                            onClick={() =>
+                                                runSearch(searchPage() + 1)
+                                            }
+                                        >
+                                            Next →
+                                        </button>
+                                    </div>
+                                </Show>
                             </div>
                         </Show>
                     </section>
 
-                    {/* ── Resultados de búsqueda (debajo, solo si hay query) ── */}
-                    <Show
-                        when={
-                            searchInput().trim().length >= MIN_SEARCH_CHARS &&
-                            searchResultItems().length > 0
-                        }
-                    >
-                        <section class="mb-5">
-                            <h4 class="text-sm font-medium text-muted mb-1">
-                                Search results
-                                <span class="ml-2">
-                                    {showAdvanced()
-                                        ? 'documents'
-                                        : 'nodes'}{' '}
-                                    · page {searchPage()}
-                                </span>
-                            </h4>
-                            <Show
-                                when={!showAdvanced()}
-                                fallback={
-                                    <div class="flex flex-col divide-y divide-border-subtle border border-border rounded-sm">
-                                        <For each={docsPager.results()}>
-                                            {singleDoc => (
-                                                <button
-                                                    type="button"
-                                                    class="text-left px-3 py-2 hover:bg-bg-2 focus-visible:bg-bg-2 focus-visible:outline-none"
-                                                    onClick={() =>
-                                                        navigate(
-                                                            `/nodes/${singleDoc.node_id}`
-                                                        )
-                                                    }
-                                                >
-                                                    <div class="text-sm text-ink-dark truncate">
-                                                        {singleDoc.title}
-                                                    </div>
-                                                    <div class="text-xs text-muted truncate">
-                                                        {singleDoc.filename}
-                                                        {' · '}
-                                                        {singleDoc.mime_type}
-                                                        {' · '}
-                                                        {singleDoc.size_in_bytes}{' '}
-                                                        bytes
-                                                    </div>
-                                                </button>
-                                            )}
-                                        </For>
-                                    </div>
-                                }
-                            >
-                                <NodeList
-                                    nodes={pager.results()}
-                                    loading={pager.loading()}
-                                    onNodeClick={n =>
-                                        navigate(`/nodes/${n.id}`)
-                                    }
-                                />
-                            </Show>
-                            <div class="mt-2 flex items-center gap-2 text-sm">
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    disabled={searchPage() <= 1}
-                                    onClick={() =>
-                                        runSearch(searchPage() - 1)
-                                    }
-                                >
-                                    Prev
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    disabled={searchResultItems().length < 10}
-                                    onClick={() =>
-                                        runSearch(searchPage() + 1)
-                                    }
-                                >
-                                    Next
-                                </Button>
-                            </div>
-                        </section>
-                    </Show>
-
-                    {/* ── Sort/dotfiles: fila compacta ── */}
+                    {/* ── Controles: sort, vista, ocultos ── */}
                     <div class="flex flex-wrap items-center gap-2 text-sm mb-2">
                         <select
                             value={sortBy()}
@@ -724,7 +1056,35 @@ export function NodeView() {
                         >
                             {sortDir() === 'asc' ? '↑' : '↓'}
                         </button>
-                        <label class="flex items-center gap-1 text-muted">
+                        <div class="flex items-center rounded-xs border border-border overflow-hidden">
+                            <button
+                                type="button"
+                                aria-label="Grid view"
+                                title="Grid view"
+                                class={`px-2 py-1 cursor-pointer transition-colors ${
+                                    viewMode() === 'grid'
+                                        ? 'bg-bg-2 text-ink'
+                                        : 'text-muted hover:bg-bg-2'
+                                }`}
+                                onClick={() => setViewMode('grid')}
+                            >
+                                ▦
+                            </button>
+                            <button
+                                type="button"
+                                aria-label="List view"
+                                title="List view"
+                                class={`px-2 py-1 cursor-pointer border-l border-border transition-colors ${
+                                    viewMode() === 'list'
+                                        ? 'bg-bg-2 text-ink'
+                                        : 'text-muted hover:bg-bg-2'
+                                }`}
+                                onClick={() => setViewMode('list')}
+                            >
+                                ☰
+                            </button>
+                        </div>
+                        <label class="ml-auto flex items-center gap-1 text-muted">
                             <input
                                 type="checkbox"
                                 checked={showDotfiles()}
@@ -732,11 +1092,11 @@ export function NodeView() {
                                     setShowDotfiles(e.target.checked)
                                 }
                             />
-                            Dotfiles
+                            Show hidden
                         </label>
                     </div>
 
-                    {/* ── Grid principal único ── */}
+                    {/* ── Grid/lista principal único ── */}
                     <section class="flex-1">
                         <Show
                             when={
@@ -749,49 +1109,107 @@ export function NodeView() {
                                 </p>
                             }
                         >
-                            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
-                                <For each={sortedFolders()}>
-                                    {nodeItem => (
-                                        <NodeCard
-                                            node={nodeItem}
-                                            onClick={n =>
-                                                navigate(`/nodes/${n.id}`)
-                                            }
-                                            onDelete={
-                                                canDeleteNode(
-                                                    role(),
-                                                    nodeItem.access_level
-                                                )
-                                                    ? () => handleDelete(nodeItem)
-                                                    : undefined
-                                            }
-                                        />
-                                    )}
-                                </For>
-                                <For each={sortedFiles()}>
-                                    {fileNode => (
-                                        <DocCard
-                                            node={fileNode}
-                                            doc={fileNode.doc}
-                                            onDownload={handleDownload}
-                                            onDelete={
-                                                canDeleteNode(
-                                                    role(),
-                                                    fileNode.access_level
-                                                )
-                                                    ? handleDeleteDoc
-                                                    : undefined
-                                            }
-                                        />
-                                    )}
-                                </For>
-                            </div>
+                            <Show
+                                when={viewMode() === 'grid'}
+                                fallback={
+                                    <div class="border border-border rounded-sm">
+                                        <For each={sortedFolders()}>
+                                            {nodeItem => (
+                                                <CompactItemRow
+                                                    icon={<FolderRowIcon />}
+                                                    title={nodeItem.name}
+                                                    subtitle={`Folder · updated ${formatRelativeDate(nodeItem.updated_at)}`}
+                                                    onOpen={() =>
+                                                        navigate(
+                                                            `/nodes/${nodeItem.id}`
+                                                        )
+                                                    }
+                                                    actions={folderRowActions(
+                                                        nodeItem
+                                                    )}
+                                                />
+                                            )}
+                                        </For>
+                                        <For each={sortedFiles()}>
+                                            {fileNode => (
+                                                <CompactItemRow
+                                                    icon={<FileRowIcon />}
+                                                    title={
+                                                        fileNode.doc?.title ??
+                                                        fileNode.name
+                                                    }
+                                                    subtitle={[
+                                                        'File',
+                                                        fileNode.doc
+                                                            ?.mime_type,
+                                                        fileNode.doc
+                                                            ?.size_in_bytes
+                                                            ? formatBytes(
+                                                                  fileNode
+                                                                      .doc
+                                                                      .size_in_bytes
+                                                              )
+                                                            : null
+                                                        ]
+                                                            .filter(Boolean)
+                                                            .join(' · ')}
+                                                    onOpen={() =>
+                                                        navigate(
+                                                            `/nodes/${fileNode.id}`
+                                                        )
+                                                    }
+                                                    actions={fileRowActions(
+                                                        fileNode
+                                                    )}
+                                                />
+                                            )}
+                                        </For>
+                                    </div>
+                                }
+                            >
+                                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
+                                    <For each={sortedFolders()}>
+                                        {nodeItem => (
+                                            <NodeCard
+                                                node={nodeItem}
+                                                onClick={n =>
+                                                    navigate(`/nodes/${n.id}`)
+                                                }
+                                                onDelete={
+                                                    canDeleteNode(
+                                                        role(),
+                                                        nodeItem.access_level
+                                                    )
+                                                        ? () =>
+                                                              handleDelete(
+                                                                  nodeItem
+                                                              )
+                                                        : undefined
+                                                }
+                                            />
+                                        )}
+                                    </For>
+                                    <For each={sortedFiles()}>
+                                        {fileNode => (
+                                            <DocCard
+                                                node={fileNode}
+                                                doc={fileNode.doc}
+                                                onDownload={handleDownload}
+                                                onDelete={
+                                                    canDeleteNode(
+                                                        role(),
+                                                        fileNode.access_level
+                                                    )
+                                                        ? handleDeleteDoc
+                                                        : undefined
+                                                }
+                                            />
+                                        )}
+                                    </For>
+                                </div>
+                            </Show>
                         </Show>
                     </section>
-
-                    <Show when={!isFolderNode()}>
-                        <DocCard doc={nodeData()?.doc} />
-                    </Show>
                 </Show>
 
                 <Show when={!isFolderNode() && nodeData()?.type === 'file'}>
