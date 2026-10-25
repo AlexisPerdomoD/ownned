@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
@@ -15,6 +16,8 @@ import (
 	"ownned/internal/domain"
 
 	"github.com/go-playground/validator/v10"
+
+	"github.com/lib/pq"
 )
 
 type ErrView struct {
@@ -40,6 +43,14 @@ func validationError(err validator.ValidationErrors) *ErrView {
 }
 
 func appError(err *apperror.AppError) *ErrView {
+	if err.Detail == nil {
+		err.Detail = make(map[string]string)
+	}
+
+	if _, ok := err.Detail["reason"]; !ok {
+		err.Detail["reason"] = "Some unknown error has happend, please report it."
+	}
+
 	switch err.Kind {
 	case apperror.ErrNotFoundInstance:
 		return &ErrView{
@@ -90,10 +101,7 @@ func appError(err *apperror.AppError) *ErrView {
 			Detail:  err.Detail,
 		}
 	case apperror.ErrNotImplementedInstance:
-		if err.Detail == nil {
-			err.Detail = make(map[string]string)
-			err.Detail["reason"] = "This resource is not implemented yet"
-		}
+		err.Detail["reason"] = "This resource is not implemented yet"
 
 		return &ErrView{
 			Code:    http.StatusNotImplemented,
@@ -116,6 +124,104 @@ func appError(err *apperror.AppError) *ErrView {
 	}
 }
 
+type sqlErrorMapping struct {
+	Code    int
+	Message string
+}
+
+// sqlErrorMap maps a PostgreSQL SQLSTATE code to the HTTP status/message used
+// when a raw database error reaches the transport layer.
+var sqlErrorMap = map[string]sqlErrorMapping{
+	"23505": {http.StatusConflict, "conflict"},                      // unique_violation
+	"23503": {http.StatusConflict, "conflict"},                      // foreign_key_violation
+	"23001": {http.StatusConflict, "conflict"},                      // restrict_violation
+	"23506": {http.StatusConflict, "conflict"},                      // exclusion_violation
+	"23P01": {http.StatusConflict, "conflict"},                      // exclusion_violation (alt)
+	"23502": {http.StatusBadRequest, "bad request"},                 // not_null_violation
+	"23514": {http.StatusBadRequest, "bad request"},                 // check_violation
+	"22P02": {http.StatusBadRequest, "bad request"},                 // invalid_text_representation
+	"08000": {http.StatusServiceUnavailable, "service unavailable"}, // connection_exception
+	"08001": {http.StatusServiceUnavailable, "service unavailable"}, // sqlclient_unable_to_establish_sqlconnection
+	"08003": {http.StatusServiceUnavailable, "service unavailable"}, // connection_does_not_exist
+	"08004": {http.StatusServiceUnavailable, "service unavailable"}, // sqlserver_rejected_establishment_of_sqlconnection
+	"08006": {http.StatusServiceUnavailable, "service unavailable"}, // connection_failure
+	"40001": {http.StatusConflict, "conflict"},                      // serialization_failure
+	"40P01": {http.StatusConflict, "conflict"},                      // deadlock_detected
+}
+
+// sqlConstraintReasons provides user-facing reasons for known constraint violations.
+var sqlConstraintReasons = map[string]string{
+	"usrs_username_ux":     "username is already in use",
+	"idx_usr_id_name":      "a group with this name already exists for this user",
+	"ux_nodes_parent_name": "a node with this name already exists in the same directory",
+	"docs_node_id_ux":      "a document is already linked to this node",
+	"group_usrs_pk":        "user already has access to this group",
+}
+
+func sqlErrorView(err *pq.Error) *ErrView {
+	mapping, ok := sqlErrorMap[string(err.Code)]
+	if !ok {
+		mapping = sqlErrorMapping{Code: http.StatusInternalServerError, Message: "internal error"}
+	}
+
+	reason := err.Message
+	if r, ok := sqlConstraintReasons[err.Constraint]; ok {
+		reason = r
+	} else if err.Detail != "" {
+		reason = err.Detail
+	}
+
+	detail := make(map[string]string)
+	detail["reason"] = reason
+	if err.Code != "" {
+		detail["sql_state"] = string(err.Code)
+		if name := err.Code.Name(); name != "" {
+			detail["sql_state_name"] = name
+		}
+	}
+	if err.Constraint != "" {
+		detail["constraint"] = err.Constraint
+	}
+	if err.Table != "" {
+		detail["table"] = err.Table
+	}
+	if err.Column != "" {
+		detail["column"] = err.Column
+	}
+
+	view := &ErrView{
+		Code:    mapping.Code,
+		Message: mapping.Message,
+		Detail:  detail,
+	}
+
+	if view.Code >= 500 {
+		elog.Error("sql error happened", "err", err, "stack", debug.Stack())
+	}
+
+	if errors.Is(err, sql.ErrNoRows) {
+		detail := make(map[string]string)
+		detail["reason"] = "resource not found"
+		return &ErrView{
+			Code:    http.StatusNotFound,
+			Message: "resource not found",
+			Detail:  detail,
+		}
+	}
+
+	if errors.Is(err, sql.ErrConnDone) || errors.Is(err, sql.ErrTxDone) {
+		detail := make(map[string]string)
+		detail["reason"] = "database connection is closed"
+		return &ErrView{
+			Code:    http.StatusServiceUnavailable,
+			Message: "service unavailable",
+			Detail:  detail,
+		}
+	}
+
+	return view
+}
+
 func errView(err error) *ErrView {
 	if err == nil {
 		elog.Warn("empty error provided", "stack", debug.Stack())
@@ -130,6 +236,10 @@ func errView(err error) *ErrView {
 			Message: "invalid credentials",
 			Detail:  detail,
 		}
+	}
+
+	if pgErr, ok := errors.AsType[*pq.Error](err); ok {
+		return sqlErrorView(pgErr)
 	}
 
 	if appErr, ok := errors.AsType[*apperror.AppError](err); ok {
