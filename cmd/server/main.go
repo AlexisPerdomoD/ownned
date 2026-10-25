@@ -113,6 +113,7 @@ func main() {
 	// MAIN ROUTER
 
 	r := chi.NewRouter()
+	r.Use(httpapi.RequestLogger)
 
 	if cfg.Mode == "local" {
 		r.Use(cors.Handler(cors.Options{
@@ -131,7 +132,6 @@ func main() {
 	}
 
 	httpapi.NewAuthHandler(loginPwd, httpapi.AuthHandlerConfig{Secure: secure, SameSite: sameSite}).MountV1(r)
-
 	httpapi.NewGroupHandler(
 		getGroup,
 		paginateGroup,
@@ -144,9 +144,7 @@ func main() {
 		deleteGroupUsr,
 		am,
 	).MountV1(r)
-
 	httpapi.NewUsrHandler(createUsr, getMe, getUsr, paginateUsr, am).MountV1(r)
-
 	httpapi.NewNodeHandler(
 		getRoot,
 		getNode,
