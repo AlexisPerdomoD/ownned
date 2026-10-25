@@ -1,56 +1,72 @@
 import { createSignal } from 'solid-js'
 
 import { buildCreateDocDTO } from '@/entities/docs/api'
-import { ApiConflictError } from '@/shared/errors'
 import { reqForm } from '@/shared/api/client'
+import { ApiConflictError, getErrorMessage } from '@/shared/errors'
 import { toast } from '@/shared/ui'
+import {
+    MAX_NAME_RETRIES,
+    fileBaseName,
+    fileNameExtension,
+    nameSuffix,
+    uniqueFileName
+} from './naming'
 
-const MAX_NAME_RETRIES = 10
+export {
+    MAX_NAME_RETRIES,
+    fileBaseName,
+    fileNameExtension,
+    uniqueFileName
+} from './naming'
 
-// NOTE: el backend aplica el índice único ux_nodes_parent_name; ante 409
-// se reintenta renombrando el archivo (solo archivos, no carpetas) como
-// `name (1).ext`, incrementando el sufijo hasta MAX_NAME_RETRIES.
-function withSuffixes(fileName, suffix) {
-    const dot = fileName.lastIndexOf('.')
-    if (dot <= 0) return `${fileName} (${suffix})`
-    return `${fileName.slice(0, dot)} (${suffix})${fileName.slice(dot)}`
-}
-
-function renamedFile(file, suffix) {
-    try {
-        return new File([file], withSuffixes(file.name, suffix), {
-            type: file.type
-        })
-    } catch {
-        // File API no disponible (raro en navegadores modernos): crear FormData directo
-        return {
-            size: file.size,
-            name: withSuffixes(file.name, suffix)
-        }
-    }
+function renamedFile(file, fileName) {
+    return new File([file], fileName, { type: file.type })
 }
 
 /**
  * @param {() => string} getParentId - function that returns the parent node ID
  * @param {() => void} [onSuccess] - callback when upload succeeds
- * @returns {{ upload: (file: File, description?: string, parentIdOverride?: string) => Promise<[boolean, any]>, loading: () => boolean }}
  */
 export function useCreateDoc(getParentId, onSuccess) {
     const [loading, setLoading] = createSignal(false)
 
-    const upload = async (file, description = '', parentIdOverride) => {
+    // NOTE: takenNames son Node.name completos de los children ya cargados;
+    // el backend persiste el filename completo en el nodo. Así se elige el
+    // primer `base (n).ext` libre sin consultas adicionales.
+    /**
+     * @param {File} file
+     * @param {string} description
+     * @param {string} [parentIdOverride]
+     * @param {Iterable<string>} [takenNames] - nombres de nodo ya ocupados en el destino
+     * @returns {Promise<[true, any] | [false, { general?: string, reason?: string, message?: string }]>}
+     */
+    const upload = async (
+        file,
+        description = '',
+        parentIdOverride,
+        takenNames
+    ) => {
         const parentId = parentIdOverride ?? getParentId()
         if (!parentId) return [false, { general: 'No parent folder selected' }]
 
         const [valid, dto] = buildCreateDocDTO(parentId, description)
         if (!valid) return [false, dto]
 
+        let activeFile = file
+        let lastSuffix = 0
+        const taken = takenNames ? Array.from(takenNames) : []
+        if (taken.length > 0) {
+            const unique = uniqueFileName(file.name, taken)
+            if (unique !== file.name) {
+                lastSuffix = nameSuffix(unique)
+                activeFile = renamedFile(file, unique)
+            }
+        }
+
         setLoading(true)
         let attempt = 0
-        let activeFile = file
         try {
-            // eslint-disable-next-line no-constant-condition
-            while (true) {
+            while (attempt <= MAX_NAME_RETRIES) {
                 try {
                     const formData = new FormData()
                     formData.append('parent_id', dto.parent_id)
@@ -62,11 +78,10 @@ export function useCreateDoc(getParentId, onSuccess) {
 
                     const doc = await reqForm('/api/v1/nodes/docs', formData)
                     onSuccess?.()
-                    if (attempt > 0) {
-                        toast({
-                            type: 'warning',
-                            message: `Name already existed; saved as "${activeFile.name}"`
-                        })
+                    if (activeFile.name !== file.name) {
+                        toast.warning(
+                            `Name already existed; saved as "${activeFile.name}"`
+                        )
                     }
                     return [true, doc]
                 } catch (e) {
@@ -75,20 +90,25 @@ export function useCreateDoc(getParentId, onSuccess) {
                         attempt < MAX_NAME_RETRIES
                     ) {
                         attempt += 1
-                        activeFile = renamedFile(file, attempt)
+                        const suffix = lastSuffix + attempt
+                        activeFile = renamedFile(
+                            file,
+                            `${fileBaseName(file.name)} (${suffix})${
+                                fileNameExtension(file.name)
+                            }`
+                        )
                         continue
                     }
                     return [
                         false,
                         {
-                            general:
-                                e?.message ||
-                                e?.detail?.reason ||
-                                'Upload failed'
+                            general: getErrorMessage(e, 'Upload failed'),
+                            reason: e?.detail?.reason
                         }
                     ]
                 }
             }
+            return [false, { general: 'Could not find a free name to upload.' }]
         } finally {
             setLoading(false)
         }

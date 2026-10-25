@@ -5,6 +5,7 @@ import {
     apiDownloadDoc,
     apiDownloadFolder
 } from '@/entities/docs/api'
+import { useAuth } from '@/features/auth/providers/AuthProvider'
 import { CommentForm, CommentsList } from '@/features/comments/ui/CommentsList'
 import {
     useCreateComment,
@@ -20,22 +21,16 @@ import {
     useDeleteNode,
     useGetNode,
     usePaginateDocs,
-    usePaginateNodes,
-    fileBaseName
+    usePaginateNodes
 } from '@/features/node/usecase'
-import {
-    Button,
-    ConfirmDialog,
-    Spinner,
-    toast
-} from '@/shared/ui'
-import { useAuth } from '@/features/auth/providers/AuthProvider'
 import {
     canCommentOnNode,
     canCreateFolder,
     canDeleteNode,
     canUploadDoc
 } from '@/shared/authz'
+import { getErrorMessage } from '@/shared/errors'
+import { Button, ConfirmDialog, Spinner, toast } from '@/shared/ui'
 import { useNavigate, useParams } from '@solidjs/router'
 
 const MIN_SEARCH_CHARS = 2
@@ -295,15 +290,13 @@ export function NodeView() {
 
     // NOTE: en paginación el backend no envía display_path; se usa el name.
     // Cuando el backend lo incluya la UI lo consumirá sin cambios.
-    const parentPath = () =>
-        nodeData()?.display_path || nodeData()?.name || ''
+    const parentPath = () => nodeData()?.display_path || nodeData()?.name || ''
 
     // debounce search (>=300ms, min 2 chars folders-only in node mode)
     const runSearch = async page => {
         const q = searchInput().trim()
         if (q.length < MIN_SEARCH_CHARS) return
-        const rootId =
-            searchScope() === 'global' ? undefined : nodeData()?.id
+        const rootId = searchScope() === 'global' ? undefined : nodeData()?.id
         if (searchScope() === 'folder' && !rootId) return
         if (showAdvanced()) {
             await docsPager.run(rootId, {
@@ -364,7 +357,8 @@ export function NodeView() {
         refresh: refreshComments
     } = useGetComments(() => params.id)
     const { create: addComment, loading: addingComment } = useCreateComment()
-    const { update: updateComment, loading: updatingComment } = useUpdateComment()
+    const { update: updateComment, loading: updatingComment } =
+        useUpdateComment()
     const { remove: deleteComment, loading: deletingComment } =
         useDeleteComment()
 
@@ -376,16 +370,9 @@ export function NodeView() {
     const confirmDelete = async () => {
         const target = deleteTarget()
         if (!target) return
-        const [success, err] = await remove(target.id)
+        const [success, result] = await remove(target.id)
         if (!success) {
-            toast({
-                type: 'error',
-                message:
-                    err?.general ||
-                    err?.message ||
-                    err?.detail?.reason ||
-                    'Delete failed'
-            })
+            toast.error(getErrorMessage(result, 'Delete failed'))
             return
         }
         if (target.id === nodeData()?.id) navigate('/nodes')
@@ -393,16 +380,13 @@ export function NodeView() {
     }
 
     const handleCreate = async () => {
-        const [success, err] = await create(nodeData()?.id, newName(), newDesc())
+        const [success, result] = await create(
+            nodeData()?.id,
+            newName(),
+            newDesc()
+        )
         if (!success) {
-            toast({
-                type: 'error',
-                message:
-                    err?.general ||
-                    err?.message ||
-                    err?.detail?.reason ||
-                    'Create failed'
-            })
+            toast.error(getErrorMessage(result, 'Create failed'))
             return
         }
         setShowCreate(false)
@@ -411,67 +395,34 @@ export function NodeView() {
         refresh()
     }
 
-    const handleUpload = async file => {
-        const [success, err] = await upload(
-            file,
-            '',
-            undefined,
-            (nodeData()?.children ?? []).map(n => n.name)
-        )
-        if (!success) {
-            toast({
-                type: 'error',
-                message:
-                    err?.general ||
-                    err?.message ||
-                    err?.detail?.reason ||
-                    'Upload failed'
-            })
-            return
-        }
-        refresh()
-    }
-
-    // Subidas en lote: los nombres resueltos (con posible renombre) se
-    // acumulan localmente; cero consultas extra al backend.
-    const uploadBatch = async (files, parentIdOverride, takenExtra) => {
-        for (const batchFile of batchFiles) {
-            const [success, uploadedDoc, err] = await upload(
+    // Subidas en lote: takenNames se acumula localmente con el nombre que
+    // devuelve el backend (result.name, ya resuelto), así los duplicados del
+    // mismo lote enumeran a (1), a (2)... sin consultas extra.
+    const uploadBatch = async (files, parentIdOverride, takenNames) => {
+        for (const batchFile of files) {
+            const [success, result] = await upload(
                 batchFile,
                 '',
                 parentIdOverride,
-                Array.isArray(takenExtra)
-                    ? [...takenExtra]
-                    : takenExtra
+                takenNames ? [...takenNames] : []
             )
             if (!success) {
-                toast({
-                    type: 'error',
-                    message:
-                        err?.general ||
-                        err?.message ||
-                        err?.detail?.reason ||
-                        'Upload failed'
-                })
+                toast.error(getErrorMessage(result, 'Upload failed'))
                 continue
             }
-            const resolved = uploadedDoc?.name ?? fileBaseName(batchFile.name)
-            ;(takenExtra ?? []).push?.(resolved)
+            takenNames?.add?.(
+                result?.name ?? batchFile.name
+            )
         }
     }
 
-    const handleFilePickerChange = e => {
+    const handleFilePickerChange = async e => {
         const files = Array.from(e.target?.files ?? [])
-        if (files.length) {
-            const taken = new Set(
-                (nodeData()?.children ?? []).map(n => n.name)
-            )
-            ;(async () => {
-                await uploadBatch(files, undefined, taken)
-                refresh()
-            })()
-        }
         e.target.value = ''
+        if (!files.length) return
+        const taken = new Set((nodeData()?.children ?? []).map(n => n.name))
+        await uploadBatch(files, undefined, taken)
+        refresh()
     }
 
     // NOTE: subcarpetas locales se recrean como carpetas hijas del nivel 1
@@ -497,63 +448,40 @@ export function NodeView() {
             }
         }
 
-        const takenRoot = new Set(
-            (nodeData()?.children ?? []).map(n => n.name)
-        )
+        const takenRoot = new Set((nodeData()?.children ?? []).map(n => n.name))
         let created = 0
         for (const [name, fileList] of Object.entries(groups)) {
-            const [ok, createdNode, createErr] = await create(
-                parentId,
-                name,
-                ''
-            )
+            const [ok, result] = await create(parentId, name, '')
             if (!ok) {
-                toast({
-                    type: 'error',
-                    message:
-                        createErr?.general ||
-                        createErr?.detail?.reason ||
-                        `Could not create "${name}"`
-                })
+                toast.error(
+                    getErrorMessage(result, `Could not create "${name}"`)
+                )
                 continue
             }
             created += 1
-            await uploadBatch(fileList, createdNode.id, [])
+            await uploadBatch(fileList, result.id, new Set())
         }
         await uploadBatch(looseFiles, undefined, takenRoot)
         refresh()
-        toast({
-            type: 'success',
-            message: `Uploaded ${created} folder${created === 1 ? '' : 's'}`
-        })
+        toast.success(`Uploaded ${created} folder${created === 1 ? '' : 's'}`)
     }
 
     const handleDownload = async doc => {
         try {
             await apiDownloadDoc(doc.id, doc.title)
         } catch (e) {
-            toast({
-                type: 'error',
-                message:
-                    e?.message ||
-                    e?.detail?.reason ||
-                    'Download failed'
-            })
+            toast.error(getErrorMessage(e, 'Download failed'))
         }
     }
 
     const handleDownloadFolder = async () => {
         try {
             await apiDownloadFolder(nodeData()?.id)
-            toast({ type: 'success', message: 'Folder download started' })
+            toast.success('Folder download started')
         } catch (e) {
-            toast({
-                type: 'error',
-                message:
-                    e?.message ||
-                    e?.detail?.reason ||
-                    'Folder download not available yet'
-            })
+            toast.error(
+                getErrorMessage(e, 'Folder download not available yet')
+            )
         }
     }
 
@@ -567,24 +495,24 @@ export function NodeView() {
         if (!doc) return
         const [success, err] = await deleteDoc(doc.id)
         if (!success) {
-            toast({
-                type: 'error',
-                message:
-                    err?.general ||
-                    err?.message ||
-                    err?.detail?.reason ||
-                    'Delete failed'
-            })
+            toast.error(getErrorMessage(err, 'Delete failed'))
             return
         }
-        toast({ type: 'success', message: 'File deleted successfully' })
+        toast.success('File deleted successfully')
         refresh()
     }
 
     const handleUpdateComment = async (commentId, content) => {
-        const [success] = await updateComment(commentId, content)
+        const [success, result] = await updateComment(commentId, content)
         if (success) refreshComments()
+        else toast.error(getErrorMessage(result, 'Comment update failed'))
         return success
+    }
+
+    const handleDeleteComment = async commentId => {
+        const [success, result] = await deleteComment(commentId)
+        if (success) refreshComments()
+        else toast.error(getErrorMessage(result, 'Comment delete failed'))
     }
 
     const folderChildren = () =>
@@ -717,8 +645,7 @@ export function NodeView() {
                                     }
                                 >
                                     {' · '}
-                                    Updated{' '}
-                                    {formatDate(nodeData()?.updated_at)}
+                                    Updated {formatDate(nodeData()?.updated_at)}
                                 </Show>
                             </p>
                             <Show when={nodeData()?.description}>
@@ -732,16 +659,12 @@ export function NodeView() {
                                 <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() =>
-                                        setShowComments(v => !v)
-                                    }
+                                    onClick={() => setShowComments(v => !v)}
                                 >
                                     💬 Comments ({comments().length})
                                 </Button>
                             </Show>
-                            <Show
-                                when={canDeleteNode(role(), accessLevel())}
-                            >
+                            <Show when={canDeleteNode(role(), accessLevel())}>
                                 <Button
                                     size="sm"
                                     variant="danger"
@@ -816,8 +739,7 @@ export function NodeView() {
                                 onInput={e => setSearchInput(e.target.value)}
                                 onFocus={() => setSearchOpen(true)}
                                 onKeyDown={e => {
-                                    if (e.key === 'Escape')
-                                        setSearchOpen(false)
+                                    if (e.key === 'Escape') setSearchOpen(false)
                                 }}
                                 class="w-full max-w-xl font-sans font-light text-sm text-ink-dark bg-surface border border-border rounded-xs px-3 py-2 focus:outline-none focus:border-ink"
                             />
@@ -1096,9 +1018,7 @@ export function NodeView() {
                             aria-label="Toggle sort direction"
                             class="px-2 py-1 border border-border rounded-xs hover:bg-bg-2"
                             onClick={() =>
-                                setSortDir(d =>
-                                    d === 'asc' ? 'desc' : 'asc'
-                                )
+                                setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
                             }
                         >
                             {sortDir() === 'asc' ? '↑' : '↓'}
@@ -1187,19 +1107,17 @@ export function NodeView() {
                                                     }
                                                     subtitle={[
                                                         'File',
-                                                        fileNode.doc
-                                                            ?.mime_type,
+                                                        fileNode.doc?.mime_type,
                                                         fileNode.doc
                                                             ?.size_in_bytes
                                                             ? formatBytes(
-                                                                  fileNode
-                                                                      .doc
+                                                                  fileNode.doc
                                                                       .size_in_bytes
                                                               )
                                                             : null
-                                                        ]
-                                                            .filter(Boolean)
-                                                            .join(' · ')}
+                                                    ]
+                                                        .filter(Boolean)
+                                                        .join(' · ')}
                                                     onOpen={() =>
                                                         navigate(
                                                             `/nodes/${fileNode.id}`
@@ -1295,12 +1213,7 @@ export function NodeView() {
                                 currentUsrId={auth.state.usr?.id}
                                 isSuper={auth.role() === 'super_usr_role'}
                                 onEdit={handleUpdateComment}
-                                onDelete={cId =>
-                                    deleteComment(cId).then(isSuccess => {
-                                        if (isSuccess) refreshComments()
-                                        return isSuccess
-                                    })
-                                }
+                                onDelete={handleDeleteComment}
                             />
                             <Show
                                 when={canCommentOnNode(
@@ -1310,24 +1223,23 @@ export function NodeView() {
                             >
                                 <CommentForm
                                     loading={addingComment()}
-                                    onSubmit={async content => {
-                                        const [success, err] =
-                                            await addComment(
-                                                nodeData()?.id,
-                                                content
-                                            )
-                                        if (!success) {
-                                            toast({
-                                                type: 'error',
-                                                message:
-                                                    err?.general ||
-                                                    err?.message ||
-                                                    err?.detail?.reason ||
-                                                    'Comment failed'
-                                            })
-                                            return false
-                                        }
-                                        refreshComments()
+                                    onSubmit={content => {
+                                        addComment(
+                                            nodeData()?.id,
+                                            content
+                                        ).then(([isSuccess, result]) => {
+                                            if (!isSuccess) {
+                                                toast.error(
+                                                    getErrorMessage(
+                                                        result,
+                                                        'Comment failed'
+                                                    )
+                                                )
+                                                return false
+                                            }
+
+                                            refreshComments()
+                                        })
                                     }}
                                 />
                             </Show>

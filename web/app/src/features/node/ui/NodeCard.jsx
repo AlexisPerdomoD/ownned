@@ -51,7 +51,7 @@ const TrashIcon = () => (
 const isFolder = node => node.type === 'folder'
 
 /** NOTE: `||` porque el backend puede enviar display_path: '' en paginación. */
-const displayName = node => node.display_path || node.name || 'Untitled'
+const displayName = node => node.name || 'Untitled'
 
 const formatDate = dateStr => {
     if (!dateStr) return ''
@@ -73,7 +73,10 @@ const formatRelativeDate = dateStr => {
     if (diffDays === 1) return 'Yesterday'
     if (diffDays < 7) return `Last ${diffDays} days`
     if (diffDays < 30)
-        return date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })
+        return date.toLocaleDateString('es-ES', {
+            month: 'short',
+            day: 'numeric'
+        })
     return formatDate(dateStr)
 }
 
@@ -131,7 +134,7 @@ export function NodeCard(props) {
             </span>
 
             <h3
-                class="w-full font-serif text-sm text-ink-dark leading-snug line-clamp-2 break-words"
+                class="w-full font-serif text-sm text-ink-dark leading-snug line-clamp-2 wrap-break-word"
                 title={displayName(own.node)}
             >
                 {displayName(own.node)}
