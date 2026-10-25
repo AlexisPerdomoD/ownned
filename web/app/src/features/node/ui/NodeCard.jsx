@@ -92,59 +92,56 @@ const formatRelativeDate = dateStr => {
  * @param {string} [props.class]
  */
 export function NodeCard(props) {
-    const [own, rest] = splitProps(props, ['node', 'onClick', 'onDelete'])
+    const [own, rest] = splitProps(props, [
+        'node',
+        'onClick',
+        'onDelete',
+        'class'
+    ])
 
     return (
-        <div
-            role="button"
-            tabIndex={0}
-            aria-label={displayName(own.node)}
-            onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    own.onClick?.(own.node)
-                }
-            }}
-            class="group relative aspect-square flex flex-col items-center justify-center gap-2 p-3 text-center bg-surface border border-border rounded-sm cursor-pointer transition-colors duration-base hover:border-accent hover:bg-bg-2 focus-visible:outline-none focus-visible:border-accent"
-            onClick={() => own.onClick?.(own.node)}
-            {...rest}
-        >
-            <Show when={own.onDelete}>
-                <button
-                    type="button"
-                    aria-label={`Delete ${displayName(own.node)}`}
-                    class="absolute top-1.5 right-1.5 p-1.5 rounded-xs text-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-danger hover:bg-red-50 dark:hover:bg-red-950 transition-opacity"
-                    onClick={e => {
-                        e.stopPropagation()
-                        own.onDelete(own.node)
-                    }}
-                >
-                    <TrashIcon />
-                </button>
-            </Show>
-
-            <span
-                class={`
+        <div class="group relative aspect-square">
+            <button
+                type="button"
+                aria-label={displayName(own.node)}
+                disabled={!own.onClick}
+                class={`absolute inset-0 z-0 flex flex-col items-center justify-center gap-2 p-3 text-center bg-surface border border-border rounded-sm transition-colors duration-base enabled:cursor-pointer enabled:hover:border-accent enabled:hover:bg-bg-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-default ${own.class ?? ''}`}
+                onClick={() => own.onClick?.(own.node)}
+                {...rest}
+            >
+                <span
+                    class={`
                     flex items-center justify-center
                     w-12 h-12 rounded-sm shrink-0
                     ${isFolder(own.node) ? 'text-accent' : 'text-ink'}
                 `}
-            >
-                {isFolder(own.node) ? <FolderIcon /> : <FileIcon />}
-            </span>
+                >
+                    {isFolder(own.node) ? <FolderIcon /> : <FileIcon />}
+                </span>
 
-            <h3
-                class="w-full font-serif text-sm text-ink-dark leading-snug line-clamp-2 wrap-break-word"
-                title={displayName(own.node)}
-            >
-                {displayName(own.node)}
-            </h3>
+                <h3
+                    class="w-full font-serif text-sm text-ink-dark leading-snug line-clamp-2 wrap-break-word"
+                    title={displayName(own.node)}
+                >
+                    {displayName(own.node)}
+                </h3>
 
-            <p class="w-full text-[11px] text-muted truncate">
-                {isFolder(own.node) ? 'Folder' : 'File'}
-                {' · '}
-                {formatRelativeDate(own.node.updated_at)}
-            </p>
+                <p class="w-full text-[11px] text-muted truncate">
+                    {isFolder(own.node) ? 'Folder' : 'File'}
+                    {' · '}
+                    {formatRelativeDate(own.node.updated_at)}
+                </p>
+            </button>
+            <Show when={own.onDelete}>
+                <button
+                    type="button"
+                    aria-label={`Delete ${displayName(own.node)}`}
+                    class="absolute top-1.5 right-1.5 z-10 p-1.5 rounded-xs text-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-danger hover:bg-red-50 dark:hover:bg-red-950 transition-opacity"
+                    onClick={() => own.onDelete(own.node)}
+                >
+                    <TrashIcon />
+                </button>
+            </Show>
         </div>
     )
 }

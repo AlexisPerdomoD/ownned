@@ -68,7 +68,8 @@ export function DocCard(props) {
         'node',
         'onClick',
         'onDownload',
-        'onDelete'
+        'onDelete',
+        'class'
     ])
 
     const doc = () =>
@@ -82,31 +83,38 @@ export function DocCard(props) {
         own.node?.name || doc().filename || doc().title || 'Document'
 
     return (
-        <div
-            role="button"
-            tabIndex={0}
-            aria-label={documentName()}
-            onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    own.onClick?.(doc())
-                }
-            }}
-            class="group relative aspect-square flex flex-col items-center justify-center gap-2 p-3 text-center bg-surface border border-border rounded-sm cursor-pointer transition-colors duration-base hover:border-accent hover:bg-bg-2 focus-visible:outline-none focus-visible:border-accent"
-            onClick={() => own.onClick?.(doc())}
-            {...rest}
-        >
-            <div class="absolute top-1.5 right-1.5 flex gap-0.5">
+        <div class="group relative aspect-square">
+            <button
+                type="button"
+                aria-label={documentName()}
+                disabled={!own.onClick}
+                class={`absolute inset-0 z-0 flex flex-col items-center justify-center gap-2 p-3 text-center bg-surface border border-border rounded-sm transition-colors duration-base enabled:cursor-pointer enabled:hover:border-accent enabled:hover:bg-bg-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-default ${own.class ?? ''}`}
+                onClick={() => own.onClick?.(doc())}
+                {...rest}
+            >
+                <span class="flex items-center justify-center w-12 h-12 rounded-sm bg-accent-pale text-accent shrink-0">
+                    <DocumentIcon />
+                </span>
+                <span class="w-full">
+                    <span
+                        class="block w-full font-serif text-sm text-ink-dark leading-snug line-clamp-2 break-words"
+                        title={documentName()}
+                    >
+                        {documentName() || 'Untitled'}
+                    </span>
+                    <span class="block w-full text-[11px] text-muted truncate">
+                        {doc().mime_type ?? 'Document'}
+                    </span>
+                </span>
+            </button>
+            <div class="absolute top-1.5 right-1.5 z-10 flex gap-0.5">
                 <Show when={own.onDownload}>
                     <button
                         type="button"
                         aria-label="Download"
                         title="Download"
                         class="p-1.5 rounded-xs text-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-ink transition-opacity"
-                        onClick={e => {
-                            e.stopPropagation()
-                            own.onDownload(doc())
-                        }}
+                        onClick={() => own.onDownload(doc())}
                     >
                         <DownloadIcon />
                     </button>
@@ -117,30 +125,12 @@ export function DocCard(props) {
                         aria-label="Delete"
                         title="Delete"
                         class="p-1.5 rounded-xs text-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-danger hover:bg-red-50 dark:hover:bg-red-950 transition-opacity"
-                        onClick={e => {
-                            e.stopPropagation()
-                            own.onDelete(doc())
-                        }}
+                        onClick={() => own.onDelete(doc())}
                     >
                         <TrashIcon />
                     </button>
                 </Show>
             </div>
-
-            <span class="flex items-center justify-center w-12 h-12 rounded-sm bg-accent-pale text-accent shrink-0">
-                <DocumentIcon />
-            </span>
-
-            <h3
-                class="w-full font-serif text-sm text-ink-dark leading-snug line-clamp-2 break-words"
-                title={documentName()}
-            >
-                {documentName() || 'Untitled'}
-            </h3>
-
-            <p class="w-full text-[11px] text-muted truncate">
-                {doc().mime_type ?? 'Document'}
-            </p>
         </div>
     )
 }

@@ -43,11 +43,10 @@ Todos los issues 12–17 en `hecho`. Resumen en `../history/web_closure_fase2_pa
 
 ### Fase 3 — Explorador, paginación y compartición usable
 
-Issues 18–21 cerradas; resúmenes técnicos en `../history/web_closure_fase3_children_metadata.md`, `web_closure_fase3_pagination.md`, `web_closure_fase3_sorting_dotfiles.md` y `web_closure_fase3_node_picker.md`. D3 está resuelta para el orden local de hijos. Los issues restantes de fases 3–5 están en revisión activa.
+Issues 18–22 cerradas; resúmenes técnicos en `../history/web_closure_fase3_children_metadata.md`, `web_closure_fase3_pagination.md`, `web_closure_fase3_sorting_dotfiles.md`, `web_closure_fase3_node_picker.md` y `web_closure_fase3_explorer_refactor.md`. D3 está resuelta para el orden local de hijos. Los issues restantes de fases 3–5 están en revisión activa.
 
 | ID | Título | Estado | Depende de |
 | --- | --- | --- | --- |
-| 22 | [Consolidar vista de explorador](22.web_closure_fase3.web.app.explorador_refactor.md) | revisión | 2.1, 2.2, 3.1 |
 | 23 | [Consolidar confirmaciones/modales](23.web_closure_fase3.web.app.dialogos.md) | revisión | fases 2–3 estables |
 | 38 | [Vista de carpeta estilo Google Drive](38.web_closure_fase3.web.app.vista_drive.md) | revisión | 3.1, 3.5 |
 

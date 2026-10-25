@@ -28,9 +28,9 @@ Este es el plan vivo para alinear el cliente SolidJS con el contrato público de
 - Rutas de comentarios en cliente no corresponden con backend; edición no tiene integración y límites de contenido discrepan.
 - Actualización de grupo envía verbo incorrecto. Actualización de nodo está en UI, pero el backend responde `501`.
 - El formulario de creación de usuario serializa un campo no permitido y muestra acciones sin aplicar el requisito de superusuario; la UI de borrado apunta a una ruta que no existe. No hay registro público.
-- Listar archivos hijos depende de `child.doc`, que el backend no incluye en los hijos de `GET /nodes/{id}`. El nuevo `access_level` tampoco se incluye actualmente en esos hijos.
-- `GET /nodes` y `GET /nodes/{id}` ahora entregan `display_path` y `access_level` para las raíces y el nodo solicitado; `access_level` resume el nivel de asignación aplicable, no incluye el techo del rol. El frontend aún no consume esos campos ni combina rol y asignación para presentar/ocultar acciones.
-- El frontend no consume paginación de nodos/documentos; no hay sorting, visibilidad de dotfiles, tema con toggle persistido ni carga de carpetas.
+- Los hijos de `GET /nodes/{id}` incluyen `doc` best-effort y `access_level`; `NodeView` degrada cuando falta `doc` y gobierna acciones con el acceso propio del hijo. `Node.name` conserva el filename completo.
+- `NodeView` muestra `display_path` y combina rol/asignación para sus acciones. `HomeView` aún debe alinear la presentación y affordances de raíces.
+- `NodeView` consume paginación para búsqueda de nodos/documentos, ordena localmente hijos y oculta dotfiles por defecto con preferencia persistida; el tema tiene toggle persistido. La subida de carpetas es todavía parcial y no recursiva.
 - Helpers de upload/download/delete/logout con `fetch` relativo no apuntan a API al correr Vite en un origen separado. La configuración `.env.example`/`MODE` también necesita alineación para CORS/cookies local.
 - El estilo ya centraliza tokens y tiene overrides dark, pero actualmente usa una paleta tierra y hay clases arbitrarias de CSS variables en vistas. Las animaciones son puntuales (transiciones de color/spinner), no una política global.
 

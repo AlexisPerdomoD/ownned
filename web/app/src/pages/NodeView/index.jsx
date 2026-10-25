@@ -145,19 +145,25 @@ const DownloadRowIcon = () => (
  */
 function CompactItemRow(props) {
     return (
-        <div
-            class="group flex items-center gap-3 px-3 py-2 border-b border-border-subtle last:border-b-0 hover:bg-bg-2 cursor-pointer"
-            onClick={() => props.onOpen?.()}
-        >
-            <span class="shrink-0 text-muted">{props.icon}</span>
-            <div class="min-w-0 flex-1">
-                <div class="text-sm text-ink-dark truncate">{props.title}</div>
-                <Show when={props.subtitle}>
-                    <div class="text-xs text-muted truncate">
-                        {props.subtitle}
-                    </div>
-                </Show>
-            </div>
+        <div class="group flex items-center gap-3 px-3 py-2 border-b border-border-subtle last:border-b-0 hover:bg-bg-2">
+            <button
+                type="button"
+                class="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                aria-label={`Open ${props.title}`}
+                onClick={() => props.onOpen?.()}
+            >
+                <span class="shrink-0 text-muted">{props.icon}</span>
+                <span class="min-w-0 flex-1">
+                    <span class="block text-sm text-ink-dark truncate">
+                        {props.title}
+                    </span>
+                    <Show when={props.subtitle}>
+                        <span class="block text-xs text-muted truncate">
+                            {props.subtitle}
+                        </span>
+                    </Show>
+                </span>
+            </button>
             <div class="flex items-center gap-1 shrink-0">{props.actions}</div>
         </div>
     )
@@ -258,7 +264,7 @@ export function NodeView() {
     const params = useParams()
     const navigate = useNavigate()
     const auth = useAuth()
-    const { node, loading, refresh } = useGetNode(() => params.id)
+    const { node, loading, error, refresh } = useGetNode(() => params.id)
     const nodeData = () => node()
     const role = () => auth.role()
     const accessLevel = () => nodeData()?.access_level
@@ -632,8 +638,27 @@ export function NodeView() {
     return (
         <section class="flex flex-col p-4 sm:p-6">
             <Show
-                when={!loading()}
-                fallback={<Spinner size="lg" class="mx-auto mt-20" />}
+                when={!loading() && !error()}
+                fallback={
+                    <Show
+                        when={loading()}
+                        fallback={
+                            <div
+                                class="mx-auto mt-20 flex max-w-md flex-col items-center gap-3 text-center"
+                                role="alert"
+                            >
+                                <p class="text-sm text-danger">
+                                    {error() || 'Could not load this node.'}
+                                </p>
+                                <Button size="sm" onClick={() => refresh()}>
+                                    Retry
+                                </Button>
+                            </div>
+                        }
+                    >
+                        <Spinner size="lg" class="mx-auto mt-20" />
+                    </Show>
+                }
             >
                 {/* ── Header: título (+ ruta), metas y acciones ── */}
                 <header class="mb-6">

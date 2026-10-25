@@ -1,6 +1,7 @@
 import { createEffect, createSignal } from 'solid-js'
 
 import { apiGetNode } from '@/entities/nodes/api/getNode'
+import { getErrorMessage } from '@/shared/errors'
 
 /**
  * @param {() => string} getId
@@ -15,13 +16,32 @@ export function useGetNode(getId) {
      */
     const [node, setNode] = createSignal(null)
     const [loading, setLoading] = createSignal(true)
+    const [error, setError] = createSignal(null)
+    let latestRequest = 0
 
-    const load = id => {
-        if (!id) return
+    const load = async id => {
+        const requestId = ++latestRequest
+        if (!id) {
+            setNode(null)
+            setError('Node ID is missing.')
+            setLoading(false)
+            return false
+        }
         setLoading(true)
-        apiGetNode(id)
-            .then(setNode)
-            .finally(() => setLoading(false))
+        setNode(null)
+        setError(null)
+        try {
+            const result = await apiGetNode(id)
+            if (requestId !== latestRequest) return false
+            setNode(result)
+            return true
+        } catch (cause) {
+            if (requestId !== latestRequest) return false
+            setError(getErrorMessage(cause, 'Could not load this node.'))
+            return false
+        } finally {
+            if (requestId === latestRequest) setLoading(false)
+        }
     }
 
     createEffect(() => {
@@ -30,5 +50,5 @@ export function useGetNode(getId) {
         load(id)
     })
 
-    return { node, loading, refresh: () => load(getId()) }
+    return { node, loading, error, refresh: () => load(getId()) }
 }
