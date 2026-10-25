@@ -20,7 +20,8 @@ import {
     useDeleteNode,
     useGetNode,
     usePaginateDocs,
-    usePaginateNodes
+    usePaginateNodes,
+    fileBaseName
 } from '@/features/node/usecase'
 import {
     Button,
@@ -411,7 +412,12 @@ export function NodeView() {
     }
 
     const handleUpload = async file => {
-        const [success, err] = await upload(file)
+        const [success, err] = await upload(
+            file,
+            '',
+            undefined,
+            (nodeData()?.children ?? []).map(n => n.name)
+        )
         if (!success) {
             toast({
                 type: 'error',
@@ -426,20 +432,52 @@ export function NodeView() {
         refresh()
     }
 
+    // Subidas en lote: los nombres resueltos (con posible renombre) se
+    // acumulan localmente; cero consultas extra al backend.
+    const uploadBatch = async (files, parentIdOverride, takenExtra) => {
+        for (const batchFile of batchFiles) {
+            const [success, uploadedDoc, err] = await upload(
+                batchFile,
+                '',
+                parentIdOverride,
+                Array.isArray(takenExtra)
+                    ? [...takenExtra]
+                    : takenExtra
+            )
+            if (!success) {
+                toast({
+                    type: 'error',
+                    message:
+                        err?.general ||
+                        err?.message ||
+                        err?.detail?.reason ||
+                        'Upload failed'
+                })
+                continue
+            }
+            const resolved = uploadedDoc?.name ?? fileBaseName(batchFile.name)
+            ;(takenExtra ?? []).push?.(resolved)
+        }
+    }
+
     const handleFilePickerChange = e => {
         const files = Array.from(e.target?.files ?? [])
         if (files.length) {
-            // sequential to avoid parallel server state races
-            files.reduce(async (acc, f) => {
-                await acc
-                return handleUpload(f)
-            }, Promise.resolve())
+            const taken = new Set(
+                (nodeData()?.children ?? []).map(n => n.name)
+            )
+            ;(async () => {
+                await uploadBatch(files, undefined, taken)
+                refresh()
+            })()
         }
         e.target.value = ''
     }
 
     // NOTE: subcarpetas locales se recrean como carpetas hijas del nivel 1
     // (webkitRelativePath); el backend no expone recursividad de subidas.
+    // Cada subcarpeta recién creada arranca con un set vacío y los nombres
+    // que este lote ya resolvió se acumulan ahí (doc.name).
     const handleFolderPickerChange = async e => {
         const files = Array.from(e.target?.files ?? [])
         e.target.value = ''
@@ -459,21 +497,30 @@ export function NodeView() {
             }
         }
 
+        const takenRoot = new Set(
+            (nodeData()?.children ?? []).map(n => n.name)
+        )
         let created = 0
         for (const [name, fileList] of Object.entries(groups)) {
-            const [ok, createdNode] = await create(parentId, name, '')
+            const [ok, createdNode, createErr] = await create(
+                parentId,
+                name,
+                ''
+            )
             if (!ok) {
-                toast({ type: 'error', message: `Could not create "${name}"` })
+                toast({
+                    type: 'error',
+                    message:
+                        createErr?.general ||
+                        createErr?.detail?.reason ||
+                        `Could not create "${name}"`
+                })
                 continue
             }
             created += 1
-            for (const singleFile of fileList) {
-                await upload(singleFile, '', createdNode.id)
-            }
+            await uploadBatch(fileList, createdNode.id, [])
         }
-        for (const singleFile of looseFiles) {
-            await upload(singleFile)
-        }
+        await uploadBatch(looseFiles, undefined, takenRoot)
         refresh()
         toast({
             type: 'success',
