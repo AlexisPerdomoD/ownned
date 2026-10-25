@@ -49,7 +49,7 @@ var approotCmd = &cobra.Command{
 		usrs := &domain.Node{
 			ID:          uuid.NewV7(),
 			UsrID:       nil,
-			Name:        domain.NodePathUsrRoot.String(),
+			Name:        domain.NodePathUsrRoot.Raw(),
 			Description: "Root folder to contain all users root folders.",
 			Type:        domain.FolderNodeType,
 			Path:        domain.NodePathUsrRoot,
@@ -58,7 +58,7 @@ var approotCmd = &cobra.Command{
 		shared := &domain.Node{
 			ID:          uuid.NewV7(),
 			UsrID:       nil,
-			Name:        domain.NodePathSharedRoot.String(),
+			Name:        domain.NodePathSharedRoot.Raw(),
 			Description: "Root folder to contain all shared folders.",
 			Type:        domain.FolderNodeType,
 			Path:        domain.NodePathSharedRoot,
