@@ -17,22 +17,6 @@ const UploadIcon = () => (
     </svg>
 )
 
-const FileIcon = () => (
-    <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-    >
-        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-        <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-    </svg>
-)
-
 const formatBytes = bytes => {
     if (bytes === 0) return '0 B'
     const k = 1024
@@ -84,8 +68,8 @@ export function UploadDropzone(props) {
         <div
             class={`
                 relative flex flex-col items-center justify-center
-                p-6 border-2 border-dashed rounded-[--radius-md]
-                transition-colors duration-[--ease-base]
+                p-6 border-2 border-dashed rounded-md
+                transition-colors duration-base
                 ${
                     dragOver()
                         ? 'border-accent bg-accent-pale'
@@ -107,7 +91,7 @@ export function UploadDropzone(props) {
 
             <div class="flex flex-col items-center gap-3 text-center pointer-events-none">
                 <div
-                    class={`p-3 rounded-full ${dragOver() ? 'bg-accent text-white' : 'bg-surface text-ink'}`}
+                    class={`p-3 rounded-full ${dragOver() ? 'bg-accent text-on-accent' : 'bg-surface text-ink'}`}
                 >
                     <UploadIcon />
                 </div>
@@ -131,7 +115,7 @@ export function UploadDropzone(props) {
             </div>
 
             {props.loading && (
-                <div class="absolute inset-0 flex items-center justify-center bg-bg/80 rounded-[--radius-md]">
+                <div class="absolute inset-0 flex items-center justify-center bg-bg/80 rounded-md">
                     <div class="flex items-center gap-2 text-sm text-ink">
                         <span class="w-4 h-4 border border-current border-t-transparent rounded-full animate-spin" />
                         Uploading...

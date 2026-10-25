@@ -124,7 +124,7 @@ export function DocCard(props) {
                         type="button"
                         aria-label="Delete"
                         title="Delete"
-                        class="p-1.5 rounded-xs text-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-danger hover:bg-red-50 dark:hover:bg-red-950 transition-opacity"
+                        class="p-1.5 rounded-xs text-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-danger hover:bg-danger-soft transition-opacity"
                         onClick={() => own.onDelete(doc())}
                     >
                         <TrashIcon />

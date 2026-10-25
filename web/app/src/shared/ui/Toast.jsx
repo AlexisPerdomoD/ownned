@@ -77,9 +77,9 @@ export const toast = Object.assign(
 
 const typeStyles = {
     default: 'bg-ink-dark text-bg',
-    success: 'bg-green-800 text-green-50',
-    error: 'bg-red-700 text-red-50',
-    warning: 'bg-amber-700 text-amber-50'
+    success: 'bg-success text-on-success',
+    error: 'bg-danger text-on-danger',
+    warning: 'bg-warning text-on-warning'
 }
 
 const typeIcons = {

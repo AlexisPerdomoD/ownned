@@ -25,7 +25,7 @@ export function Select({
             {label && (
                 <label
                     for={selectId}
-                    class="text-[--text-xs] text-muted tracking-wide uppercase"
+                    class="text-xs text-muted tracking-wide uppercase"
                 >
                     {label}
                 </label>
@@ -36,14 +36,14 @@ export function Select({
                     id={selectId}
                     class={`
                         w-full appearance-none
-                        font-[--font-sans] font-light text-[--text-sm]
+                        font-sans font-light text-sm
                         text-ink-dark
-                        bg-surface border rounded-[--radius-xs]
+                        bg-surface border rounded-xs
                         px-3 py-2 pr-8
-                        transition-colors duration-[--ease-base]
+                        transition-colors duration-base
                         focus:outline-none focus:border-ink
                         disabled:opacity-40 disabled:cursor-not-allowed
-                        ${error ? 'border-red-400' : 'border-border hover:border-muted'}
+                        ${error ? 'border-danger' : 'border-border hover:border-muted'}
                     `}
                     {...props}
                 >
@@ -63,9 +63,9 @@ export function Select({
                 </span>
             </div>
 
-            {error && <p class="text-[--text-xs] text-red-500">{error}</p>}
+            {error && <p class="text-xs text-danger">{error}</p>}
             {!error && hint && (
-                <p class="text-[--text-xs] text-muted">{hint}</p>
+                <p class="text-xs text-muted">{hint}</p>
             )}
         </div>
     )
@@ -102,7 +102,7 @@ export function Textarea({
             {label && (
                 <label
                     for={textareaId}
-                    class="text-[--text-xs] text-muted tracking-wide uppercase"
+                    class="text-xs text-muted tracking-wide uppercase"
                 >
                     {label}
                 </label>
@@ -113,21 +113,21 @@ export function Textarea({
                 rows={rows}
                 class={`
                     w-full resize-y
-                    font-[--font-sans] font-light text-[--text-sm]
+                    font-sans font-light text-sm
                     text-ink-dark placeholder:text-muted
-                    bg-surface border rounded-[--radius-xs]
+                    bg-surface border rounded-xs
                     px-3 py-2
-                    transition-colors duration-[--ease-base]
+                    transition-colors duration-base
                     focus:outline-none focus:border-ink
                     disabled:opacity-40 disabled:cursor-not-allowed
-                    ${error ? 'border-red-400' : 'border-border hover:border-muted'}
+                    ${error ? 'border-danger' : 'border-border hover:border-muted'}
                 `}
                 {...props}
             />
 
-            {error && <p class="text-[--text-xs] text-red-500">{error}</p>}
+            {error && <p class="text-xs text-danger">{error}</p>}
             {!error && hint && (
-                <p class="text-[--text-xs] text-muted">{hint}</p>
+                <p class="text-xs text-muted">{hint}</p>
             )}
         </div>
     )
@@ -155,9 +155,9 @@ export function Checkbox({ label, hint, class: cls = '', id, ...props }) {
                 id={checkId}
                 class={`
                     mt-0.5 w-3.5 h-3.5 shrink-0
-                    rounded-[--radius-xs] border border-border
+                    rounded-xs border border-border
                     bg-surface
-                    accent-[--color-ink-dark]
+                    accent-ink-dark
                     cursor-pointer
                     disabled:opacity-40 disabled:cursor-not-allowed
                 `}
@@ -168,13 +168,13 @@ export function Checkbox({ label, hint, class: cls = '', id, ...props }) {
                     {label && (
                         <label
                             for={checkId}
-                            class="text-[--text-sm] text-ink cursor-pointer leading-none"
+                            class="text-sm text-ink cursor-pointer leading-none"
                         >
                             {label}
                         </label>
                     )}
                     {hint && (
-                        <p class="text-[--text-xs] text-muted">
+                        <p class="text-xs text-muted">
                             {hint}
                         </p>
                     )}

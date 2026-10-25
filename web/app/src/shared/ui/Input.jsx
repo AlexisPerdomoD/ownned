@@ -52,7 +52,7 @@ export function Input({
                         transition-colors ease-base
                         focus:outline-none focus:border-ink
                         disabled:opacity-40 disabled:cursor-not-allowed
-                        ${error ? 'border-red-400 focus:border-red-500' : 'border-border hover:border-muted'}
+                        ${error ? 'border-danger focus:border-danger' : 'border-border hover:border-muted'}
                         ${prefix ? 'pl-9' : ''}
                         ${suffix ? 'pr-9' : ''}
                     `}

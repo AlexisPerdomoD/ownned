@@ -109,7 +109,7 @@ export function GroupForm(props) {
                                 text-ink border border-border rounded-xs
                                 bg-transparent
                                 hover:bg-bg-2
-                                transition-colors duration-[--ease-base]
+                                transition-colors duration-base
                             "
                                     disabled={props.loading}
                                 >
@@ -122,7 +122,7 @@ export function GroupForm(props) {
                                 px-4 py-2 text-sm font-normal
                                 bg-ink-dark text-bg border border-ink-dark rounded-xs
                                 hover:bg-ink
-                                transition-colors duration-[--ease-base]
+                                transition-colors duration-base
                                 disabled:opacity-40 disabled:cursor-not-allowed
                             "
                                 >

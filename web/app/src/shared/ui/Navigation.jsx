@@ -34,9 +34,9 @@ export function Tabs({ items, active, onChange, class: cls = '' }) {
                             onClick={() => onChange(item.key)}
                             class={`
                                 inline-flex items-center gap-1.5
-                                px-4 py-2.5 text-[--text-sm] font-[--font-sans]
+                                px-4 py-2.5 text-sm font-sans
                                 border-b-[1.5px] -mb-px
-                                transition-colors duration-[--ease-base]
+                                transition-colors duration-base
                                 cursor-pointer whitespace-nowrap
                                 ${
                                     isActive()
@@ -99,7 +99,7 @@ export function Breadcrumb({ items, class: cls = '' }) {
                     return (
                         <>
                             <Show when={index() > 0}>
-                                <span class="text-border text-[--text-xs] select-none">
+                                <span class="text-border text-xs select-none">
                                     /
                                 </span>
                             </Show>
@@ -107,7 +107,7 @@ export function Breadcrumb({ items, class: cls = '' }) {
                                 when={!isLast() && (item.href || item.onClick)}
                                 fallback={
                                     <span
-                                        class="text-[--text-sm] text-ink-dark font-normal"
+                                        class="text-sm text-ink-dark font-normal"
                                         aria-current={
                                             isLast() ? 'page' : undefined
                                         }
@@ -125,10 +125,10 @@ export function Breadcrumb({ items, class: cls = '' }) {
                                         }
                                     }}
                                     class="
-                                        text-[--text-sm] text-muted
+                                        text-sm text-muted
                                         hover:text-ink
-                                        transition-colors duration-[--ease-base]
-                                        underline underline-offset-2 decoration-[--color-border]
+                                        transition-colors duration-base
+                                        underline underline-offset-2 decoration-border
                                     "
                                 >
                                     {item.label}

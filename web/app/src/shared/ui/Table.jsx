@@ -34,7 +34,7 @@ const alignClass = {
 export function Table(props) {
     return (
         <div class={`w-full overflow-x-auto ${props.class ?? ''}`}>
-            <table class="w-full border-collapse font-[--font-sans] text-[--text-sm]">
+            <table class="w-full border-collapse font-sans text-sm">
                 <thead>
                     <tr class="border-b border-border">
                         <For each={props.columns}>
@@ -84,7 +84,7 @@ export function Table(props) {
                                 <tr
                                     class={`
                                         border-b border-border-subtle
-                                        transition-colors duration-[--ease-base]
+                                        transition-colors duration-base
                                         ${props.onRowClick ? 'hover:bg-bg-2 cursor-pointer' : 'hover:bg-bg-2/50'}
                                     `}
                                     onClick={() => props.onRowClick?.(row)}

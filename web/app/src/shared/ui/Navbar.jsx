@@ -3,7 +3,7 @@ import { Show, createEffect, createSignal } from 'solid-js'
 
 import { useAuth } from '@/features/auth/providers/AuthProvider'
 import { canManageUsrs } from '@/shared/authz'
-import { Avatar, Button } from '@/shared/ui'
+import { Button } from '@/shared/ui'
 
 /**
  * @param {Object} props
@@ -25,12 +25,6 @@ export function Navbar({ collapsed = false }) {
 
     const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/')
 
-    const navItems = [
-        { path: '/nodes', label: 'Files', icon: '📁' },
-        { path: '/groups', label: 'Groups', icon: '👥' },
-        { path: '/usrs', label: 'Users', icon: '👤' }
-    ]
-
     const handleLogout = async () => {
         await logout()
         window.location.href = '/login'
@@ -49,9 +43,9 @@ export function Navbar({ collapsed = false }) {
                 <A
                     href="/nodes"
                     class={`
-                        flex items-center gap-2 px-3 py-2 rounded-[--radius-xs]
-                        text-[--text-sm] font-light
-                        transition-colors duration-[--ease-base]
+                        flex items-center gap-2 px-3 py-2 rounded-xs
+                        text-sm font-light
+                        transition-colors duration-base
                         ${
                             isActive('/nodes')
                                 ? 'bg-surface text-ink-dark'
@@ -66,9 +60,9 @@ export function Navbar({ collapsed = false }) {
                 <A
                     href="/groups"
                     class={`
-                        flex items-center gap-2 px-3 py-2 rounded-[--radius-xs]
-                        text-[--text-sm] font-light
-                        transition-colors duration-[--ease-base]
+                        flex items-center gap-2 px-3 py-2 rounded-xs
+                        text-sm font-light
+                        transition-colors duration-base
                         ${
                             isActive('/groups')
                                 ? 'bg-surface text-ink-dark'
@@ -84,9 +78,9 @@ export function Navbar({ collapsed = false }) {
                     <A
                         href="/usrs"
                         class={`
-                        flex items-center gap-2 px-3 py-2 rounded-[--radius-xs]
-                        text-[--text-sm] font-light
-                        transition-colors duration-[--ease-base]
+                        flex items-center gap-2 px-3 py-2 rounded-xs
+                        text-sm font-light
+                        transition-colors duration-base
                         ${
                             isActive('/usrs')
                                 ? 'bg-surface text-ink-dark'
@@ -111,7 +105,7 @@ export function Navbar({ collapsed = false }) {
                 >
                     {theme() === 'dark' ? '☀' : '☾'}
                 </Button>
-                <span class="text-[--text-sm] text-muted">
+                <span class="text-sm text-muted">
                     {collapsed ? '' : state.usr?.username}
                 </span>
                 <Button variant="ghost" size="sm" onClick={handleLogout}>

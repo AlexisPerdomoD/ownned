@@ -136,7 +136,7 @@ export function NodeCard(props) {
                 <button
                     type="button"
                     aria-label={`Delete ${displayName(own.node)}`}
-                    class="absolute top-1.5 right-1.5 z-10 p-1.5 rounded-xs text-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-danger hover:bg-red-50 dark:hover:bg-red-950 transition-opacity"
+                    class="absolute top-1.5 right-1.5 z-10 p-1.5 rounded-xs text-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 hover:text-danger hover:bg-danger-soft transition-opacity"
                     onClick={() => own.onDelete(own.node)}
                 >
                     <TrashIcon />

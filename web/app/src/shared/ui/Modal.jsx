@@ -126,7 +126,7 @@ export function Modal(props) {
                         class={`
                             relative w-full ${sizes[props.size ?? 'md']}
                             bg-surface border border-border
-                            rounded-[--radius-sm] shadow-sm
+                            rounded-sm shadow-sm
                             flex flex-col
                         `}
                     >
@@ -136,13 +136,13 @@ export function Modal(props) {
                                 {props.title && (
                                     <h2
                                         id="modal-title"
-                                        class="font-[--font-serif] text-[--text-lg] text-ink-dark leading-snug"
+                                        class="font-serif text-lg text-ink-dark leading-snug"
                                     >
                                         {props.title}
                                     </h2>
                                 )}
                                 {props.description && (
-                                    <p class="mt-1 text-[--text-sm] text-muted">
+                                    <p class="mt-1 text-sm text-muted">
                                         {props.description}
                                     </p>
                                 )}
@@ -156,7 +156,7 @@ export function Modal(props) {
                             class="
                                 absolute top-3.5 right-4
                                 text-muted hover:text-ink
-                                transition-colors duration-[--ease-base]
+                                transition-colors duration-base
                                 cursor-pointer
                             "
                         >

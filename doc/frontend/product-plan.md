@@ -64,7 +64,7 @@ Este es el plan vivo para alinear el cliente SolidJS con el contrato público de
 
 - Tokens semánticos viven en la raíz del CSS (`@theme` en `web/app/src/index.css`) y sustentan ambos temas. Usar utilidades Tailwind generadas (`text-bg`, `bg-surface`, `border-border`); evitar `text-[--color-bg]`/valores inline cuando hay token equivalente.
 - D6 resuelta: el tema explícito persiste en `localStorage` y tiene precedencia; `prefers-color-scheme` es el fallback inicial. El bootstrap del HTML aplica el tema antes de montar la app. `prefers-reduced-motion` reduce animación/transiciones globalmente.
-- Verificar contraste legible en ambos temas y estados de hover/focus/disabled; no elegir valores cromáticos antes de comprobarlos.
+- Los pares semánticos de texto/estado de ambos temas se verifican automáticamente con el umbral WCAG AA (4.5:1); auditar visualmente hover/focus/disabled sigue siendo parte de issue 26.
 - Animación discreta, corta y consistente; desactivar o reducir movimiento no esencial con `prefers-reduced-motion`.
 
 ### D. Subida de una carpeta completa: evaluación de opciones

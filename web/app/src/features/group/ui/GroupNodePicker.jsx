@@ -205,7 +205,7 @@ export function GroupNodePicker(props) {
                     <Show when={currentFolder()}>
                         <button
                             type="button"
-                            class="px-3 py-2 bg-accent text-white rounded-xs text-sm disabled:opacity-50"
+                            class="px-3 py-2 bg-accent text-on-accent rounded-xs text-sm disabled:opacity-50"
                             disabled={
                                 isAssigned(currentFolder()?.id) || loading()
                             }

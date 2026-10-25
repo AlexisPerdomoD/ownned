@@ -18,9 +18,9 @@ export function Divider({ orientation = 'horizontal', class: cls = '' }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const avatarSizes = {
-    sm: 'w-7 h-7 text-[--text-xs]',
-    md: 'w-9 h-9 text-[--text-sm]',
-    lg: 'w-12 h-12 text-[--text-base]'
+    sm: 'w-7 h-7 text-xs',
+    md: 'w-9 h-9 text-sm',
+    lg: 'w-12 h-12 text-base'
 }
 
 /**
@@ -47,7 +47,7 @@ export function Avatar({ src, name = '', size = 'md', class: cls = '' }) {
                 inline-flex items-center justify-center
                 rounded-full shrink-0 overflow-hidden
                 bg-accent-pale text-accent
-                font-[--font-sans] font-normal select-none
+                font-sans font-normal select-none
                 ${avatarSizes[size]} ${cls}
             `}
         >
@@ -79,7 +79,7 @@ export function Spinner({ size = 'md', class: cls = '' }) {
             aria-label="Cargando"
             class={`
                 inline-block rounded-full animate-spin
-                border-border border-t-[--color-ink]
+                border-border border-t-ink
                 ${spinnerSizes[size]} ${cls}
             `}
         />
@@ -109,8 +109,8 @@ export function EmptyState({ title = 'Sin resultados', description, action, icon
             `}
         >
             {icon && <span class="text-border mb-1 opacity-60">{icon}</span>}
-            <p class="font-[--font-serif] text-[--text-base] text-ink">{title}</p>
-            {description && <p class="text-[--text-sm] text-muted max-w-xs leading-relaxed">{description}</p>}
+            <p class="font-serif text-base text-ink">{title}</p>
+            {description && <p class="text-sm text-muted max-w-xs leading-relaxed">{description}</p>}
             {action && <div class="mt-2">{action}</div>}
         </div>
     )

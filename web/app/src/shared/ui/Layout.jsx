@@ -58,7 +58,7 @@ AppShell.Sidebar = function Sidebar({
             {/* Brand */}
             {brand && (
                 <div class="px-4 py-4 border-b border-border-subtle">
-                    <span class="font-[--font-serif] text-[--text-base] text-ink-dark">
+                    <span class="font-serif text-base text-ink-dark">
                         {brand}
                     </span>
                 </div>
@@ -114,9 +114,9 @@ export function NavItem({
 }) {
     const base = `
         flex items-center gap-2.5 w-full
-        px-3 py-2 rounded-[--radius-xs]
-        text-[--text-sm] font-[--font-sans] font-light
-        transition-colors duration-[--ease-base]
+        px-3 py-2 rounded-xs
+        text-sm font-sans font-light
+        transition-colors duration-base
         cursor-pointer
         ${
             active
@@ -184,7 +184,7 @@ export function PageHeader({
                             <button
                                 type="button"
                                 onClick={onBack}
-                                class="text-[--text-sm] text-accent hover:underline"
+                                class="text-sm text-accent hover:underline"
                             >
                                 ← Back
                             </button>
@@ -192,7 +192,7 @@ export function PageHeader({
                         {backTo && !onBack && (
                             <a
                                 href={backTo}
-                                class="text-[--text-sm] text-accent hover:underline"
+                                class="text-sm text-accent hover:underline"
                             >
                                 ← Back
                             </a>
@@ -200,11 +200,11 @@ export function PageHeader({
                     </div>
                 )}
                 {breadcrumb}
-                <h1 class="font-[--font-serif] text-[--text-2xl] text-ink-dark leading-tight">
+                <h1 class="font-serif text-2xl text-ink-dark leading-tight">
                     {title}
                 </h1>
                 {subtitle && (
-                    <p class="text-[--text-sm] text-muted">
+                    <p class="text-sm text-muted">
                         {subtitle}
                     </p>
                 )}
