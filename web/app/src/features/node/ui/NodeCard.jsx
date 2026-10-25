@@ -104,7 +104,7 @@ export function NodeCard(props) {
     return (
         <Card
             hoverable={!!props.onClick}
-            class={`w-full ${props.cls}`}
+            class={`aspect-square flex flex-col items-center justify-center ${props.cls}`}
             role={props.onClick ? 'button' : undefined}
             tabIndex={props.onClick ? 0 : undefined}
         >

@@ -162,11 +162,17 @@ export function NodeView() {
     const params = useParams()
     const navigate = useNavigate()
     const auth = useAuth()
+    const { node, loading, refresh } = useGetNode(() => params.id)
+    const nodeData = () => node()
     const role = () => auth.role()
     const accessLevel = () => nodeData()?.access_level
-    const { node, loading } = useGetNode(() => params.id)
     const pager = usePaginateNodes()
     const [searchInput, setSearchInput] = createSignal('')
+    const [searchScope, setSearchScope] = createSignal('folder') // 'folder' | 'global'
+    const [showAdvanced, setShowAdvanced] = createSignal(false)
+    const [docMime, setDocMime] = createSignal('')
+    const [docMinSize, setDocMinSize] = createSignal('')
+    const [docMaxSize, setDocMaxSize] = createSignal('')
     const [sortBy, setSortBy] = createSignal('name')
     const [sortDir, setSortDir] = createSignal('asc')
     const [showDotfiles, setShowDotfiles] = createSignal(
@@ -176,6 +182,22 @@ export function NodeView() {
     // persist dotfile preference (D6)
     createEffect(() => {
         localStorage.setItem('owned.showDotfiles', String(showDotfiles()))
+    })
+
+    // debounce node search
+    createEffect(() => {
+        const q = searchInput()
+        const scope = searchScope()
+        const rootId = scope === 'global' ? undefined : nodeData()?.id
+        const timer = setTimeout(() => {
+            if (q.trim()) {
+                pager.run(rootId, { page: 1, limit: 10, search: q.trim() })
+            } else {
+                // clear results when query empty
+                // pager has no clear; set results via run with empty search? skip
+            }
+        }, 300)
+        return () => clearTimeout(timer)
     })
     const { create, loading: creating } = useCreateFolder()
     const { update, loading: updating } = useUpdateNode()
@@ -229,28 +251,52 @@ export function NodeView() {
     }
 
     const handleCreate = async () => {
-        const [success] = await create(node().id, newName(), newDesc())
-        if (success) {
-            setShowCreate(false)
-            setNewName('')
-            setNewDesc('')
+        const [success, err] = await create(node().id, newName(), newDesc())
+        if (!success) {
+            toast({
+                type: 'error',
+                message:
+                    err?.general ||
+                    err?.message ||
+                    err?.detail?.reason ||
+                    'Create failed'
+            })
+            return
         }
+        setShowCreate(false)
+        setNewName('')
+        setNewDesc('')
+        refresh()
     }
 
     const handleUpload = async file => {
         const [success, err] = await upload(file)
         if (!success) {
-            toast({ type: 'error', message: err?.general ?? 'Upload failed' })
+            toast({
+                type: 'error',
+                message:
+                    err?.general ||
+                    err?.message ||
+                    err?.detail?.reason ||
+                    'Upload failed'
+            })
             return
         }
         toast({ type: 'success', message: 'File uploaded successfully' })
+        refresh()
     }
 
     const handleDownload = async doc => {
         try {
             await apiDownloadDoc(doc.id, doc.title)
         } catch (e) {
-            toast({ type: 'error', message: e.message ?? 'Download failed' })
+            toast({
+                type: 'error',
+                message:
+                    e?.message ||
+                    e?.detail?.reason ||
+                    'Download failed'
+            })
         }
     }
 
@@ -276,7 +322,14 @@ export function NodeView() {
         if (!doc) return
         const [success, err] = await deleteDoc(doc.id)
         if (!success) {
-            toast({ type: 'error', message: err?.general ?? 'Delete failed' })
+            toast({
+                type: 'error',
+                message:
+                    err?.general ||
+                    err?.message ||
+                    err?.detail?.reason ||
+                    'Delete failed'
+            })
             return
         }
         toast({ type: 'success', message: 'File deleted successfully' })
@@ -288,7 +341,6 @@ export function NodeView() {
         return success
     }
 
-    const nodeData = () => node()
     const canEdit = () => nodeData()?.type === 'folder'
 
     const folderChildren = () =>
@@ -437,26 +489,56 @@ export function NodeView() {
                 </Show>
 
                 <Show when={nodeData()?.type === 'folder'}>
-                    <section class="mt-4 flex items-center gap-2">
-                        <input
-                            type="text"
-                            placeholder="Search in this folder..."
-                            value={searchInput()}
-                            onInput={e => setSearchInput(e.target.value)}
-                            class="flex-1 font-sans font-light text-sm text-ink-dark bg-surface border border-border rounded-xs px-3 py-2 focus:outline-none focus:border-ink"
-                        />
-                        <Button
-                            size="sm"
-                            onClick={() =>
-                                pager.run(nodeData()?.id, {
-                                    page: 1,
-                                    limit: 10,
-                                    search: searchInput()
-                                })
-                            }
+                    <section class="mt-4 flex flex-col gap-2">
+                        <div class="flex items-center gap-2">
+                            <select
+                                value={searchScope()}
+                                onChange={e => setSearchScope(e.target.value)}
+                                class="bg-surface border border-border rounded-xs px-2 py-2 text-sm"
+                            >
+                                <option value="folder">This folder</option>
+                                <option value="global">Global</option>
+                            </select>
+                            <input
+                                type="text"
+                                placeholder="Search nodes..."
+                                value={searchInput()}
+                                onInput={e => setSearchInput(e.target.value)}
+                                class="flex-1 font-sans font-light text-sm text-ink-dark bg-surface border border-border rounded-xs px-3 py-2 focus:outline-none focus:border-ink"
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            class="text-xs text-muted underline self-start"
+                            onClick={() => setShowAdvanced(v => !v)}
                         >
-                            Search
-                        </Button>
+                            {showAdvanced() ? 'Hide' : 'Show'} advanced document search
+                        </button>
+                        <Show when={showAdvanced()}>
+                            <div class="flex items-center gap-2 text-sm">
+                                <input
+                                    type="text"
+                                    placeholder="mimetype"
+                                    value={docMime()}
+                                    onInput={e => setDocMime(e.target.value)}
+                                    class="bg-surface border border-border rounded-xs px-2 py-1"
+                                />
+                                <input
+                                    type="number"
+                                    placeholder="min size"
+                                    value={docMinSize()}
+                                    onInput={e => setDocMinSize(e.target.value)}
+                                    class="bg-surface border border-border rounded-xs px-2 py-1 w-24"
+                                />
+                                <input
+                                    type="number"
+                                    placeholder="max size"
+                                    value={docMaxSize()}
+                                    onInput={e => setDocMaxSize(e.target.value)}
+                                    class="bg-surface border border-border rounded-xs px-2 py-1 w-24"
+                                />
+                            </div>
+                        </Show>
                     </section>
 
                     <Show when={pager.results().length > 0}>

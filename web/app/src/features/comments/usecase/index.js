@@ -37,7 +37,15 @@ export function useCreateComment() {
             const comment = await apiCreateComment(nodeId, dto)
             return [true, comment]
         } catch (e) {
-            return [false, { general: e.message }]
+            return [
+                false,
+                {
+                    general:
+                        e?.message ||
+                        e?.detail?.reason ||
+                        'Request failed.'
+                }
+            ]
         } finally {
             setLoading(false)
         }
@@ -59,7 +67,15 @@ export function useUpdateComment() {
             const comment = await apiUpdateComment(commentId, dto)
             return [true, comment]
         } catch (e) {
-            return [false, { general: e.message }]
+            return [
+                false,
+                {
+                    general:
+                        e?.message ||
+                        e?.detail?.reason ||
+                        'Request failed.'
+                }
+            ]
         } finally {
             setLoading(false)
         }
@@ -77,7 +93,15 @@ export function useDeleteComment() {
             await apiDeleteComment(commentId)
             return [true, null]
         } catch (e) {
-            return [false, { general: e.message }]
+            return [
+                false,
+                {
+                    general:
+                        e?.message ||
+                        e?.detail?.reason ||
+                        'Request failed.'
+                }
+            ]
         } finally {
             setLoading(false)
         }

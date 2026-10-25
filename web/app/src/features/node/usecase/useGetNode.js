@@ -16,14 +16,19 @@ export function useGetNode(getId) {
     const [node, setNode] = createSignal(null)
     const [loading, setLoading] = createSignal(true)
 
-    createEffect(() => {
-        const id = getId()
+    const load = id => {
+        if (!id) return
         setLoading(true)
-        setNode(null)
         apiGetNode(id)
             .then(setNode)
             .finally(() => setLoading(false))
+    }
+
+    createEffect(() => {
+        const id = getId()
+        setNode(null)
+        load(id)
     })
 
-    return { node, loading }
+    return { node, loading, refresh: () => load(getId()) }
 }

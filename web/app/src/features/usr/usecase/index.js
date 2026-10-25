@@ -59,7 +59,15 @@ export function useCreateUsr() {
             toast({ type: 'success', message: 'User created.' })
             return [true, usr]
         } catch (e) {
-            return [false, { general: e.message }]
+            return [
+                false,
+                {
+                    general:
+                        e?.message ||
+                        e?.detail?.reason ||
+                        'Request failed.'
+                }
+            ]
         } finally {
             setLoading(false)
         }
