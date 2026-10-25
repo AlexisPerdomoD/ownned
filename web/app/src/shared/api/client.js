@@ -17,9 +17,7 @@ import {
 
 const LOCAL_API_URL = 'http://localhost:3000'
 
-const credentials = APP_MODE === 'local'
-    ? 'include'
-    : 'same-origin'
+const credentials = APP_MODE === 'local' ? 'include' : 'same-origin'
 
 function apiURL(path) {
     return new URL(path, APP_MODE === 'local' ? LOCAL_API_URL : undefined)
@@ -34,14 +32,11 @@ function apiURL(path) {
  * @returns {Promise<never>}
  */
 async function throwForApiError(res, fallback = 'Request failed.') {
-    const body = await res
-        .json()
-        .catch(() => null)
+    const body = await res.json().catch(() => null)
     const msg = body?.detail?.reason || body?.message || fallback
     /** @type {Record<string, string> | null} */
-    const detail = typeof body === 'string' || body == null
-        ? null
-        : (body.detail ?? null)
+    const detail =
+        typeof body === 'string' || body == null ? null : (body.detail ?? null)
 
     switch (res.status) {
         case 400:
@@ -71,6 +66,28 @@ async function throwForApiError(res, fallback = 'Request failed.') {
         default:
             throw new ApiUnknownError(msg, detail)
     }
+}
+
+/**
+ * Sends a request without expecting a response body.
+ *
+ * @param {string} path relative API path (e.g. '/api/v1/usrs/me')
+ * @param {RequestInit} opts
+ * @returns {Promise<void>} empty response
+ */
+export async function reqNoContent(path, opts = {}) {
+    const { headers, ...init } = opts
+
+    const r = await fetch(apiURL(path), {
+        ...init,
+        credentials,
+        headers: {
+            'Content-type': 'application/json',
+            ...headers
+        }
+    })
+
+    if (!r.ok) await throwForApiError(r)
 }
 
 /**

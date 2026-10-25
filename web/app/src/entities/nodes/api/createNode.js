@@ -1,10 +1,10 @@
 import z from 'zod'
 
-import { reqJSON } from '@/shared/api/client'
+import { reqJSON, reqNoContent } from '@/shared/api/client'
 
 export class CreateFolderDTO {
     static #schema = z.strictObject({
-        parent_id: z.string('Parent ID must be a string.').uuid('Invalid UUID format.'),
+        parent_id: z.uuid('Invalid UUID format.'),
         name: z
             .string('Name must be a string.')
             .min(1, 'Name is required.')
@@ -42,7 +42,11 @@ export class CreateFolderDTO {
      * @returns {[true, CreateFolderDTO] | [false, Record<string, string>]} result
      */
     static build(parentId, name, description = '') {
-        const r = CreateFolderDTO.#schema.safeParse({ parent_id: parentId, name, description })
+        const r = CreateFolderDTO.#schema.safeParse({
+            parent_id: parentId,
+            name,
+            description
+        })
         if (!r.success) {
             const issues = {}
             r.error.issues.forEach(issue => {
@@ -160,7 +164,7 @@ export async function apiUpdateNode(nodeId, dto) {
  * @returns {Promise<{message: string}>}
  */
 export async function apiDeleteNode(nodeId) {
-    return await reqJSON(`/api/v1/nodes/${nodeId}`, {
+    return reqNoContent(`/api/v1/nodes/${nodeId}`, {
         method: 'DELETE'
-    })
+    }).then(() => ({ message: 'Node deleted successfully' }))
 }
