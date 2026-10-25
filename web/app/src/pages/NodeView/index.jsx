@@ -347,10 +347,10 @@ export function NodeView() {
     })
 
     const { create, loading: creating } = useCreateFolder()
-    const { remove, loading: deleting } = useDeleteNode()
+    const { remove } = useDeleteNode()
 
-    const { upload, loading: uploading } = useCreateDoc(() => params.id)
-    const { remove: deleteDoc, loading: deletingDoc } = useDeleteDoc()
+    const { upload } = useCreateDoc(() => params.id)
+    const { remove: deleteDoc } = useDeleteDoc()
 
     const [showCreate, setShowCreate] = createSignal(false)
     const [showDelete, setShowDelete] = createSignal(false)
@@ -366,10 +366,8 @@ export function NodeView() {
         refresh: refreshComments
     } = useGetComments(() => params.id)
     const { create: addComment, loading: addingComment } = useCreateComment()
-    const { update: updateComment, loading: updatingComment } =
-        useUpdateComment()
-    const { remove: deleteComment, loading: deletingComment } =
-        useDeleteComment()
+    const { update: updateComment } = useUpdateComment()
+    const { remove: deleteComment } = useDeleteComment()
 
     const handleDelete = target => {
         setDeleteTarget(target ?? nodeData())
