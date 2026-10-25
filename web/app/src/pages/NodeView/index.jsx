@@ -332,6 +332,10 @@ export function NodeView() {
         const _maxSize = docMaxSize()
         const _advanced = showAdvanced()
         const rootId = scope === 'global' ? undefined : nodeData()?.id
+        if (q.length >= MIN_SEARCH_CHARS) {
+            pager.clear()
+            docsPager.clear()
+        }
         const timer = setTimeout(() => {
             if (q.length < MIN_SEARCH_CHARS) {
                 pager.clear()
@@ -580,6 +584,14 @@ export function NodeView() {
         showAdvanced() ? docsPager.results() : pager.results()
     const searchPage = () => (showAdvanced() ? docsPager.page() : pager.page())
     const hasSearchQuery = () => searchInput().trim().length >= MIN_SEARCH_CHARS
+    const searchLoading = () =>
+        showAdvanced() ? docsPager.loading() : pager.loading()
+    const searchError = () =>
+        showAdvanced() ? docsPager.error() : pager.error()
+    const searchHasSearched = () =>
+        showAdvanced() ? docsPager.hasSearched() : pager.hasSearched()
+    const searchTotalPages = () =>
+        showAdvanced() ? docsPager.totalPages() : pager.totalPages()
 
     // rows for list view and search dropdown
     const folderRowActions = folderNode => (
@@ -866,7 +878,9 @@ export function NodeView() {
                             when={
                                 searchOpen() &&
                                 hasSearchQuery() &&
-                                searchResultItems().length > 0
+                                (searchLoading() ||
+                                    searchError() ||
+                                    searchHasSearched())
                             }
                         >
                             <div
@@ -880,7 +894,8 @@ export function NodeView() {
                                             ? 'Documents'
                                             : 'Folders'}
                                         {' · '}
-                                        page {searchPage()}
+                                        page {searchPage()} of{' '}
+                                        {searchTotalPages() || 1}
                                     </span>
                                     <button
                                         type="button"
@@ -891,9 +906,35 @@ export function NodeView() {
                                         ✕
                                     </button>
                                 </div>
+                                <Show when={searchLoading()}>
+                                    <p class="px-3 py-4 text-sm text-muted" role="status">
+                                        Searching…
+                                    </p>
+                                </Show>
+                                <Show when={searchError()}>
+                                    <p class="px-3 py-4 text-sm text-danger" role="alert">
+                                        {searchError()}
+                                    </p>
+                                </Show>
                                 <Show
-                                    when={!showAdvanced()}
-                                    fallback={
+                                    when={
+                                        searchHasSearched() &&
+                                        !searchLoading() &&
+                                        !searchError() &&
+                                        searchResultItems().length === 0
+                                    }
+                                >
+                                    <p class="px-3 py-4 text-sm text-muted">
+                                        No matching{' '}
+                                        {showAdvanced() ? 'documents' : 'folders'}.
+                                    </p>
+                                </Show>
+                                <Show
+                                    when={searchResultItems().length > 0}
+                                >
+                                    <Show
+                                        when={!showAdvanced()}
+                                        fallback={
                                         <>
                                             <For each={docsPager.results()}>
                                                 {singleDoc => (
@@ -966,8 +1007,8 @@ export function NodeView() {
                                                     type="button"
                                                     class="text-accent disabled:opacity-40 hover:underline"
                                                     disabled={
-                                                        docsPager.results()
-                                                            .length < 10
+                                                        searchPage() >=
+                                                        searchTotalPages()
                                                     }
                                                     onClick={() =>
                                                         runSearch(
@@ -979,8 +1020,8 @@ export function NodeView() {
                                                 </button>
                                             </div>
                                         </>
-                                    }
-                                >
+                                        }
+                                    >
                                     <For each={pager.results()}>
                                         {folderResult => (
                                             <CompactItemRow
@@ -1014,7 +1055,8 @@ export function NodeView() {
                                             type="button"
                                             class="text-accent disabled:opacity-40 hover:underline"
                                             disabled={
-                                                pager.results().length < 10
+                                                searchPage() >=
+                                                searchTotalPages()
                                             }
                                             onClick={() =>
                                                 runSearch(searchPage() + 1)
@@ -1023,6 +1065,7 @@ export function NodeView() {
                                             Next →
                                         </button>
                                     </div>
+                                    </Show>
                                 </Show>
                             </div>
                         </Show>
