@@ -1,11 +1,21 @@
 import { createSignal } from 'solid-js'
 
-import { buildUpdateNodeDTO, apiUpdateNode } from '@/entities/nodes/api/createNode'
+import {
+    apiUpdateNode,
+    buildUpdateNodeDTO
+} from '@/entities/nodes/api/createNode'
+import { ApiError } from '@/shared/errors'
 import { toast } from '@/shared/ui'
 
 export function useUpdateNode() {
     const [loading, setLoading] = createSignal(false)
 
+    /**
+     * @param {string} nodeId
+     * @param {string} name
+     * @param {string} description
+     * @returns {Promise<[true, import('@/entities/nodes').Node] | [false, { message: string, reason?: string }]>}
+     */
     const update = async (
         /** @type {string} */ nodeId,
         /** @type {string} */ name,
@@ -19,9 +29,12 @@ export function useUpdateNode() {
         setLoading(true)
         try {
             const node = await apiUpdateNode(nodeId, dto)
-            toast({ type: 'success', message: 'Node updated.' })
+            toast.success('Node updated.')
             return [true, node]
         } catch (e) {
+            if (e instanceof ApiError) {
+                return [false, { message: e.message, reason: e.detail?.reason }]
+            }
             return [false, { general: e.message }]
         } finally {
             setLoading(false)

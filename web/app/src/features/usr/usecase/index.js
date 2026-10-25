@@ -56,7 +56,7 @@ export function useCreateUsr() {
         setLoading(true)
         try {
             const usr = await apiCreateUsr(dto)
-            toast({ type: 'success', message: 'User created.' })
+            toast.success('User created.')
             return [true, usr]
         } catch (e) {
             return [

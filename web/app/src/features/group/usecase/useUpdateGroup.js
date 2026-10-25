@@ -19,7 +19,7 @@ export function useUpdateGroup() {
         setLoading(true)
         try {
             const group = await apiUpdateGroup(groupId, dto)
-            toast({ type: 'success', message: 'Group updated successfully.' })
+            toast.success('Group updated successfully.')
             return [true, group]
         } catch (e) {
             return [false, { general: e.message }]

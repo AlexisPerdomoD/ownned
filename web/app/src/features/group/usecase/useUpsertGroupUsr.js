@@ -19,7 +19,7 @@ export function useUpsertGroupUsr() {
         setLoading(true)
         try {
             await apiUpsertGroupUsr(groupId, dto)
-            toast({ type: 'success', message: 'User assigned successfully.' })
+            toast.success('User assigned successfully.')
             return [true, null]
         } catch (e) {
             return [false, { general: e.message }]

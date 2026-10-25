@@ -37,6 +37,29 @@ export class ApiBadRequestError extends ApiError {}
 
 export class ApiUnknownError extends ApiError {}
 
+/**
+ * Returns a user-facing message from API errors, use-case results, or DTO
+ * validation issue maps.
+ * @param {unknown} error
+ * @param {string} [fallback]
+ */
+export function getErrorMessage(error, fallback = 'Request failed.') {
+    if (typeof error === 'string' && error.trim()) return error
+    if (!error || typeof error !== 'object') return fallback
+
+    const candidate =
+        error.detail?.reason ||
+        error.reason ||
+        error.message ||
+        error.general
+    if (typeof candidate === 'string' && candidate.trim()) return candidate
+
+    const issues = Object.values(error).filter(
+        value => typeof value === 'string' && value.trim()
+    )
+    return issues.length ? issues.join(' · ') : fallback
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // FRONTEND ERRORS (ClientError)
 // ─────────────────────────────────────────────────────────────────────────────

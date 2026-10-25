@@ -10,7 +10,7 @@ export function useDeleteGroupUsr() {
         setLoading(true)
         try {
             await apiDeleteGroupUsr(groupId, usrId)
-            toast({ type: 'success', message: 'User removed from group.' })
+            toast.success('User removed from group.')
             return [true, null]
         } catch (e) {
             return [false, { general: e.message }]

@@ -6,6 +6,7 @@ import {
 } from '@/features/usr/usecase'
 import { useAuth } from '@/features/auth/providers/AuthProvider'
 import { canManageUsrs } from '@/shared/authz'
+import { getErrorMessage } from '@/shared/errors'
 import {
     Badge,
     Button,
@@ -353,11 +354,9 @@ export function UsrsView() {
                     create(username, password, firstname, lastname, role).then(
                         ([success, usr]) => {
                             if (!success) {
-                                toast({
-                                    type: 'error',
-                                    message:
-                                        usr.general ?? 'Error creating user.'
-                                })
+                                toast.error(
+                                    getErrorMessage(usr, 'Error creating user.')
+                                )
                                 return
                             }
 

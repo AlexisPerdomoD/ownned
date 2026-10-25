@@ -15,7 +15,7 @@ export function useCreateGroup() {
         setLoading(true)
         try {
             const group = await apiCreateGroup(dto)
-            toast({ type: 'success', message: 'Group created successfully.' })
+            toast.success('Group created successfully.')
             return [true, group]
         } catch (e) {
             return [false, { general: e.message }]

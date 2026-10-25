@@ -1,9 +1,9 @@
 import { createEffect, createSignal } from 'solid-js'
 
 import {
-    apiGetComments,
     apiCreateComment,
     apiDeleteComment,
+    apiGetComments,
     apiUpdateComment
 } from '@/entities/comments/api'
 
@@ -21,14 +21,24 @@ export function useGetComments(/** @type {() => string} */ getNodeId) {
             .finally(() => setLoading(false))
     })
 
-    return { comments, loading, refresh: () => apiGetComments(getNodeId()).then(setComments) }
+    return {
+        comments,
+        loading,
+        refresh: () => apiGetComments(getNodeId()).then(setComments)
+    }
 }
 
 export function useCreateComment() {
     const [loading, setLoading] = createSignal(false)
 
+    /**
+     * @param {string} nodeId
+     * @param {string} content
+     * @returns {Promise<[true, import('@/entities/nodes').NodeComment] | [false, { message: string, reason?: string }]>}
+     */
     const create = async (nodeId, content) => {
-        const { buildCreateCommentDTO } = await import('@/entities/comments/api')
+        const { buildCreateCommentDTO } =
+            await import('@/entities/comments/api')
         const [valid, dto] = buildCreateCommentDTO(nodeId, content)
         if (!valid) return [false, dto]
 
@@ -40,10 +50,8 @@ export function useCreateComment() {
             return [
                 false,
                 {
-                    general:
-                        e?.message ||
-                        e?.detail?.reason ||
-                        'Request failed.'
+                    general: e?.message || 'Request failed.',
+                    reason: e?.detail?.reason
                 }
             ]
         } finally {
@@ -57,8 +65,12 @@ export function useCreateComment() {
 export function useUpdateComment() {
     const [loading, setLoading] = createSignal(false)
 
-    const update = async (/** @type {string} */ commentId, /** @type {string} */ content) => {
-        const { buildUpdateCommentDTO } = await import('@/entities/comments/api')
+    const update = async (
+        /** @type {string} */ commentId,
+        /** @type {string} */ content
+    ) => {
+        const { buildUpdateCommentDTO } =
+            await import('@/entities/comments/api')
         const [valid, dto] = buildUpdateCommentDTO(content)
         if (!valid) return [false, dto]
 
@@ -71,9 +83,7 @@ export function useUpdateComment() {
                 false,
                 {
                     general:
-                        e?.message ||
-                        e?.detail?.reason ||
-                        'Request failed.'
+                        e?.message || e?.detail?.reason || 'Request failed.'
                 }
             ]
         } finally {
@@ -97,9 +107,7 @@ export function useDeleteComment() {
                 false,
                 {
                     general:
-                        e?.message ||
-                        e?.detail?.reason ||
-                        'Request failed.'
+                        e?.message || e?.detail?.reason || 'Request failed.'
                 }
             ]
         } finally {

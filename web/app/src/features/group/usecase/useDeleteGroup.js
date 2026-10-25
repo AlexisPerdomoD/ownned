@@ -10,7 +10,7 @@ export function useDeleteGroup() {
         setLoading(true)
         try {
             await apiDeleteGroup(groupId)
-            toast({ type: 'success', message: 'Group deleted successfully.' })
+            toast.success('Group deleted successfully.')
             return [true, null]
         } catch (e) {
             return [false, { general: e.message }]

@@ -15,7 +15,7 @@ export function useUpsertGroupNode() {
         setLoading(true)
         try {
             await apiUpsertGroupNode(groupId, dto)
-            toast({ type: 'success', message: 'Node added to group.' })
+            toast.success('Node added to group.')
             return [true, null]
         } catch (e) {
             return [false, { general: e.message }]
