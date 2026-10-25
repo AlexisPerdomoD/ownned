@@ -1,4 +1,4 @@
-import { Show, createSignal } from 'solid-js'
+import { For, Show, createSignal } from 'solid-js'
 
 import {
     ApiBadRequestError,
@@ -68,40 +68,45 @@ function getTitle(type) {
  * @param {Function} [props.onBack] - Optional back navigation callback
  * @returns {import('solid-js').JSX.Element}
  */
-export function ErrView({ error, onRetry, onBack }) {
+export function ErrView(props) {
     const [showDetails, setShowDetails] = createSignal(false)
 
-    const type = getErrorType(error)
-    const title = getTitle(type)
-    const message = getMessage(error, type)
-    const isClientError = error instanceof ClientError
+    const type = () => getErrorType(props.error)
+    const title = () => getTitle(type())
+    const message = () => getMessage(props.error, type())
+    const isClientError = () => props.error instanceof ClientError
 
     return (
-        <section class="flex flex-col items-center justify-center min-h-[60vh] px-6 py-12">
+        <section
+            class="flex flex-col items-center justify-center min-h-[60vh] px-6 py-12"
+            role="alert"
+        >
             <div class="max-w-md w-full text-center space-y-6">
                 <div class="space-y-2">
-                    <h1 class="font-serif text-4xl text-ink">{title}</h1>
+                    <h1 class="font-serif text-4xl text-ink">{title()}</h1>
                 </div>
 
-                <p class="text-base text-muted leading-relaxed">{message}</p>
+                <p class="text-base text-muted leading-relaxed">{message()}</p>
 
-                <Show when={isClientError && error.issues}>
+                <Show when={isClientError() && props.error.issues}>
                     <div class="text-left bg-bg-2 rounded-sm p-4">
                         <p class="text-sm font-medium text-ink mb-2">
                             Validation Issues:
                         </p>
                         <ul class="text-sm text-muted space-y-1">
-                            {error.issues.map(issue => (
+                            <For each={props.error.issues}>
+                                {issue => (
                                 <li class="flex gap-2">
                                     <span class="text-danger">•</span>
                                     <span>{issue.message}</span>
                                 </li>
-                            ))}
+                                )}
+                            </For>
                         </ul>
                     </div>
                 </Show>
 
-                <Show when={showDetails() && error?.stack}>
+                <Show when={showDetails() && props.error?.stack}>
                     <div class="text-left">
                         <button
                             type="button"
@@ -110,13 +115,13 @@ export function ErrView({ error, onRetry, onBack }) {
                         >
                             Hide technical details
                         </button>
-                        <pre class="mt-2 p-3 bg-bg-2 rounded-sm text-xs text-muted overflow-x-auto whitespace-pre-wrap break-all font-mono">
-                            {error.stack}
+                            <pre class="mt-2 p-3 bg-bg-2 rounded-sm text-xs text-muted overflow-x-auto whitespace-pre-wrap break-all font-mono">
+                            {props.error.stack}
                         </pre>
                     </div>
                 </Show>
 
-                <Show when={!showDetails() && error?.stack}>
+                <Show when={!showDetails() && props.error?.stack}>
                     <button
                         type="button"
                         onClick={() => setShowDetails(true)}
@@ -127,13 +132,19 @@ export function ErrView({ error, onRetry, onBack }) {
                 </Show>
 
                 <div class="flex items-center justify-center gap-3 pt-4">
-                    <Show when={onBack}>
-                        <Button variant="ghost" onClick={onBack}>
+                    <Show when={props.onBack}>
+                        <Button
+                            variant="ghost"
+                            onClick={() => props.onBack?.()}
+                        >
                             Go Back
                         </Button>
                     </Show>
-                    <Show when={onRetry}>
-                        <Button variant="primary" onClick={onRetry}>
+                    <Show when={props.onRetry}>
+                        <Button
+                            variant="primary"
+                            onClick={() => props.onRetry?.()}
+                        >
                             Try Again
                         </Button>
                     </Show>

@@ -183,9 +183,9 @@ Otros roles ──────────────────────�
 
 **Contrato implicado:** `GET /api/v1/usrs/paginate` admite búsqueda y rol; `POST /api/v1/usrs` crea y requiere superusuario; `GET /api/v1/usrs/{usrID}` existe. No hay endpoint de borrado ni registro público.
 
-**Estado actual:** existe tabla con búsqueda/paginación y formulario de creación. El DTO web agrega `access: []`, campo no permitido por el decoder estricto del backend. El formulario y la ruta de administración no aplican gating visual de superusuario; la validación visible de password solo expresa mínimo 8 y no replica todas las reglas backend. Aunque el hook intenta borrar usuarios, el backend no registra `DELETE /usrs/{usrID}`. El filtro de rol está disponible en el hook/API pero no como control de vista; el GET individual no tiene un flujo de UI identificado.
+**Estado actual:** existe tabla con búsqueda/paginación/filtro de rol y formulario de creación, limitados visualmente a superusuarios. Los errores de carga muestran reintento y la creación conserva el formulario ante fallos. El borrado de usuarios no tiene endpoint ni affordance; el GET individual no tiene un flujo UI identificado.
 
-**Cierre verificable:** formulario crea payload aceptado y valida reglas completas; acceso a acciones está condicionado a superusuario y errores `403` se entienden; el filtro de rol queda disponible en UI o explícitamente fuera de alcance; eliminar usuario se retira/oculta o se acuerda e implementa como contrato nuevo. No agregar registro público sin contrato explícito.
+**Cierre verificable:** formulario crea payload aceptado y valida reglas completas; acceso está condicionado a superusuario y errores `403` se entienden; búsqueda/paginación/filtro de rol están disponibles; eliminar usuario permanece oculto por no tener contrato. No agregar registro público sin contrato explícito.
 
 ### 8. Estados y comportamiento comunes
 

@@ -14,6 +14,7 @@ const PAGE_SIZE = 20
  * @param {() => void} props.onClose
  * @param {(nodeId: string) => Promise<boolean>} props.onSelect
  * @param {string[]} [props.assignedNodeIds]
+ * @param {boolean} [props.busy]
  */
 export function GroupNodePicker(props) {
     const [roots, setRoots] = createSignal([])
@@ -207,7 +208,9 @@ export function GroupNodePicker(props) {
                             type="button"
                             class="px-3 py-2 bg-accent text-on-accent rounded-xs text-sm disabled:opacity-50"
                             disabled={
-                                isAssigned(currentFolder()?.id) || loading()
+                                props.busy ||
+                                isAssigned(currentFolder()?.id) ||
+                                loading()
                             }
                             onClick={selectCurrentFolder}
                         >
@@ -227,6 +230,11 @@ export function GroupNodePicker(props) {
                 <Show when={loading() || searchLoading()}>
                     <p class="py-4 text-center text-sm text-muted" role="status">
                         Loading nodes…
+                    </p>
+                </Show>
+                <Show when={props.busy}>
+                    <p class="text-sm text-muted" role="status">
+                        Sharing node…
                     </p>
                 </Show>
                 <Show when={loadError() || searchError()}>
@@ -289,6 +297,7 @@ export function GroupNodePicker(props) {
                                         <button
                                             type="button"
                                             class="px-2 py-1 text-xs text-accent hover:underline"
+                                            disabled={props.busy || loading()}
                                             onClick={() => openFolder(node)}
                                         >
                                             Open
@@ -298,7 +307,9 @@ export function GroupNodePicker(props) {
                                         type="button"
                                         class="px-2 py-1 text-xs text-accent hover:underline disabled:opacity-50"
                                         disabled={
-                                            isAssigned(node.id) || loading()
+                                            props.busy ||
+                                            isAssigned(node.id) ||
+                                            loading()
                                         }
                                         onClick={() => selectNode(node)}
                                     >

@@ -1,4 +1,4 @@
-import { createEffect } from 'solid-js'
+import { Show, createEffect, createSignal } from 'solid-js'
 
 import { buildCreateGroupDTO, buildUpdateGroupDTO } from '@/entities/groups/api'
 import { Modal } from '@/shared/ui'
@@ -15,26 +15,34 @@ import { Modal } from '@/shared/ui'
 export function GroupForm(props) {
     let nameInput
     let descInput
+    const [errors, setErrors] = createSignal({})
 
     createEffect(() => {
         if (props.open && nameInput && descInput) {
             nameInput.value = props.group?.name ?? ''
             descInput.value = props.group?.description ?? ''
+            setErrors({})
         }
     })
 
     const handleSubmit = e => {
         e.preventDefault()
+        setErrors({})
         const name = nameInput?.value?.trim()
         const description = descInput?.value?.trim() ?? ''
 
-        if (!name) return
+        if (!name) {
+            setErrors({ name: 'Name is required.' })
+            return
+        }
 
         const schema = props.group ? buildUpdateGroupDTO : buildCreateGroupDTO
-        const [valid] = schema(name, description)
+        const [valid, result] = schema(name, description)
 
         if (valid) {
             props.onSubmit?.({ name, description })
+        } else {
+            setErrors(result)
         }
     }
 
@@ -74,6 +82,11 @@ export function GroupForm(props) {
                             "
                                     required
                                 />
+                                <Show when={errors().name}>
+                                    <p class="text-xs text-danger" role="alert">
+                                        {errors().name}
+                                    </p>
+                                </Show>
                             </div>
 
                             <div class="flex flex-col gap-1">
@@ -98,6 +111,11 @@ export function GroupForm(props) {
                                 hover:border-muted
                             "
                                 />
+                                <Show when={errors().description}>
+                                    <p class="text-xs text-danger" role="alert">
+                                        {errors().description}
+                                    </p>
+                                </Show>
                             </div>
 
                             <div class="flex justify-end gap-2 pt-2">

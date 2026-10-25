@@ -1,9 +1,10 @@
-import { A, useLocation } from '@solidjs/router'
+import { A, useLocation, useNavigate } from '@solidjs/router'
 import { Show, createEffect, createSignal } from 'solid-js'
 
 import { useAuth } from '@/features/auth/providers/AuthProvider'
 import { canManageUsrs } from '@/shared/authz'
-import { Button } from '@/shared/ui'
+import { getErrorMessage } from '@/shared/errors'
+import { Button, toast } from '@/shared/ui'
 
 /**
  * @param {Object} props
@@ -12,6 +13,7 @@ import { Button } from '@/shared/ui'
  */
 export function Navbar({ collapsed = false }) {
     const location = useLocation()
+    const navigate = useNavigate()
     const { state, logout, role } = useAuth()
 
     const initialTheme =
@@ -26,8 +28,13 @@ export function Navbar({ collapsed = false }) {
     const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/')
 
     const handleLogout = async () => {
-        await logout()
-        window.location.href = '/login'
+        try {
+            await logout()
+        } catch (error) {
+            toast.error(getErrorMessage(error, 'Logout could not reach the server.'))
+        } finally {
+            navigate('/login', { replace: true })
+        }
     }
 
     return (
@@ -98,6 +105,11 @@ export function Navbar({ collapsed = false }) {
                 <Button
                     variant="ghost"
                     size="sm"
+                    aria-label={
+                        theme() === 'dark'
+                            ? 'Switch to light theme'
+                            : 'Switch to dark theme'
+                    }
                     onClick={() =>
                         setTheme(t => (t === 'dark' ? 'light' : 'dark'))
                     }

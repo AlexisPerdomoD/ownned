@@ -1,3 +1,5 @@
+import { Show } from 'solid-js'
+
 /**
  * Línea divisora horizontal u vertical.
  *
@@ -99,19 +101,31 @@ export function Spinner({ size = 'md', class: cls = '' }) {
  * @param {string} [props.class]
  * @returns {import('solid-js').JSX.Element}
  */
-export function EmptyState({ title = 'Sin resultados', description, action, icon, class: cls = '' }) {
+export function EmptyState(props) {
     return (
         <div
+            role="status"
+            aria-live="polite"
             class={`
                 flex flex-col items-center justify-center gap-3
                 py-16 px-8 text-center
-                ${cls}
+                ${props.class ?? ''}
             `}
         >
-            {icon && <span class="text-border mb-1 opacity-60">{icon}</span>}
-            <p class="font-serif text-base text-ink">{title}</p>
-            {description && <p class="text-sm text-muted max-w-xs leading-relaxed">{description}</p>}
-            {action && <div class="mt-2">{action}</div>}
+            <Show when={props.icon}>
+                <span class="text-border mb-1 opacity-60">{props.icon}</span>
+            </Show>
+            <p class="font-serif text-base text-ink">
+                {props.title ?? 'Sin resultados'}
+            </p>
+            <Show when={props.description}>
+                <p class="text-sm text-muted max-w-xs leading-relaxed">
+                    {props.description}
+                </p>
+            </Show>
+            <Show when={props.action}>
+                <div class="mt-2">{props.action}</div>
+            </Show>
         </div>
     )
 }

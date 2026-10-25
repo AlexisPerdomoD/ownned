@@ -27,7 +27,7 @@ Este es el plan vivo para alinear el cliente SolidJS con el contrato público de
 
 - Rutas de comentarios en cliente no corresponden con backend; edición no tiene integración y límites de contenido discrepan.
 - Actualización de grupo envía verbo incorrecto. Actualización de nodo está en UI, pero el backend responde `501`.
-- El formulario de creación de usuario serializa un campo no permitido y muestra acciones sin aplicar el requisito de superusuario; la UI de borrado apunta a una ruta que no existe. No hay registro público.
+- La administración de usuarios está limitada a superusuarios y ya consume búsqueda/paginación/filtro de rol; no se ofrece borrado ni registro público sin contrato.
 - Los hijos de `GET /nodes/{id}` incluyen `doc` best-effort y `access_level`; `NodeView` degrada cuando falta `doc` y gobierna acciones con el acceso propio del hijo. `Node.name` conserva el filename completo.
 - `NodeView` muestra `display_path` y combina rol/asignación para sus acciones. `HomeView` aún debe alinear la presentación y affordances de raíces.
 - `NodeView` consume paginación para búsqueda de nodos/documentos, ordena localmente hijos y oculta dotfiles por defecto con preferencia persistida; el tema tiene toggle persistido. La subida de carpetas es todavía parcial y no recursiva.

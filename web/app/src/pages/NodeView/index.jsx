@@ -196,11 +196,15 @@ function NodeForm(props) {
         >
                     <form onSubmit={handleSubmit} class="flex flex-col gap-4">
                         <div class="flex flex-col gap-1">
-                            <label class="text-xs text-muted uppercase tracking-wide">
+                            <label
+                                for="node-name"
+                                class="text-xs text-muted uppercase tracking-wide"
+                            >
                                 Name *
                             </label>
                             <input
                                 type="text"
+                                id="node-name"
                                 data-autofocus
                                 value={name()}
                                 onInput={e => setName(e.target.value)}
@@ -217,10 +221,14 @@ function NodeForm(props) {
                         </div>
 
                         <div class="flex flex-col gap-1">
-                            <label class="text-xs text-muted uppercase tracking-wide">
+                            <label
+                                for="node-description"
+                                class="text-xs text-muted uppercase tracking-wide"
+                            >
                                 Description
                             </label>
                             <textarea
+                                id="node-description"
                                 value={description()}
                                 onInput={e => setDescription(e.target.value)}
                                 rows={2}
@@ -265,6 +273,7 @@ export function NodeView() {
     const [fileInput, setFileInput] = createSignal(null)
     const [folderInput, setFolderInput] = createSignal(null)
     const [showComments, setShowComments] = createSignal(false)
+    const [batchUploading, setBatchUploading] = createSignal(false)
     const [childrenPage, setChildrenPage] = createSignal(1)
     const [viewMode, setViewMode] = createSignal(
         localStorage.getItem('owned.viewMode') ?? 'grid'
@@ -363,6 +372,7 @@ export function NodeView() {
     const {
         comments,
         loading: commentsLoading,
+        error: commentsError,
         refresh: refreshComments
     } = useGetComments(() => params.id)
     const { create: addComment, loading: addingComment } = useCreateComment()
@@ -428,8 +438,13 @@ export function NodeView() {
         e.target.value = ''
         if (!files.length) return
         const taken = new Set((nodeData()?.children ?? []).map(n => n.name))
-        await uploadBatch(files, undefined, taken)
-        refresh()
+        setBatchUploading(true)
+        try {
+            await uploadBatch(files, undefined, taken)
+            refresh()
+        } finally {
+            setBatchUploading(false)
+        }
     }
 
     // NOTE: subcarpetas locales se recrean como carpetas hijas del nivel 1
@@ -441,36 +456,41 @@ export function NodeView() {
         e.target.value = ''
         const parentId = nodeData()?.id
         if (!parentId) return
+        setBatchUploading(true)
 
-        const groups = {}
-        const looseFiles = []
-        for (const singleFile of files) {
-            const rel = singleFile.webkitRelativePath || singleFile.name
-            const first = rel.split('/')[0]
-            if (first && first !== singleFile.name) {
-                groups[first] = groups[first] ?? []
-                groups[first].push(singleFile)
-            } else {
-                looseFiles.push(singleFile)
+        try {
+            const groups = {}
+            const looseFiles = []
+            for (const singleFile of files) {
+                const rel = singleFile.webkitRelativePath || singleFile.name
+                const first = rel.split('/')[0]
+                if (first && first !== singleFile.name) {
+                    groups[first] = groups[first] ?? []
+                    groups[first].push(singleFile)
+                } else {
+                    looseFiles.push(singleFile)
+                }
             }
-        }
 
-        const takenRoot = new Set((nodeData()?.children ?? []).map(n => n.name))
-        let created = 0
-        for (const [name, fileList] of Object.entries(groups)) {
-            const [ok, result] = await create(parentId, name, '')
-            if (!ok) {
-                toast.error(
-                    getErrorMessage(result, `Could not create "${name}"`)
-                )
-                continue
+            const takenRoot = new Set((nodeData()?.children ?? []).map(n => n.name))
+            let created = 0
+            for (const [name, fileList] of Object.entries(groups)) {
+                const [ok, result] = await create(parentId, name, '')
+                if (!ok) {
+                    toast.error(
+                        getErrorMessage(result, `Could not create "${name}"`)
+                    )
+                    continue
+                }
+                created += 1
+                await uploadBatch(fileList, result.id, new Set())
             }
-            created += 1
-            await uploadBatch(fileList, result.id, new Set())
+            await uploadBatch(looseFiles, undefined, takenRoot)
+            refresh()
+            toast.success(`Uploaded ${created} folder${created === 1 ? '' : 's'}`)
+        } finally {
+            setBatchUploading(false)
         }
-        await uploadBatch(looseFiles, undefined, takenRoot)
-        refresh()
-        toast.success(`Uploaded ${created} folder${created === 1 ? '' : 's'}`)
     }
 
     const handleDownload = async doc => {
@@ -520,6 +540,16 @@ export function NodeView() {
         const [success, result] = await deleteComment(commentId)
         if (success) refreshComments()
         else toast.error(getErrorMessage(result, 'Comment delete failed'))
+    }
+
+    const handleCreateComment = async content => {
+        const [success, result] = await addComment(nodeData()?.id, content)
+        if (!success) {
+            toast.error(getErrorMessage(result, 'Comment failed'))
+            return false
+        }
+        void refreshComments()
+        return true
     }
 
     const folderChildren = () =>
@@ -732,6 +762,7 @@ export function NodeView() {
                             />
                             <Button
                                 size="sm"
+                                loading={batchUploading()}
                                 onClick={() => fileInput()?.click()}
                             >
                                 ⬆ Upload file
@@ -748,6 +779,7 @@ export function NodeView() {
                             <Show when={role() === 'super_usr_role'}>
                                 <Button
                                     size="sm"
+                                    loading={batchUploading()}
                                     onClick={() => folderInput()?.click()}
                                 >
                                     📁 Upload folder
@@ -769,6 +801,7 @@ export function NodeView() {
                             <input
                                 type="text"
                                 placeholder={`Search folders (min ${MIN_SEARCH_CHARS} characters)...`}
+                                aria-label="Search folders and documents"
                                 value={searchInput()}
                                 onInput={e => setSearchInput(e.target.value)}
                                 onFocus={() => setSearchOpen(true)}
@@ -1326,14 +1359,33 @@ export function NodeView() {
                             </button>
                         </div>
                         <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-                            <CommentsList
-                                comments={comments()}
-                                loading={commentsLoading()}
-                                currentUsrId={auth.state.usr?.id}
-                                isSuper={auth.role() === 'super_usr_role'}
-                                onEdit={handleUpdateComment}
-                                onDelete={handleDeleteComment}
-                            />
+                            <Show when={commentsError()}>
+                                <div
+                                    class="flex flex-col items-start gap-2"
+                                    role="alert"
+                                >
+                                    <p class="text-sm text-danger">
+                                        {commentsError()}
+                                    </p>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => refreshComments()}
+                                    >
+                                        Retry
+                                    </Button>
+                                </div>
+                            </Show>
+                            <Show when={!commentsError()}>
+                                <CommentsList
+                                    comments={comments()}
+                                    loading={commentsLoading()}
+                                    currentUsrId={auth.state.usr?.id}
+                                    isSuper={auth.role() === 'super_usr_role'}
+                                    onEdit={handleUpdateComment}
+                                    onDelete={handleDeleteComment}
+                                />
+                            </Show>
                             <Show
                                 when={canCommentOnNode(
                                     auth.role(),
@@ -1342,24 +1394,7 @@ export function NodeView() {
                             >
                                 <CommentForm
                                     loading={addingComment()}
-                                    onSubmit={content => {
-                                        addComment(
-                                            nodeData()?.id,
-                                            content
-                                        ).then(([isSuccess, result]) => {
-                                            if (!isSuccess) {
-                                                toast.error(
-                                                    getErrorMessage(
-                                                        result,
-                                                        'Comment failed'
-                                                    )
-                                                )
-                                                return false
-                                            }
-
-                                            refreshComments()
-                                        })
-                                    }}
+                                    onSubmit={handleCreateComment}
                                 />
                             </Show>
                         </div>

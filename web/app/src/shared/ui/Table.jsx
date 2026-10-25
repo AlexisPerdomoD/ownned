@@ -28,6 +28,7 @@ const alignClass = {
  * @param {string} [props.emptyTitle='Sin resultados']
  * @param {string} [props.emptyDescription]
  * @param {(row: any) => void} [props.onRowClick]      - Hace la fila clickeable si se provee.
+ * @param {(row: any) => string} [props.rowLabel]       - Nombre accesible para filas interactivas.
  * @param {string} [props.class]
  * @returns {import('solid-js').JSX.Element}
  */
@@ -85,9 +86,21 @@ export function Table(props) {
                                     class={`
                                         border-b border-border-subtle
                                         transition-colors duration-base
-                                        ${props.onRowClick ? 'hover:bg-bg-2 cursor-pointer' : 'hover:bg-bg-2/50'}
+                                        ${props.onRowClick ? 'hover:bg-bg-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent cursor-pointer' : 'hover:bg-bg-2/50'}
                                     `}
+                                    tabIndex={props.onRowClick ? 0 : undefined}
+                                    aria-label={props.rowLabel?.(row)}
                                     onClick={() => props.onRowClick?.(row)}
+                                    onKeyDown={event => {
+                                        if (
+                                            props.onRowClick &&
+                                            (event.key === 'Enter' ||
+                                                event.key === ' ')
+                                        ) {
+                                            event.preventDefault()
+                                            props.onRowClick(row)
+                                        }
+                                    }}
                                 >
                                     <For each={props.columns}>
                                         {col => (

@@ -50,11 +50,10 @@ Issues 18–23 y 38 cerradas; resúmenes técnicos en `../history/web_closure_fa
 
 ### Fase 4 — Consistencia global
 
-Issues 24–25 cerradas; resúmenes técnicos en [`../history/web_closure_fase4_theme.md`](../history/web_closure_fase4_theme.md) y [`../history/web_closure_fase4_tokens.md`](../history/web_closure_fase4_tokens.md). D6 queda resuelta para preferencias locales.
+Issues 24–26 cerradas; resúmenes técnicos en [`../history/web_closure_fase4_theme.md`](../history/web_closure_fase4_theme.md), [`../history/web_closure_fase4_tokens.md`](../history/web_closure_fase4_tokens.md) y [`../history/web_closure_fase4_accessibility.md`](../history/web_closure_fase4_accessibility.md). D6 queda resuelta para preferencias locales.
 
 | ID | Título | Estado | Depende de |
 | --- | --- | --- | --- |
-| 26 | [Auditoría de accesibilidad](26.web_closure_fase4.web.app.accesibilidad.md) | revisión | 3.5, 4.1 |
 
 ### Fase 5 — Capacidades avanzadas, verificación y cierre
 

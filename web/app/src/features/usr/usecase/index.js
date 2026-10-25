@@ -12,21 +12,34 @@ export function usePaginateUsrs({ pageSize = 20 } = {}) {
     const [loading, setLoading] = createSignal(true)
     const [search, setSearch] = createSignal('')
     const [role, setRole] = createSignal(undefined)
+    const [error, setError] = createSignal(null)
+    let latestRequest = 0
 
     const fetch = async (pg, term, roleFilter) => {
+        const requestId = ++latestRequest
         setLoading(true)
+        setError(null)
         try {
             const res = await apiPaginateUsrs(pg, pageSize, term, roleFilter)
+            if (requestId !== latestRequest) return false
             setUsrs(res.data)
             setTotal(res.total_count)
             setPage(res.page)
+            return true
+        } catch (cause) {
+            if (requestId === latestRequest) {
+                setUsrs([])
+                setTotal(0)
+                setError(cause)
+            }
+            return false
         } finally {
-            setLoading(false)
+            if (requestId === latestRequest) setLoading(false)
         }
     }
 
     onMount(() => {
-        fetch(1, '', undefined)
+        void fetch(1, '', undefined)
     })
 
     return {
@@ -34,6 +47,7 @@ export function usePaginateUsrs({ pageSize = 20 } = {}) {
         page,
         total,
         loading,
+        error,
         search,
         setSearch,
         role,
@@ -75,4 +89,3 @@ export function useCreateUsr() {
 
     return { create, loading }
 }
-

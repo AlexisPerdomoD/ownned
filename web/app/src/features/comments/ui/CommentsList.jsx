@@ -99,6 +99,7 @@ export function CommentsList(props) {
                                         onInput={e =>
                                             setDraft(e.target.value)
                                         }
+                                        aria-label="Edit comment"
                                         rows={2}
                                         class="
                                             w-full font-sans font-light text-sm
@@ -165,6 +166,7 @@ export function CommentForm(props) {
                 value={content()}
                 onInput={e => setContent(e.target.value)}
                 placeholder="Write a comment..."
+                aria-label="Write a comment"
                 rows={2}
                 maxLength={255}
                 class="

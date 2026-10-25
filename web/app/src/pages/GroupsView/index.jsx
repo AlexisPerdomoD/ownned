@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js'
+import { Show, createSignal } from 'solid-js'
 
 import { GroupForm, GroupsTable } from '@/features/group/ui'
 import {
@@ -7,16 +7,32 @@ import {
     usePaginateGroups,
     useUpdateGroup
 } from '@/features/group/usecase'
-import { Button, ConfirmDialog, PageHeader, Pagination } from '@/shared/ui'
+import { getErrorMessage } from '@/shared/errors'
+import {
+    Button,
+    ConfirmDialog,
+    ErrView,
+    PageHeader,
+    Pagination,
+    toast
+} from '@/shared/ui'
 import { useNavigate } from '@solidjs/router'
 
 export function GroupsView() {
     const navigate = useNavigate()
-    const { groups, page, total, loading, search, setSearch, goTo, refresh } =
-        usePaginateGroups({ pageSize: 20 })
+    const {
+        groups,
+        page,
+        total,
+        loading,
+        error,
+        setSearch,
+        goTo,
+        refresh
+    } = usePaginateGroups({ pageSize: 20 })
     const { create, loading: creating } = useCreateGroup()
     const { update, loading: updating } = useUpdateGroup()
-    const { remove, loading: deleting } = useDeleteGroup()
+    const { remove } = useDeleteGroup()
 
     const [showForm, setShowForm] = createSignal(false)
     const [editingGroup, setEditingGroup] = createSignal(null)
@@ -25,11 +41,13 @@ export function GroupsView() {
     const [showDelete, setShowDelete] = createSignal(false)
 
     const handleCreate = async ({ name, description }) => {
-        const [success] = await create(name, description)
-        if (success) {
-            setShowForm(false)
-            refresh()
+        const [success, error] = await create(name, description)
+        if (!success) {
+            toast.error(getErrorMessage(error, 'Could not create group.'))
+            return
         }
+        setShowForm(false)
+        await refresh()
     }
 
     const handleEdit = group => {
@@ -38,12 +56,18 @@ export function GroupsView() {
     }
 
     const handleUpdate = async ({ name, description }) => {
-        const [success] = await update(editingGroup().id, name, description)
-        if (success) {
-            setEditingGroup(null)
-            setShowForm(false)
-            refresh()
+        const [success, error] = await update(
+            editingGroup().id,
+            name,
+            description
+        )
+        if (!success) {
+            toast.error(getErrorMessage(error, 'Could not update group.'))
+            return
         }
+        setEditingGroup(null)
+        setShowForm(false)
+        await refresh()
     }
 
     const handleDelete = group => {
@@ -54,8 +78,12 @@ export function GroupsView() {
     const confirmDelete = async () => {
         const group = deleteTarget()
         if (!group) return
-        const [success] = await remove(group.id)
-        if (success) refresh()
+        const [success, error] = await remove(group.id)
+        if (!success) {
+            toast.error(getErrorMessage(error, 'Could not delete group.'))
+            return
+        }
+        await refresh()
     }
 
     const handleSearch = () => {
@@ -83,6 +111,7 @@ export function GroupsView() {
                 <input
                     type="text"
                     placeholder="Search groups..."
+                    aria-label="Search groups"
                     value={searchInput()}
                     onInput={e => setSearchInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleSearch()}
@@ -99,22 +128,27 @@ export function GroupsView() {
                 </Button>
             </div>
 
-            <GroupsTable
-                groups={groups()}
-                loading={loading()}
-                onRowClick={handleRowClick}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-            />
-
-            <div class="mt-4">
-                <Pagination
-                    page={page()}
-                    total={total()}
-                    pageSize={20}
-                    onChange={goTo}
+            <Show
+                when={!error()}
+                fallback={<ErrView error={error()} onRetry={() => refresh()} />}
+            >
+                <GroupsTable
+                    groups={groups()}
+                    loading={loading()}
+                    onRowClick={handleRowClick}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
                 />
-            </div>
+
+                <div class="mt-4">
+                    <Pagination
+                        page={page()}
+                        total={total()}
+                        pageSize={20}
+                        onChange={goTo}
+                    />
+                </div>
+            </Show>
 
             <GroupForm
                 open={showForm()}

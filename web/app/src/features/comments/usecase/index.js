@@ -6,25 +6,50 @@ import {
     apiGetComments,
     apiUpdateComment
 } from '@/entities/comments/api'
+import { getErrorMessage } from '@/shared/errors'
 
 export function useGetComments(/** @type {() => string} */ getNodeId) {
     const [comments, setComments] = createSignal([])
     const [loading, setLoading] = createSignal(false)
+    const [error, setError] = createSignal(null)
+    let latestRequest = 0
+
+    const load = async nodeId => {
+        const requestId = ++latestRequest
+        if (!nodeId) {
+            setComments([])
+            setError(null)
+            setLoading(false)
+            return false
+        }
+
+        setLoading(true)
+        setError(null)
+        try {
+            const result = await apiGetComments(nodeId)
+            if (requestId !== latestRequest) return false
+            setComments(result ?? [])
+            return true
+        } catch (cause) {
+            if (requestId !== latestRequest) return false
+            setComments([])
+            setError(getErrorMessage(cause, 'Could not load comments.'))
+            return false
+        } finally {
+            if (requestId === latestRequest) setLoading(false)
+        }
+    }
 
     createEffect(() => {
         const nodeId = getNodeId()
-        if (!nodeId) return
-
-        setLoading(true)
-        apiGetComments(nodeId)
-            .then(setComments)
-            .finally(() => setLoading(false))
+        void load(nodeId)
     })
 
     return {
         comments,
         loading,
-        refresh: () => apiGetComments(getNodeId()).then(setComments)
+        error,
+        refresh: () => load(getNodeId())
     }
 }
 

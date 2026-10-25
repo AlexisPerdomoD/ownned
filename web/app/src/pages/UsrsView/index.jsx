@@ -10,6 +10,7 @@ import { getErrorMessage } from '@/shared/errors'
 import {
     Badge,
     Button,
+    ErrView,
     Modal,
     PageHeader,
     Pagination,
@@ -128,12 +129,16 @@ function CreateUsrForm(props) {
                             class="flex flex-col gap-4"
                         >
                             <div class="flex flex-col gap-1">
-                                <label class="text-xs text-muted uppercase tracking-wide">
+                                <label
+                                    for="usr-email"
+                                    class="text-xs text-muted uppercase tracking-wide"
+                                >
                                     Email *
                                 </label>
                                 <input
                                     ref={r => (usernameInput = r)}
                                     data-autofocus
+                                    id="usr-email"
                                     type="email"
                                     placeholder="email@example.com"
                                     class="
@@ -149,11 +154,15 @@ function CreateUsrForm(props) {
 
                             <div class="flex gap-2">
                                 <div class="flex flex-col gap-1 flex-1">
-                                    <label class="text-xs text-muted uppercase tracking-wide">
+                                    <label
+                                        for="usr-firstname"
+                                        class="text-xs text-muted uppercase tracking-wide"
+                                    >
                                         First Name *
                                     </label>
                                     <input
                                         ref={r => (firstnameInput = r)}
+                                        id="usr-firstname"
                                         type="text"
                                         placeholder="John"
                                         class="
@@ -167,11 +176,15 @@ function CreateUsrForm(props) {
                                     />
                                 </div>
                                 <div class="flex flex-col gap-1 flex-1">
-                                    <label class="text-xs text-muted uppercase tracking-wide">
+                                    <label
+                                        for="usr-lastname"
+                                        class="text-xs text-muted uppercase tracking-wide"
+                                    >
                                         Last Name *
                                     </label>
                                     <input
                                         ref={r => (lastnameInput = r)}
+                                        id="usr-lastname"
                                         type="text"
                                         placeholder="Doe"
                                         class="
@@ -187,11 +200,15 @@ function CreateUsrForm(props) {
                             </div>
 
                             <div class="flex flex-col gap-1">
-                                <label class="text-xs text-muted uppercase tracking-wide">
+                                <label
+                                    for="usr-role"
+                                    class="text-xs text-muted uppercase tracking-wide"
+                                >
                                     Role *
                                 </label>
                                 <select
                                     ref={r => (roleInput = r)}
+                                    id="usr-role"
                                     defaultValue="normal_usr_role"
                                     class="
                                 w-full font-sans font-light text-sm
@@ -213,11 +230,15 @@ function CreateUsrForm(props) {
                             </div>
 
                             <div class="flex flex-col gap-1">
-                                <label class="text-xs text-muted uppercase tracking-wide">
+                                <label
+                                    for="usr-password"
+                                    class="text-xs text-muted uppercase tracking-wide"
+                                >
                                     Password *
                                 </label>
                                 <input
                                     ref={r => (passwordInput = r)}
+                                    id="usr-password"
                                     type="password"
                                     minLength={8}
                                     placeholder="Min 8 characters"
@@ -262,7 +283,7 @@ export function UsrsView() {
         page,
         total,
         loading,
-        search,
+        error,
         setSearch,
         role,
         setRole,
@@ -308,6 +329,7 @@ export function UsrsView() {
                 <input
                     type="text"
                     placeholder="Search users..."
+                    aria-label="Search users"
                     value={searchInput()}
                     onInput={e => setSearchInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleSearch()}
@@ -322,21 +344,37 @@ export function UsrsView() {
                 <Button variant="ghost" size="sm" onClick={handleSearch}>
                     Search
                 </Button>
+                <select
+                    aria-label="Filter users by role"
+                    value={role() ?? ''}
+                    onChange={event => {
+                        setRole(event.currentTarget.value || undefined)
+                        goTo(1)
+                    }}
+                    class="bg-surface border border-border rounded-xs px-3 py-2 text-sm"
+                >
+                    <option value="">All roles</option>
+                    <option value="super_usr_role">Super</option>
+                    <option value="normal_usr_role">Normal</option>
+                    <option value="limited_usr_role">Limited</option>
+                </select>
             </div>
 
-            <UsrsTable
-                usrs={usrs()}
-                loading={loading()}
-            />
+            <Show
+                when={!error()}
+                fallback={<ErrView error={error()} onRetry={() => refresh()} />}
+            >
+                <UsrsTable usrs={usrs()} loading={loading()} />
 
-            <div class="mt-4">
-                <Pagination
-                    page={page()}
-                    total={total()}
-                    pageSize={20}
-                    onChange={goTo}
-                />
-            </div>
+                <div class="mt-4">
+                    <Pagination
+                        page={page()}
+                        total={total()}
+                        pageSize={20}
+                        onChange={goTo}
+                    />
+                </div>
+            </Show>
 
             <CreateUsrForm
                 open={showForm()}

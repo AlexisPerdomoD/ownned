@@ -69,21 +69,23 @@ export function GroupUsersList(props) {
  * @param {Object} props
  * @param {import('@/entities/usrs').Usr[]} props.availableUsrs
  * @param {boolean} [props.loading]
- * @param {(usrId: string, access: string) => void} [props.onAdd]
+ * @param {(usrId: string, access: string) => Promise<void> | undefined} [props.onAdd]
  * @returns {import('solid-js').JSX.Element}
  */
 export function AddUserForm(props) {
     let selectRef
     let accessRef
 
-    const handleSubmit = e => {
+    const handleSubmit = async e => {
         e.preventDefault()
         const userId = selectRef?.value
         const access = accessRef?.value
         if (userId && access) {
-            props.onAdd?.(userId, access)
-            selectRef.value = ''
-            accessRef.value = 'read_only_access'
+            const result = await props.onAdd?.(userId, access)
+            if (result !== false) {
+                selectRef.value = ''
+                accessRef.value = 'read_only_access'
+            }
         }
     }
 
@@ -91,6 +93,7 @@ export function AddUserForm(props) {
         <form onSubmit={handleSubmit} class="flex items-center gap-2">
             <select
                 ref={el => (selectRef = el)}
+                aria-label="Select user to add"
                 class="
                     flex-1 font-sans font-light text-sm
                     text-ink-dark
@@ -108,6 +111,7 @@ export function AddUserForm(props) {
 
             <select
                 ref={el => (accessRef = el)}
+                aria-label="Access level for assigned user"
                 defaultValue="read_only_access"
                 class="
                     font-sans font-light text-sm

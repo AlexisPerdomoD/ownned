@@ -16,22 +16,58 @@ import { For, Show } from 'solid-js'
  * @param {string} props.active            - Key del tab activo.
  * @param {(key: string) => void} props.onChange
  * @param {string} [props.class]
+ * @param {string} [props.label]
+ * @param {string} [props.id]
  * @returns {import('solid-js').JSX.Element}
  */
-export function Tabs({ items, active, onChange, class: cls = '' }) {
+export function Tabs(props) {
+    const handleKeyDown = (event, currentIndex) => {
+        const count = props.items.length
+        let nextIndex
+        switch (event.key) {
+            case 'ArrowRight':
+                nextIndex = (currentIndex + 1) % count
+                break
+            case 'ArrowLeft':
+                nextIndex = (currentIndex - 1 + count) % count
+                break
+            case 'Home':
+                nextIndex = 0
+                break
+            case 'End':
+                nextIndex = count - 1
+                break
+            default:
+                return
+        }
+
+        event.preventDefault()
+        event.currentTarget.parentElement
+            ?.querySelectorAll('[role="tab"]')
+            ?.[nextIndex]?.focus()
+        props.onChange(props.items[nextIndex].key)
+    }
+
     return (
         <nav
-            class={`flex items-end gap-0 border-b border-border ${cls}`}
+            class={`flex items-end gap-0 border-b border-border ${props.class ?? ''}`}
             role="tablist"
+            aria-label={props.label ?? 'Sections'}
         >
-            <For each={items}>
-                {item => {
-                    const isActive = () => item.key === active
+            <For each={props.items}>
+                {(item, index) => {
+                    const isActive = () => item.key === props.active
                     return (
                         <button
+                            id={`${props.id ?? 'tabs'}-tab-${item.key}`}
                             role="tab"
+                            aria-controls={`${props.id ?? 'tabs'}-panel-${item.key}`}
                             aria-selected={isActive()}
-                            onClick={() => onChange(item.key)}
+                            tabIndex={isActive() ? 0 : -1}
+                            onClick={() => props.onChange(item.key)}
+                            onKeyDown={event =>
+                                handleKeyDown(event, index())
+                            }
                             class={`
                                 inline-flex items-center gap-1.5
                                 px-4 py-2.5 text-sm font-sans

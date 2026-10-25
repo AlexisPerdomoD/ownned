@@ -1,10 +1,13 @@
+import { Show } from 'solid-js'
+
 import { useAuth } from '@/features/auth/providers/AuthProvider'
 import { NodeList } from '@/features/node/ui'
 import { useGetRoot } from '@/features/node/usecase'
+import { ErrView } from '@/shared/ui'
 import { useNavigate } from '@solidjs/router'
 
 export function HomeView() {
-    const { root, loading } = useGetRoot()
+    const { root, loading, error, refresh } = useGetRoot()
     const { state } = useAuth()
     const navigate = useNavigate()
 
@@ -21,12 +24,17 @@ export function HomeView() {
                 </section>
             </section>
 
-            <NodeList
-                title={`${state.usr.username}'s root folder`}
-                nodes={root()}
-                loading={loading()}
-                onNodeClick={node => navigate(`/nodes/${node.id}`)}
-            />
+            <Show
+                when={!error()}
+                fallback={<ErrView error={error()} onRetry={() => refresh()} />}
+            >
+                <NodeList
+                    title={`${state.usr.username}'s root folder`}
+                    nodes={root()}
+                    loading={loading()}
+                    onNodeClick={node => navigate(`/nodes/${node.id}`)}
+                />
+            </Show>
         </section>
     )
 }

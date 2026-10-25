@@ -1,6 +1,6 @@
 import { For } from 'solid-js'
 
-import { Badge, Pagination, Table } from '@/shared/ui'
+import { Badge, Table } from '@/shared/ui'
 
 const accessBadgeVariant = {
     read_only_access: 'neutral',
@@ -118,6 +118,7 @@ export function GroupsTable(props) {
             rows={props.groups}
             loading={props.loading}
             onRowClick={props.onRowClick}
+            rowLabel={row => `Open group ${row.name}`}
             emptyTitle="No groups yet"
             emptyDescription="Create a group to organize collaboration."
         />

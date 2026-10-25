@@ -8,7 +8,6 @@ import {
     useDeleteGroup,
     useDeleteGroupNode,
     useDeleteGroupUsr,
-    useUpdateGroup,
     useUpsertGroupNode,
     useUpsertGroupUsr
 } from '@/features/group/usecase'
@@ -18,6 +17,7 @@ import { getErrorMessage } from '@/shared/errors'
 import {
     Button,
     ConfirmDialog,
+    ErrView,
     PageHeader,
     Spinner,
     Tabs,
@@ -30,10 +30,14 @@ export function GroupView() {
     const navigate = useNavigate()
     const auth = useAuth()
     const role = () => auth.role()
-    const { group, loading, refresh: refreshGroup } = useGetGroup(() => params.id)
+    const {
+        group,
+        loading,
+        error: groupError,
+        refresh: refreshGroup
+    } = useGetGroup(() => params.id)
 
-    const { update, loading: updating } = useUpdateGroup()
-    const { remove: deleteGroup, loading: deleting } = useDeleteGroup()
+    const { remove: deleteGroup } = useDeleteGroup()
     const { assign: addUsr, loading: addingUsr } = useUpsertGroupUsr()
     const { remove: removeUsr, loading: removingUsr } = useDeleteGroupUsr()
     const { assign: addNode, loading: addingNode } = useUpsertGroupNode()
@@ -44,46 +48,71 @@ export function GroupView() {
     const [showNodePicker, setShowNodePicker] = createSignal(false)
     const [availableUsrs, setAvailableUsrs] = createSignal([])
     const [loadingUsrs, setLoadingUsrs] = createSignal(false)
+    const [availableUsrsError, setAvailableUsrsError] = createSignal(null)
+    let usersRequest = 0
+
+    const loadAvailableUsrs = async () => {
+        const requestId = ++usersRequest
+        setLoadingUsrs(true)
+        setAvailableUsrsError(null)
+        try {
+            const result = await apiPaginateUsrs(1, 100, '', undefined)
+            if (requestId === usersRequest) {
+                setAvailableUsrs(result.data ?? [])
+            }
+        } catch (error) {
+            if (requestId === usersRequest) {
+                setAvailableUsrs([])
+                setAvailableUsrsError(error)
+            }
+        } finally {
+            if (requestId === usersRequest) setLoadingUsrs(false)
+        }
+    }
 
     createEffect(() => {
         const groupId = params.id
         if (!groupId) return
-        let active = true
-        setLoadingUsrs(true)
-        apiPaginateUsrs(1, 100, '', undefined)
-            .then(result => {
-                if (active) setAvailableUsrs(result.data ?? [])
-            })
-            .catch(error => {
-                if (!active) return
-                setAvailableUsrs([])
-                toast.error(getErrorMessage(error, 'Could not load users.'))
-            })
-            .finally(() => {
-                if (active) setLoadingUsrs(false)
-            })
+        void loadAvailableUsrs()
         onCleanup(() => {
-            active = false
+            usersRequest += 1
         })
     })
-
-    const handleUpdate = async (name, description) => {
-        await update(group().id, name, description)
-    }
 
     const handleDelete = () => setShowDelete(true)
 
     const confirmDelete = async () => {
-        const [success] = await deleteGroup(group().id)
+        const [success, error] = await deleteGroup(group().id)
         if (success) navigate('/groups')
+        else toast.error(getErrorMessage(error, 'Could not delete group.'))
     }
 
     const handleAddUsr = async (usrId, access) => {
-        await addUsr(group().id, usrId, access)
+        const [success, error] = await addUsr(group().id, usrId, access)
+        if (!success) {
+            toast.error(getErrorMessage(error, 'Could not assign user.'))
+            return false
+        }
+        try {
+            await refreshGroup()
+            return true
+        } catch (error) {
+            toast.error(getErrorMessage(error, 'Could not refresh group.'))
+            return false
+        }
     }
 
     const handleRemoveUsr = async usrId => {
-        await removeUsr(group().id, usrId)
+        const [success, error] = await removeUsr(group().id, usrId)
+        if (!success) {
+            toast.error(getErrorMessage(error, 'Could not remove user.'))
+            return
+        }
+        try {
+            await refreshGroup()
+        } catch (error) {
+            toast.error(getErrorMessage(error, 'Could not refresh group.'))
+        }
     }
 
     const handleAddNode = async nodeId => {
@@ -121,8 +150,20 @@ export function GroupView() {
     return (
         <section class="flex flex-col p-6">
             <Show
-                when={!loading()}
-                fallback={<Spinner size="lg" class="mx-auto mt-20" />}
+                when={!loading() && !groupError()}
+                fallback={
+                    <Show
+                        when={loading()}
+                        fallback={
+                            <ErrView
+                                error={groupError()}
+                                onRetry={() => refreshGroup()}
+                            />
+                        }
+                    >
+                        <Spinner size="lg" class="mx-auto mt-20" />
+                    </Show>
+                }
             >
                 <PageHeader
                     title={groupData()?.name ?? 'Group'}
@@ -137,6 +178,8 @@ export function GroupView() {
 
                 <div class="mb-6">
                     <Tabs
+                        id="group-sections"
+                        label="Group sections"
                         items={[
                             { key: 'users', label: 'Users' },
                             { key: 'nodes', label: 'Nodes' }
@@ -147,14 +190,40 @@ export function GroupView() {
                 </div>
 
                 <Show when={tab() === 'users'}>
-                    <section class="flex flex-col gap-4">
+                    <section
+                        id="group-sections-panel-users"
+                        role="tabpanel"
+                        aria-labelledby="group-sections-tab-users"
+                        tabIndex={0}
+                        class="flex flex-col gap-4"
+                    >
                         <div class="p-4 bg-surface border border-border-subtle rounded-md">
                             <h4 class="text-sm font-medium mb-3">Add User</h4>
-                            <AddUserForm
-                                availableUsrs={availableUsrs()}
-                                loading={loadingUsrs() || addingUsr()}
-                                onAdd={handleAddUsr}
-                            />
+                            <Show when={availableUsrsError()}>
+                                <div class="flex flex-col items-start gap-2" role="alert">
+                                    <p class="text-sm text-danger">
+                                        {getErrorMessage(
+                                            availableUsrsError(),
+                                            'Could not load users.'
+                                        )}
+                                    </p>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        loading={loadingUsrs()}
+                                        onClick={() => loadAvailableUsrs()}
+                                    >
+                                        Retry
+                                    </Button>
+                                </div>
+                            </Show>
+                            <Show when={!availableUsrsError()}>
+                                <AddUserForm
+                                    availableUsrs={availableUsrs()}
+                                    loading={loadingUsrs() || addingUsr()}
+                                    onAdd={handleAddUsr}
+                                />
+                            </Show>
                         </div>
 
                         <div class="p-4 bg-surface border border-surface rounded-md">
@@ -171,7 +240,13 @@ export function GroupView() {
                 </Show>
 
                 <Show when={tab() === 'nodes'}>
-                    <section class="flex flex-col gap-4">
+                    <section
+                        id="group-sections-panel-nodes"
+                        role="tabpanel"
+                        aria-labelledby="group-sections-tab-nodes"
+                        tabIndex={0}
+                        class="flex flex-col gap-4"
+                    >
                         <Show when={canManageGroupNodes(role())}>
                             <div class="p-4 bg-surface border border-border-subtle rounded-md">
                                 <h4 class="text-sm font-medium mb-2">Add Node</h4>
@@ -209,6 +284,7 @@ export function GroupView() {
                 open={showNodePicker()}
                 onClose={() => setShowNodePicker(false)}
                 onSelect={handleAddNode}
+                busy={addingNode()}
                 assignedNodeIds={(groupData()?.nodes ?? []).map(
                     node => node.node_id
                 )}
