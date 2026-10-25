@@ -24,9 +24,14 @@ import {
     usePaginateNodes
 } from '@/features/node/usecase'
 import {
+    CHILDREN_PAGE_SIZE,
+    paginateChildren
+} from '@/features/node/usecase/paginateChildren'
+import {
     canCommentOnNode,
     canCreateFolder,
     canDeleteNode,
+    canReadNode,
     canUploadDoc
 } from '@/shared/authz'
 import { getErrorMessage } from '@/shared/errors'
@@ -261,6 +266,7 @@ export function NodeView() {
     const [fileInput, setFileInput] = createSignal(null)
     const [folderInput, setFolderInput] = createSignal(null)
     const [showComments, setShowComments] = createSignal(false)
+    const [childrenPage, setChildrenPage] = createSignal(1)
     const [viewMode, setViewMode] = createSignal(
         localStorage.getItem('owned.viewMode') ?? 'grid'
     )
@@ -545,6 +551,21 @@ export function NodeView() {
 
     const sortedFolders = () => sortNodes(folderChildren())
     const sortedFiles = () => sortNodes(fileChildren())
+    const paginatedChildren = () =>
+        paginateChildren(sortedFolders(), sortedFiles(), childrenPage())
+
+    createEffect(() => {
+        nodeData()?.id
+        showDotfiles()
+        sortBy()
+        sortDir()
+        setChildrenPage(1)
+    })
+
+    createEffect(() => {
+        const { page } = paginatedChildren()
+        if (childrenPage() !== page) setChildrenPage(page)
+    })
 
     const formatDate = dateStr =>
         new Date(dateStr).toLocaleDateString('es-ES', {
@@ -579,7 +600,12 @@ export function NodeView() {
 
     const fileRowActions = fileNode => (
         <>
-            <Show when={fileNode.doc}>
+            <Show
+                when={
+                    fileNode.doc &&
+                    canReadNode(role(), fileNode.access_level)
+                }
+            >
                 <button
                     type="button"
                     aria-label="Download"
@@ -1067,8 +1093,7 @@ export function NodeView() {
                     <section class="flex-1">
                         <Show
                             when={
-                                sortedFolders().length > 0 ||
-                                sortedFiles().length > 0
+                                paginatedChildren().total > 0
                             }
                             fallback={
                                 <p class="text-sm text-muted">
@@ -1080,7 +1105,7 @@ export function NodeView() {
                                 when={viewMode() === 'grid'}
                                 fallback={
                                     <div class="border border-border rounded-sm">
-                                        <For each={sortedFolders()}>
+                                        <For each={paginatedChildren().folders}>
                                             {nodeItem => (
                                                 <CompactItemRow
                                                     icon={<FolderRowIcon />}
@@ -1097,14 +1122,11 @@ export function NodeView() {
                                                 />
                                             )}
                                         </For>
-                                        <For each={sortedFiles()}>
+                                        <For each={paginatedChildren().files}>
                                             {fileNode => (
                                                 <CompactItemRow
                                                     icon={<FileRowIcon />}
-                                                    title={
-                                                        fileNode.doc?.title ??
-                                                        fileNode.name
-                                                    }
+                                                    title={fileNode.name}
                                                     subtitle={[
                                                         'File',
                                                         fileNode.doc?.mime_type,
@@ -1133,7 +1155,7 @@ export function NodeView() {
                                 }
                             >
                                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
-                                    <For each={sortedFolders()}>
+                                    <For each={paginatedChildren().folders}>
                                         {nodeItem => (
                                             <NodeCard
                                                 node={nodeItem}
@@ -1154,12 +1176,19 @@ export function NodeView() {
                                             />
                                         )}
                                     </For>
-                                    <For each={sortedFiles()}>
+                                    <For each={paginatedChildren().files}>
                                         {fileNode => (
                                             <DocCard
                                                 node={fileNode}
                                                 doc={fileNode.doc}
-                                                onDownload={handleDownload}
+                                                onDownload={
+                                                    canReadNode(
+                                                        role(),
+                                                        fileNode.access_level
+                                                    )
+                                                        ? handleDownload
+                                                        : undefined
+                                                }
                                                 onDelete={
                                                     canDeleteNode(
                                                         role(),
@@ -1173,6 +1202,57 @@ export function NodeView() {
                                     </For>
                                 </div>
                             </Show>
+                        </Show>
+                        <Show
+                            when={
+                                paginatedChildren().total >
+                                CHILDREN_PAGE_SIZE
+                            }
+                        >
+                            <div class="mt-3 flex items-center justify-between text-xs text-muted">
+                                <span>
+                                    Showing{' '}
+                                    {(paginatedChildren().page - 1) *
+                                        CHILDREN_PAGE_SIZE +
+                                        1}
+                                    –
+                                    {Math.min(
+                                        paginatedChildren().page *
+                                            CHILDREN_PAGE_SIZE,
+                                        paginatedChildren().total
+                                    )}{' '}
+                                    of {paginatedChildren().total} items · 100 per page
+                                </span>
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        class="text-accent disabled:opacity-40 hover:underline"
+                                        disabled={paginatedChildren().page <= 1}
+                                        onClick={() =>
+                                            setChildrenPage(page => page - 1)
+                                        }
+                                    >
+                                        Previous
+                                    </button>
+                                    <span>
+                                        {paginatedChildren().page} /{' '}
+                                        {paginatedChildren().totalPages}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        class="text-accent disabled:opacity-40 hover:underline"
+                                        disabled={
+                                            paginatedChildren().page >=
+                                            paginatedChildren().totalPages
+                                        }
+                                        onClick={() =>
+                                            setChildrenPage(page => page + 1)
+                                        }
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
                         </Show>
                     </section>
                 </Show>

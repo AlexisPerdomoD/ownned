@@ -46,6 +46,8 @@ Como guía de affordances, no como reemplazo de autorización backend:
 
 Los archivos hijos de `GET /nodes/{nodeID}` llegan como `NodeView` con su propia `doc` opcional (`id`, nombre original, mimetype) — resuelta best-effort: si la lectura del doc falla, el hijo regresa con `doc` inválido o vacío y la UI debe degradar con icono/nombre de nodo sin tratarlo como error. Cada hijo lleva también su `access_level` y `display_path`, computados junto con el nodo solicitado; la UI no debe inferir el nivel del padre para los hijos, consume el campo propio. `children` se limita al primer nivel (los hijos de carpetas anidadas llegan vacíos; cada carpeta se navega por su instancia de `GET /nodes/{id}`). Mientras el `doc`/nivel no sea usable, las acciones mutables quedan ocultas/deshabilitadas.
 
+Para archivos, `Node.name` conserva el filename completo, incluida la extensión; `Doc.title` puede omitirla y `Doc.filename` conserva el filename original. La UI usa `Node.name` para identidad/colisiones y `Doc.filename` para mostrar o descargar el archivo, sin reconstruir el nombre a partir de `Doc.title`.
+
 Para la UI, mostrar `display_path` como contexto de ubicación y no exponer UUIDs en texto visible. Un `access_level` ausente/desconocido no habilita acciones mutables; aun con nivel conocido, manejar `403` y conservar la autorización backend como fuente de verdad.
 
 ## Matriz por recurso
@@ -83,7 +85,7 @@ Para la UI, mostrar `display_path` como contexto de ubicación y no exponer UUID
 | --- | --- | --- | --- |
 | `GET /api/v1/nodes` | Implementado | `apiGetRoot` y Home | **Parcial:** cada raíz (`NodeDisplay`) incluye `display_path` y `access_level`; no incluye `doc`. La UI aún no muestra `display_path` ni usa el nivel para mostrar/ocultar capacidades. |
 | `POST /api/v1/nodes` (`parent_id`, `name`, `description`) | Implementado | API y creación de carpeta | Alineado para carpetas individuales. |
-| `GET /api/v1/nodes/{nodeID}` | Implementado | API y `NodeView` | El nodo solicitado incluye `display_path` y `access_level`, pero la UI no consume esos campos. Los hijos de primer nivel ya traen `doc` (best-effort, puede llegar vacío), `access_level` y `display_path` propios; `children` no anida más niveles. Falta que la UI consuma los campos y degrade con `doc` vacío. |
+| `GET /api/v1/nodes/{nodeID}` | Implementado | API y `NodeView` | El nodo solicitado muestra su `display_path`; los hijos de primer nivel consumen su propio `access_level` para descargar/eliminar y su `Node.name` como filename completo. `doc` sigue siendo best-effort: con metadata muestra `filename` y mimetype; sin ella, degrada al nombre e icono genéricos del nodo. `children` no anida más niveles. La UI limita el render a 100 elementos por página, aunque el handler aún devuelve todos los hijos. |
 | `PUT /api/v1/nodes/{nodeID}` | **Backend stub (`501`)** | `useUpdateNode` y formulario de edición | El cliente ya intenta la operación, pero no puede completarse hasta implementar el handler. El DTO web prevé `name`/`description`; validar el contrato final con backend. |
 | `DELETE /api/v1/nodes/{nodeID}` | Implementado | API/UI | El backend elimina el nodo y descendientes; limpieza de almacenamiento va en segundo plano. Confirmar mensajes/confirmación para borrado recursivo. |
 | `GET /api/v1/nodes/{nodeID}/download` | **Backend stub (`501`)** | Sin integración | Planificar como capacidad pública, definiendo formato de archivo, límites y errores antes del UI. |
@@ -104,8 +106,8 @@ Para la UI, mostrar `display_path` como contexto de ubicación y no exponer UUID
 - `.env.example` establece `MODE=dev`, mientras `cmd/server/main.go` habilita CORS de `localhost:5173` y cookies lax/no seguras solo con `MODE=local`. La configuración de desarrollo puede bloquear login desde Vite; alinear el sample de entorno y el procedimiento local antes de dar por validado el flujo.
 - La subida usa el UUID de nodo como clave de storage, pero el contrato de descarga/borrado recibe el UUID de documento. La descarga entrega ese UUID al use case como si fuera `nodeID`; el borrado usa `doc.ID` y descarta el error. Resolver explícitamente `DocID → NodeID`/clave antes de afirmar que descarga y borrado individual cubren el flujo.
 - El código de frontend no implementa ordenación, filtro/visibilidad de dotfiles, selector de tema, carga de carpetas, paginación de nodos ni paginación de documentos. El tema oscuro solo tiene overrides CSS en `[data-theme='dark']`; no se encontró toggle de usuario.
-- El frontend todavía no lee `access_level` para gobernar affordances ni muestra `display_path`; los UUIDs deben permanecer como identificadores internos. El permiso del padre no se debe propagar como permiso del hijo.
-- La API actual no define campo `hidden` ni ordenación en la consulta paginada. Para dotfiles, el contrato de nodo debe hacer disponible el nombre/filename real al listar hijos (no inferirlo de un título sin extensión).
+- `NodeView` consume el `display_path` del nodo actual y el `access_level` propio de cada hijo; no hereda permisos desde el padre. `HomeView` aún debe alinear la presentación de raíces y sus affordances. Los UUIDs permanecen como identificadores internos.
+- La API actual no define campo `hidden` ni ordenación en la consulta paginada. Para dotfiles, la lista de hijos expone el nombre de nodo completo; no inferirlo de `Doc.title`, que puede omitir la extensión.
 
 ## Qué cuenta como cobertura completa
 

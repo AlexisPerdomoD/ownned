@@ -78,12 +78,14 @@ export function DocCard(props) {
             created_at: own.node?.created_at,
             updated_at: own.node?.updated_at
         }
+    const documentName = () =>
+        own.node?.name || doc().filename || doc().title || 'Document'
 
     return (
         <div
             role="button"
             tabIndex={0}
-            aria-label={doc().title ?? 'Document'}
+            aria-label={documentName()}
             onKeyDown={e => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
@@ -131,9 +133,9 @@ export function DocCard(props) {
 
             <h3
                 class="w-full font-serif text-sm text-ink-dark leading-snug line-clamp-2 break-words"
-                title={doc().title}
+                title={documentName()}
             >
-                {doc().title || 'Untitled'}
+                {documentName() || 'Untitled'}
             </h3>
 
             <p class="w-full text-[11px] text-muted truncate">

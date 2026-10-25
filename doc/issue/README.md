@@ -43,32 +43,33 @@ Todos los issues 12–17 en `hecho`. Resumen en `../history/web_closure_fase2_pa
 
 ### Fase 3 — Explorador, paginación y compartición usable
 
+Issue 18 cerrada; resumen técnico en [`../history/web_closure_fase3_children_metadata.md`](../history/web_closure_fase3_children_metadata.md). Los issues restantes de fases 3–5 están en revisión activa.
+
 | ID | Título | Estado | Depende de |
 | --- | --- | --- | --- |
-| 18 | [Hijos con metadata real y gating por hijo](18.web_closure_fase3.web.app.hijos_metadata.md) | pendiente | 1.10, 2.1 |
-| 19 | [Paginación de nodos y documentos](19.web_closure_fase3.web.app.paginacion.md) | pendiente | 1.1, 3.1; D3 por defecto |
-| 20 | [Ordenación y dotfiles](20.web_closure_fase3.web.app.orden_dotfiles.md) | pendiente | 3.1; D3/D6 por defecto |
-| 21 | [Selector visual de nodos (grupos)](21.web_closure_fase3.web.app.selector_nodos.md) | pendiente | 2.4 |
-| 22 | [Consolidar vista de explorador](22.web_closure_fase3.web.app.explorador_refactor.md) | pendiente | 2.1, 2.2, 3.1 |
-| 23 | [Consolidar confirmaciones/modales](23.web_closure_fase3.web.app.dialogos.md) | pendiente | fases 2–3 estables |
-| 38 | [Vista de carpeta estilo Google Drive](38.web_closure_fase3.web.app.vista_drive.md) | pendiente | 3.1, 3.5 |
+| 19 | [Paginación de nodos y documentos](19.web_closure_fase3.web.app.paginacion.md) | revisión | 1.1, 3.1; D3 por defecto |
+| 20 | [Ordenación y dotfiles](20.web_closure_fase3.web.app.orden_dotfiles.md) | revisión | 3.1; D3/D6 por defecto |
+| 21 | [Selector visual de nodos (grupos)](21.web_closure_fase3.web.app.selector_nodos.md) | revisión | 2.4 |
+| 22 | [Consolidar vista de explorador](22.web_closure_fase3.web.app.explorador_refactor.md) | revisión | 2.1, 2.2, 3.1 |
+| 23 | [Consolidar confirmaciones/modales](23.web_closure_fase3.web.app.dialogos.md) | revisión | fases 2–3 estables |
+| 38 | [Vista de carpeta estilo Google Drive](38.web_closure_fase3.web.app.vista_drive.md) | revisión | 3.1, 3.5 |
 
 ### Fase 4 — Consistencia global
 
 | ID | Título | Estado | Depende de |
 | --- | --- | --- | --- |
-| 24 | [Tema persistente y movimiento reducido](24.web_closure_fase4.web.app.tema.md) | pendiente | D6 por defecto; coordinar con 3.5 |
-| 25 | [Tokens semánticos (limpieza de clases)](25.web_closure_fase4.web.app.tokens.md) | pendiente | fase 3 |
-| 26 | [Auditoría de accesibilidad](26.web_closure_fase4.web.app.accesibilidad.md) | pendiente | 3.5, 4.1 |
+| 24 | [Tema persistente y movimiento reducido](24.web_closure_fase4.web.app.tema.md) | revisión | D6 por defecto; coordinar con 3.5 |
+| 25 | [Tokens semánticos (limpieza de clases)](25.web_closure_fase4.web.app.tokens.md) | revisión | fase 3 |
+| 26 | [Auditoría de accesibilidad](26.web_closure_fase4.web.app.accesibilidad.md) | revisión | 3.5, 4.1 |
 
 ### Fase 5 — Capacidades avanzadas, verificación y cierre
 
 | ID | Título | Estado | Depende de |
 | --- | --- | --- | --- |
-| 27 | [Subida de carpetas (Propuesta A — cliente)](27.web_closure_fase5.web.app.upload_carpetas.md) | pendiente | D4 resuelta; fases 1–2 |
-| 28 | [Descarga de carpeta (bloqueada por 501)](28.web_closure_fase5.web.app.download_carpeta.md) | pendiente | backend (501) |
-| 29 | [Verificación automatizada (Vitest + checklist)](29.web_closure_fase5.web.app.verificacion.md) | pendiente | D7 resuelta; fases 1–4 |
-| 30 | [Reporte final y actualización documental](30.web_closure_fase5.web.app.cierre_docs.md) | pendiente | todas las funcionales |
+| 27 | [Subida de carpetas (Propuesta A — cliente)](27.web_closure_fase5.web.app.upload_carpetas.md) | revisión | D4 resuelta; fases 1–2 |
+| 28 | [Descarga de carpeta (bloqueada por 501)](28.web_closure_fase5.web.app.download_carpeta.md) | revisión | backend (501) |
+| 29 | [Verificación automatizada (Vitest + checklist)](29.web_closure_fase5.web.app.verificacion.md) | revisión | D7 resuelta; fases 1–4 |
+| 30 | [Reporte final y actualización documental](30.web_closure_fase5.web.app.cierre_docs.md) | revisión | todas las funcionales |
 
 ## Épica: restructuración de `cmd/` (server + CLI unificado) — cerrada
 
