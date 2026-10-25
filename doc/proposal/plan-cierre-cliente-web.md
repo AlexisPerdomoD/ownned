@@ -44,12 +44,12 @@
 
 - **D1 (resuelta):** `limited_usr_role` **no puede crear comentarios**. El frontend asume esta regla en su gating desde ya; el que el backend todavía permita comentar con solo lectura (`create_node_comment_usecase.go` exige solo `read_only_access`) es un fix backend posterior **fuera del alcance frontend**.
 - **D2 (resuelta):** `GET /nodes/{id}` ya embebe metadata por hijo. El ajuste en `internal/app/node/get_node_usecase.go` resuelve `doc` para archivos hijos (best-effort: si la lectura del doc falla, el hijo regresa sin doc útil) y `view.go` serializa por hijo `doc` (→ `DocView`), `display_path` y `access_level` (`nodeFileViewFromDomain`/`nodeFolderViewFromDomain`). `get_root_nodes` se mantiene como `NodeDisplay` sin metadata adicional: las tarjetas de raíces no deben depender de `doc` ni de el nombre real derivado de él.
+- **D3 (resuelta):** ordenar localmente por nombre/creación/modificación sobre el conjunto completo de hijos recibido por `GET /nodes/{id}`; las páginas de 100 elementos limitan solo el render. Las rutas paginadas se consumen para búsqueda y filtros; el contrato actual no ofrece parámetros de orden.
 - **D4 (resuelta):** la subida de carpetas inicia desde el cliente (orquestación en navegador con los endpoints existentes). El reporte pro/contras de ambas propuestas vive en [`./dir_upload.md`](./dir_upload.md).
 - **D7 (resuelta):** Vitest para lógica pura (`shared/authz` y validación de DTOs) + checklist E2E manual de los 9 flujos. Criterio: mínima superficie de dependencias con garantías explícitas de integridad sobre las decisiones de acceso.
 
 ### Decisiones aún abiertas
 
-- **D3** ¿Paginación de hijos local o API? (por defecto: API para carpetas grandes, orden local para pocas)
 - **D5** ¿Borrado de usuario se retira o se diseña contrato?
 - **D6** ¿Preferencias (tema, dotfiles) solo en `localStorage`? (por defecto: sí)
 

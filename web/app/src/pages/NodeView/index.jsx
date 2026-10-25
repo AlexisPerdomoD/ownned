@@ -27,6 +27,7 @@ import {
     CHILDREN_PAGE_SIZE,
     paginateChildren
 } from '@/features/node/usecase/paginateChildren'
+import { sortNodeChildren } from '@/features/node/usecase/sortNodeChildren'
 import {
     canCommentOnNode,
     canCreateFolder,
@@ -530,28 +531,8 @@ export function NodeView() {
     const fileChildren = () =>
         nodeData()?.children?.filter(n => n.type === 'file') ?? []
 
-    const sortNodes = list => {
-        const filtered = showDotfiles()
-            ? list
-            : list.filter(n => !String(n.name ?? '').startsWith('.'))
-        return [...filtered].sort((a, b) => {
-            let va
-            let vb
-            if (sortBy() === 'name') {
-                va = String(a.name ?? '')
-                vb = String(b.name ?? '')
-            } else if (sortBy() === 'created') {
-                va = a.created_at ?? ''
-                vb = b.created_at ?? ''
-            } else {
-                va = a.updated_at ?? ''
-                vb = b.updated_at ?? ''
-            }
-            if (va < vb) return sortDir() === 'asc' ? -1 : 1
-            if (va > vb) return sortDir() === 'asc' ? 1 : -1
-            return 0
-        })
-    }
+    const sortNodes = list =>
+        sortNodeChildren(list, sortBy(), sortDir(), showDotfiles())
 
     const sortedFolders = () => sortNodes(folderChildren())
     const sortedFiles = () => sortNodes(fileChildren())

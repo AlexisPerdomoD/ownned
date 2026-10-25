@@ -220,7 +220,7 @@ Sistema: reduced motion -> Reducir/desactivar movimiento no esencial
 
 1. **Contenido y acceso de hijos:** incluir `doc` y `access_level` en cada hijo o decidir consulta por hijo antes de renderizar affordances; no heredar el permiso del padre.
 2. **Permiso de comentar para `limited_usr_role`:** el contrato actual acepta comentarios con solo lectura; decidir si este rol puede usarlos o si se requiere una restricción específica de rol.
-3. **Paginación y orden del explorador:** definir si se conserva navegación por hijos completos o se introduce paginación; precisar dónde se aplica orden y si requiere ampliar contrato.
+3. **Paginación y orden del explorador (resuelto):** las búsquedas usan la paginación API y sus filtros; el orden del contenido de `GET /nodes/{id}` se aplica localmente al conjunto completo, porque el contrato paginado no define `sort_by`/`sort_order`. El render se limita a 100 elementos por página.
 4. **Subida de carpetas:** decidir navegadores/plataformas soportados, límites, duplicados, cancelación/reintentos, tratamiento de fallos parciales y si basta orquestación cliente o hace falta batch backend.
 5. **Borrado de usuario:** retirar la acción sin soporte o diseñar operación backend (método, autorización y consecuencias).
 6. **Preferencias locales:** persistencia y precedencia del tema y de «mostrar ocultos»; backend no publica preferencias de usuario.
