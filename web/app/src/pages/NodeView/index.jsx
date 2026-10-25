@@ -36,7 +36,7 @@ import {
     canUploadDoc
 } from '@/shared/authz'
 import { getErrorMessage } from '@/shared/errors'
-import { Button, ConfirmDialog, Spinner, toast } from '@/shared/ui'
+import { Button, ConfirmDialog, Modal, Spinner, toast } from '@/shared/ui'
 import { useNavigate, useParams } from '@solidjs/router'
 
 const MIN_SEARCH_CHARS = 2
@@ -188,19 +188,12 @@ function NodeForm(props) {
     }
 
     return (
-        <Show when={props.open}>
-            <div
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-                onClick={() => props.onClose?.()}
-            >
-                <div
-                    class="bg-surface border border-border rounded-md w-full max-w-md p-6"
-                    onClick={e => e.stopPropagation()}
-                >
-                    <h3 class="font-serif text-lg text-ink-dark mb-4">
-                        {props.node ? 'Edit Node' : 'New Folder'}
-                    </h3>
-
+        <Modal
+            open={props.open}
+            onClose={props.onClose}
+            title={props.node ? 'Edit Node' : 'New Folder'}
+            size="md"
+        >
                     <form onSubmit={handleSubmit} class="flex flex-col gap-4">
                         <div class="flex flex-col gap-1">
                             <label class="text-xs text-muted uppercase tracking-wide">
@@ -208,6 +201,7 @@ function NodeForm(props) {
                             </label>
                             <input
                                 type="text"
+                                data-autofocus
                                 value={name()}
                                 onInput={e => setName(e.target.value)}
                                 maxLength={255}
@@ -254,9 +248,7 @@ function NodeForm(props) {
                             </Button>
                         </div>
                     </form>
-                </div>
-            </div>
-        </Show>
+        </Modal>
     )
 }
 

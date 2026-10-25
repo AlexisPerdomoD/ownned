@@ -1,6 +1,7 @@
 import { createEffect } from 'solid-js'
 
 import { buildCreateGroupDTO, buildUpdateGroupDTO } from '@/entities/groups/api'
+import { Modal } from '@/shared/ui'
 
 /**
  * @param {Object} props
@@ -38,20 +39,13 @@ export function GroupForm(props) {
     }
 
     return (
-        <>
-            {!props.open ? null : (
-                <div
-                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-                    onClick={props.onClose}
-                >
-                    <div
-                        class="bg-surface border border-border rounded-md w-full max-w-md p-6"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <h3 class="font-serif text-lg text-ink-dark mb-4">
-                            {props.group ? 'Edit Group' : 'New Group'}
-                        </h3>
-
+        <Modal
+            open={props.open}
+            onClose={props.onClose}
+            title={props.group ? 'Edit Group' : 'New Group'}
+            size="md"
+            closeOnBackdrop={!props.loading}
+        >
                         <form
                             onSubmit={handleSubmit}
                             class="flex flex-col gap-4"
@@ -65,6 +59,7 @@ export function GroupForm(props) {
                                 </label>
                                 <input
                                     ref={r => (nameInput = r)}
+                                    data-autofocus
                                     id="group-name"
                                     type="text"
                                     maxLength={255}
@@ -108,7 +103,7 @@ export function GroupForm(props) {
                             <div class="flex justify-end gap-2 pt-2">
                                 <button
                                     type="button"
-                                    onClick={props.onClose}
+                                    onClick={() => props.onClose?.()}
                                     class="
                                 px-4 py-2 text-sm font-normal
                                 text-ink border border-border rounded-xs
@@ -139,9 +134,6 @@ export function GroupForm(props) {
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
-            )}
-        </>
+        </Modal>
     )
 }

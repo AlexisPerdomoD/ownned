@@ -1,4 +1,4 @@
-import { Show, createEffect, onCleanup } from 'solid-js'
+import { Show, createEffect, onCleanup, splitProps } from 'solid-js'
 import { Portal } from 'solid-js/web'
 
 /**
@@ -36,17 +36,68 @@ const sizes = {
  * @returns {import('solid-js').JSX.Element}
  */
 export function Modal(props) {
-    // NOTE: props no se destructuran: open/onClose/title se leen reactivamente desde props.
+    let panel
+
     createEffect(() => {
         if (!props.open) return
-        const onKey = e => {
-            if (e.key === 'Escape') props.onClose?.()
+
+        const previousFocus =
+            document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null
+        const previousOverflow = document.body.style.overflow
+        const focusableSelector =
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        const getFocusableElements = () =>
+            Array.from(panel?.querySelectorAll(focusableSelector) ?? []).filter(
+                element => element.getAttribute('aria-hidden') !== 'true'
+            )
+
+        const onKeyDown = event => {
+            if (event.key === 'Escape') {
+                props.onClose?.()
+                return
+            }
+            if (event.key !== 'Tab') return
+
+            const focusable = getFocusableElements()
+            const first = focusable[0]
+            const last = focusable.at(-1)
+            if (!first || !last) {
+                event.preventDefault()
+                panel?.focus()
+            } else if (
+                event.shiftKey &&
+                (document.activeElement === first ||
+                    !panel?.contains(document.activeElement))
+            ) {
+                event.preventDefault()
+                last.focus()
+            } else if (
+                !event.shiftKey &&
+                (document.activeElement === last ||
+                    !panel?.contains(document.activeElement))
+            ) {
+                event.preventDefault()
+                first.focus()
+            }
         }
-        document.addEventListener('keydown', onKey)
+
+        document.addEventListener('keydown', onKeyDown)
         document.body.style.overflow = 'hidden'
+        const frame = requestAnimationFrame(() => {
+            const initial =
+                panel?.querySelector('[data-autofocus]') ??
+                getFocusableElements()[0] ??
+                panel
+            initial?.focus()
+        })
+
         onCleanup(() => {
-            document.removeEventListener('keydown', onKey)
-            document.body.style.overflow = ''
+            cancelAnimationFrame(frame)
+            document.removeEventListener('keydown', onKeyDown)
+            document.body.style.overflow = previousOverflow
+            if (previousFocus?.isConnected) previousFocus.focus()
         })
     })
 
@@ -64,12 +115,14 @@ export function Modal(props) {
                         )
                             props.onClose?.()
                     }}
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby={props.title ? 'modal-title' : undefined}
                 >
                     {/* Panel */}
                     <div
+                        ref={element => (panel = element)}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby={props.title ? 'modal-title' : undefined}
+                        tabIndex={-1}
                         class={`
                             relative w-full ${sizes[props.size ?? 'md']}
                             bg-surface border border-border
@@ -139,17 +192,18 @@ export function Modal(props) {
  * @param {import('solid-js').JSX.HTMLAttributes<HTMLDivElement>} props
  * @returns {import('solid-js').JSX.Element}
  */
-Modal.Footer = function ModalFooter({ class: cls = '', children, ...props }) {
+Modal.Footer = function ModalFooter(props) {
+    const [own, rest] = splitProps(props, ['class', 'children'])
     return (
         <div
             class={`
                 flex items-center justify-end gap-2
                 pt-3 mt-2 border-t border-border-subtle
-                ${cls}
+                ${own.class ?? ''}
             `}
-            {...props}
+            {...rest}
         >
-            {children}
+            {own.children}
         </div>
     )
 }

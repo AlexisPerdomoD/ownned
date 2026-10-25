@@ -10,6 +10,7 @@ import { getErrorMessage } from '@/shared/errors'
 import {
     Badge,
     Button,
+    Modal,
     PageHeader,
     Pagination,
     Table,
@@ -116,20 +117,12 @@ function CreateUsrForm(props) {
     }
 
     return (
-        <>
-            {!props.open ? null : (
-                <div
-                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-                    onClick={() => props.onClose?.()}
-                >
-                    <div
-                        class="bg-success border border-border rounded-md w-full max-w-md p-6"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <h3 class="font-serif text-lg text-ink-dark mb-4">
-                            New User
-                        </h3>
-
+        <Modal
+            open={props.open}
+            onClose={props.onClose}
+            title="New User"
+            size="md"
+        >
                         <form
                             onSubmit={handleSubmit}
                             class="flex flex-col gap-4"
@@ -140,6 +133,7 @@ function CreateUsrForm(props) {
                                 </label>
                                 <input
                                     ref={r => (usernameInput = r)}
+                                    data-autofocus
                                     type="email"
                                     placeholder="email@example.com"
                                     class="
@@ -248,7 +242,7 @@ function CreateUsrForm(props) {
                                 <Button
                                     type="button"
                                     variant="ghost"
-                                    onClick={props.onClose}
+                                    onClick={() => props.onClose?.()}
                                 >
                                     Cancel
                                 </Button>
@@ -257,10 +251,7 @@ function CreateUsrForm(props) {
                                 </Button>
                             </div>
                         </form>
-                    </div>
-                </div>
-            )}
-        </>
+        </Modal>
     )
 }
 
