@@ -58,10 +58,10 @@ Issues 24–26 cerradas; resúmenes técnicos en [`../history/web_closure_fase4_
 ### Fase 5 — Capacidades avanzadas, verificación y cierre
 
 Issue 27 cerrada; resumen técnico en [`../history/web_closure_fase5_folder_upload.md`](../history/web_closure_fase5_folder_upload.md). La Propuesta A queda implementada; la carga es parcial y no atómica.
+Issue 28 cerrada; resumen técnico en [`../history/web_closure_fase5_folder_download.md`](../history/web_closure_fase5_folder_download.md). Decisión: botón de descarga de carpeta visible que notifica el error `501`.
 
 | ID | Título | Estado | Depende de |
 | --- | --- | --- | --- |
-| 28 | [Descarga de carpeta (bloqueada por 501)](28.web_closure_fase5.web.app.download_carpeta.md) | revisión | backend (501) |
 | 29 | [Verificación automatizada (Vitest + checklist)](29.web_closure_fase5.web.app.verificacion.md) | revisión | D7 resuelta; fases 1–4 |
 | 30 | [Reporte final y actualización documental](30.web_closure_fase5.web.app.cierre_docs.md) | revisión | todas las funcionales |
 
