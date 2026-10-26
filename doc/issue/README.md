@@ -57,12 +57,8 @@ Issues 24–26 cerradas; resúmenes técnicos en [`../history/web_closure_fase4_
 
 ### Fase 5 — Capacidades avanzadas, verificación y cierre
 
-Issue 27 cerrada; resumen técnico en [`../history/web_closure_fase5_folder_upload.md`](../history/web_closure_fase5_folder_upload.md). La Propuesta A queda implementada; la carga es parcial y no atómica.
-Issue 28 cerrada; resumen técnico en [`../history/web_closure_fase5_folder_download.md`](../history/web_closure_fase5_folder_download.md). Decisión: botón de descarga de carpeta visible que notifica el error `501`.
-
-| ID | Título | Estado | Depende de |
-| --- | --- | --- | --- |
-| 29 | [Verificación automatizada (Vitest + checklist)](29.web_closure_fase5.web.app.verificacion.md) | revisión | D7 resuelta; fases 1–4 |
+Issues 27 y 28 cerradas; resúmenes técnicos en [`../history/web_closure_fase5_folder_upload.md`](../history/web_closure_fase5_folder_upload.md) y [`../history/web_closure_fase5_folder_download.md`](../history/web_closure_fase5_folder_download.md). La Propuesta A de subida queda implementada; la carga es parcial y no atómica. El botón de descarga de carpeta permanece visible y notifica el error `501`.
+Issue 29 cerrada; resumen técnico en [`../history/web_closure_fase5_verification.md`](../history/web_closure_fase5_verification.md). La matriz authz y las validaciones de usuario están cubiertas con Vitest; **queda pendiente explícito** el checklist manual E2E de los 9 flujos.
 | 30 | [Reporte final y actualización documental](30.web_closure_fase5.web.app.cierre_docs.md) | revisión | todas las funcionales |
 
 ## Épica: restructuración de `cmd/` (server + CLI unificado) — cerrada
