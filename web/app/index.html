@@ -4,6 +4,13 @@
         <meta charset="UTF-8" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link
+            rel="preload"
+            href="/fonts/inter-variable.woff2"
+            as="font"
+            type="font/woff2"
+            crossorigin
+        />
         <title>app</title>
         <script>
             ;(() => {
@@ -11,20 +18,35 @@
                 try {
                     const stored = localStorage.getItem('owned.theme')
                     theme =
-                        stored === 'light' || stored === 'dark'
-                            ? stored
-                            : null
+                        stored === 'light' || stored === 'dark' ? stored : null
                 } catch {
                     theme = null
                 }
                 if (!theme) {
-                    theme = window.matchMedia?.(
-                        '(prefers-color-scheme: dark)'
-                    ).matches
+                    theme = window.matchMedia?.('(prefers-color-scheme: dark)')
+                        .matches
                         ? 'dark'
                         : 'light'
                 }
                 document.documentElement.dataset.theme = theme
+
+                let palette
+                try {
+                    const stored = localStorage.getItem('owned.palette')
+                    palette = [
+                        'obsidian',
+                        'carbon',
+                        'graphite',
+                        'slate',
+                        'warm',
+                        'aurora'
+                    ].includes(stored)
+                        ? stored
+                        : 'obsidian'
+                } catch {
+                    palette = 'obsidian'
+                }
+                document.documentElement.dataset.palette = palette
             })()
         </script>
     </head>

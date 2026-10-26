@@ -19,7 +19,7 @@ function ProtectedLayout({ children }) {
     return (
         <section class="flex flex-col h-screen">
             <Navbar />
-            <main class="flex-1 overflow-y-auto bg-bg">
+            <main class="view-enter flex-1 overflow-y-auto bg-bg">
                 {children}
             </main>
         </section>

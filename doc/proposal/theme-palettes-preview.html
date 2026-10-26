@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Preview de paletas — cliente web owned</title>
+<style>
+  :root {
+    --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 20px;
+    --ease: cubic-bezier(0.4,0,0.2,1);
+    --dur: 200ms;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.12);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,.18);
+    --shadow-glow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+    --blur: 12px;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink-dark);
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+    -webkit-font-smoothing: antialiased;
+  }
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 56px; padding: 0 16px;
+    background: color-mix(in srgb, var(--bg-2) 70%, transparent);
+    backdrop-filter: blur(var(--blur));
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .brand { font-weight: 600; font-size: 15px; }
+  .nav { display: flex; gap: 4px; }
+  .nav a {
+    padding: 6px 12px; border-radius: var(--radius-sm);
+    color: var(--ink); text-decoration: none; font-size: 13px;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+  }
+  .nav a.active { background: var(--surface); color: var(--ink-dark); border: 1px solid var(--border); }
+  .nav a:hover { background: var(--surface); color: var(--ink-dark); }
+  .controls { display: flex; gap: 8px; align-items: center; }
+  select, button {
+    background: var(--surface); color: var(--ink-dark);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 6px 10px; font-size: 13px; cursor: pointer;
+    transition: all var(--dur) var(--ease);
+  }
+  button.primary {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+  button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  button.ghost { background: transparent; }
+  button:focus-visible { outline: none; box-shadow: var(--shadow-glow); }
+
+  .content { padding: 24px; max-width: 1100px; margin: 0 auto; width: 100%; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 20px;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .card h3 { margin: 0 0 8px; font-size: 16px; }
+  .card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: var(--radius-full);
+    font-size: 11px; border: 1px solid var(--border);
+    background: var(--bg-2); color: var(--ink);
+  }
+  .badge.accent { background: var(--accent-pale); color: var(--accent); border-color: var(--accent); }
+  .badge.success { background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success); border-color: var(--success); }
+  .badge.danger { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); border-color: var(--danger); }
+
+  .field { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+  .field label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .field input {
+    background: var(--bg); color: var(--ink-dark);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 8px 10px; font-size: 13px;
+    transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  }
+  .field input:focus { outline: none; border-color: var(--accent); box-shadow: var(--shadow-glow); }
+
+  .table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  .table th, .table td { padding: 10px 12px; text-align: left; font-size: 13px; border-bottom: 1px solid var(--border-subtle); }
+  .table th { color: var(--muted); font-weight: 500; text-transform: uppercase; font-size: 11px; letter-spacing: .06em; }
+  .table tr:hover td { background: var(--surface-hover); }
+
+  .modal {
+    background: color-mix(in srgb, var(--surface) 75%, transparent);
+    backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--border); border-radius: var(--radius-xl);
+    padding: 24px; box-shadow: var(--shadow-lg); max-width: 420px;
+  }
+  .modal h4 { margin: 0 0 8px; }
+  .modal p { color: var(--muted); font-size: 13px; }
+
+  .swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 8px; margin-top: 16px; }
+  .swatch { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+  .swatch .dot { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border); }
+
+  .section-title { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 24px 0 8px; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">owned · preview</div>
+    <nav class="nav">
+      <a class="active" href="#">Files</a>
+      <a href="#">Groups</a>
+      <a href="#">Users</a>
+    </nav>
+    <div class="controls">
+      <select id="palette"></select>
+      <button id="theme" class="ghost" title="Toggle theme">☾</button>
+      <button class="primary">Nuevo</button>
+    </div>
+  </header>
+
+  <main class="content">
+    <div class="section-title">Paleta activa</div>
+    <div class="swatches" id="swatches"></div>
+
+    <div class="section-title">Componentes</div>
+    <div class="grid">
+      <div class="card">
+        <h3>Carpeta de proyecto</h3>
+        <p>Metadatos, permisos y acciones rápidas sobre el nodo seleccionado.</p>
+        <div class="row">
+          <span class="badge accent">write_access</span>
+          <span class="badge success">synced</span>
+          <span class="badge">v2.4</span>
+        </div>
+        <div class="row">
+          <button class="primary">Abrir</button>
+          <button>Compartir</button>
+          <button class="ghost">Eliminar</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Subir archivo</h3>
+        <p>Arrastra o selecciona archivos para cargarlos en la carpeta actual.</p>
+        <div class="field">
+          <label>Nombre</label>
+          <input type="text" placeholder="documento.pdf" />
+        </div>
+        <div class="row">
+          <button class="primary">Subir</button>
+          <span class="badge danger">error 413</span>
+        </div>
+      </div>
+      <div class="modal">
+        <h4>Confirmar borrado</h4>
+        <p>Esta acción no se puede deshacer. El nodo y sus hijos se eliminarán.</p>
+        <div class="row">
+          <button class="primary">Confirmar</button>
+          <button>Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Tabla</div>
+    <table class="table">
+      <thead><tr><th>Nombre</th><th>Tipo</th><th>Modificado</th><th>Acceso</th></tr></thead>
+      <tbody>
+        <tr><td>docs</td><td>Carpeta</td><td>hace 2 h</td><td><span class="badge accent">owner</span></td></tr>
+        <tr><td>reporte.pdf</td><td>Archivo</td><td>ayer</td><td><span class="badge">read</span></td></tr>
+        <tr><td>assets</td><td>Carpeta</td><td>hace 3 d</td><td><span class="badge success">write</span></td></tr>
+      </tbody>
+    </table>
+  </main>
+</div>
+
+<script>
+const palettes = {
+  obsidian: {
+    name: 'A · Obsidian (black + cyan)',
+    light: { bg:'#fafafa', bg2:'#f4f4f5', surface:'#ffffff', surfaceHover:'#f4f4f5', border:'#e4e4e7', borderSubtle:'#f4f4f5', muted:'#71717a', ink:'#52525b', inkDark:'#09090b', accent:'#0891b2', accentHover:'#0e7490', accentPale:'#cffafe', success:'#16a34a', danger:'#dc2626' },
+    dark:  { bg:'#09090b', bg2:'#111113', surface:'#18181b', surfaceHover:'#1f1f23', border:'#27272a', borderSubtle:'#1f1f23', muted:'#71717a', ink:'#a1a1aa', inkDark:'#fafafa', accent:'#22d3ee', accentHover:'#67e8f9', accentPale:'#0c2a33', success:'#22c55e', danger:'#f87171' }
+  },
+  carbon: {
+    name: 'B · Carbon (gris + azul)',
+    light: { bg:'#ffffff', bg2:'#f6f8fa', surface:'#ffffff', surfaceHover:'#f6f8fa', border:'#d0d7de', borderSubtle:'#eaeef2', muted:'#6e7781', ink:'#24292f', inkDark:'#1f2328', accent:'#0969da', accentHover:'#0550ae', accentPale:'#ddf4ff', success:'#1a7f37', danger:'#cf222e' },
+    dark:  { bg:'#0d1117', bg2:'#161b22', surface:'#21262d', surfaceHover:'#1c2128', border:'#30363d', borderSubtle:'#21262d', muted:'#8b949e', ink:'#c9d1d9', inkDark:'#f0f6fc', accent:'#58a6ff', accentHover:'#79c0ff', accentPale:'#1f3a5f', success:'#3fb950', danger:'#f85149' }
+  },
+  graphite: {
+    name: 'C · Graphite (gris + violeta)',
+    light: { bg:'#fafafa', bg2:'#f4f4f5', surface:'#ffffff', surfaceHover:'#f4f4f5', border:'#e4e4e7', borderSubtle:'#f4f4f5', muted:'#71717a', ink:'#52525b', inkDark:'#18181b', accent:'#7c3aed', accentHover:'#6d28d9', accentPale:'#ede9fe', success:'#16a34a', danger:'#dc2626' },
+    dark:  { bg:'#18181b', bg2:'#27272a', surface:'#3f3f46', surfaceHover:'#2f2f33', border:'#52525b', borderSubtle:'#3f3f46', muted:'#a1a1aa', ink:'#d4d4d8', inkDark:'#fafafa', accent:'#a78bfa', accentHover:'#c4b5fd', accentPale:'#2e1f5e', success:'#4ade80', danger:'#f87171' }
+  },
+  slate: {
+    name: 'D · Slate (azul-gris + sky)',
+    light: { bg:'#f8fafc', bg2:'#f1f5f9', surface:'#ffffff', surfaceHover:'#f1f5f9', border:'#cbd5e1', borderSubtle:'#e2e8f0', muted:'#64748b', ink:'#334155', inkDark:'#0f172a', accent:'#0284c7', accentHover:'#0369a1', accentPale:'#e0f2fe', success:'#16a34a', danger:'#dc2626' },
+    dark:  { bg:'#020617', bg2:'#0f172a', surface:'#1e293b', surfaceHover:'#172033', border:'#334155', borderSubtle:'#1e293b', muted:'#94a3b8', ink:'#cbd5e1', inkDark:'#f1f5f9', accent:'#38bdf8', accentHover:'#7dd3fc', accentPale:'#0c2a45', success:'#4ade80', danger:'#f87171' }
+  },
+  warm: {
+    name: 'E · Warm Dark (sepia/terracota)',
+    light: { bg:'#f5f0e8', bg2:'#ede6d8', surface:'#fdfbf7', surfaceHover:'#f5f0e8', border:'#d6cfc2', borderSubtle:'#e8e2d9', muted:'#8c8478', ink:'#4a453e', inkDark:'#2a2520', accent:'#c4714a', accentHover:'#b05e39', accentPale:'#f0ddd4', success:'#4a9b5f', danger:'#b05e39' },
+    dark:  { bg:'#1a1612', bg2:'#241f19', surface:'#2f2922', surfaceHover:'#27221c', border:'#3d352b', borderSubtle:'#322c24', muted:'#8a8074', ink:'#c8bfb0', inkDark:'#ede6d8', accent:'#d4845c', accentHover:'#e09070', accentPale:'#3a2e28', success:'#5fb373', danger:'#d07050' }
+  },
+  aurora: {
+    name: 'F · Aurora (violeta + magenta)',
+    light: { bg:'#fafaff', bg2:'#f3f3ff', surface:'#ffffff', surfaceHover:'#f3f3ff', border:'#d4d4e8', borderSubtle:'#e8e8f5', muted:'#6b6b8a', ink:'#3a3a5c', inkDark:'#1a1a2e', accent:'#7c3aed', accentHover:'#6d28d9', accentPale:'#ede9fe', success:'#16a34a', danger:'#dc2626' },
+    dark:  { bg:'#0b0b12', bg2:'#14141f', surface:'#1e1e2e', surfaceHover:'#181825', border:'#2e2e44', borderSubtle:'#232336', muted:'#8b8ba7', ink:'#c4c4dd', inkDark:'#f0f0fa', accent:'#f472b6', accentHover:'#f9a8d4', accentPale:'#2a1f4a', success:'#4ade80', danger:'#fb7185' }
+  }
+};
+
+const root = document.documentElement;
+const sel = document.getElementById('palette');
+const themeBtn = document.getElementById('theme');
+const swatches = document.getElementById('swatches');
+
+Object.keys(palettes).forEach(k => {
+  const o = document.createElement('option');
+  o.value = k; o.textContent = palettes[k].name;
+  sel.appendChild(o);
+});
+
+let theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+let palette = 'obsidian';
+
+function apply() {
+  const p = palettes[palette][theme];
+  const map = {
+    bg: p.bg, bg2: p.bg2, surface: p.surface, surfaceHover: p.surfaceHover,
+    border: p.border, borderSubtle: p.borderSubtle, muted: p.muted, ink: p.ink,
+    inkDark: p.inkDark, accent: p.accent, accentHover: p.accentHover,
+    accentPale: p.accentPale, success: p.success, danger: p.danger
+  };
+  for (const [k,v] of Object.entries(map)) root.style.setProperty('--'+k, v);
+  themeBtn.textContent = theme === 'dark' ? '☀' : '☾';
+  renderSwatches(map);
+}
+function renderSwatches(map) {
+  const labels = { bg:'bg', bg2:'bg-2', surface:'surface', surfaceHover:'surface-hover', border:'border', borderSubtle:'border-subtle', muted:'muted', ink:'ink', inkDark:'ink-dark', accent:'accent', accentHover:'accent-hover', accentPale:'accent-pale', success:'success', danger:'danger' };
+  swatches.innerHTML = '';
+  for (const k of Object.keys(labels)) {
+    const d = document.createElement('div'); d.className='swatch';
+    const dot = document.createElement('span'); dot.className='dot'; dot.style.background = map[k];
+    const t = document.createElement('span'); t.textContent = labels[k] + ' ' + map[k];
+    d.appendChild(dot); d.appendChild(t); swatches.appendChild(d);
+  }
+}
+sel.addEventListener('change', e => { palette = e.target.value; apply(); });
+themeBtn.addEventListener('click', () => { theme = theme === 'dark' ? 'light' : 'dark'; apply(); });
+
+apply();
+</script>
+</body>
+</html>

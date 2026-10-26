@@ -1,4 +1,10 @@
-import { Show, createEffect, onCleanup, splitProps } from 'solid-js'
+import {
+    Show,
+    createEffect,
+    createSignal,
+    onCleanup,
+    splitProps
+} from 'solid-js'
 import { Portal } from 'solid-js/web'
 
 /**
@@ -37,6 +43,27 @@ const sizes = {
  */
 export function Modal(props) {
     let panel
+    const [present, setPresent] = createSignal(false)
+    const [visible, setVisible] = createSignal(false)
+
+    createEffect(() => {
+        if (props.open) {
+            setPresent(true)
+            const frame = requestAnimationFrame(() => setVisible(true))
+            onCleanup(() => cancelAnimationFrame(frame))
+            return
+        }
+
+        setVisible(false)
+        if (!present()) return
+
+        const duration = window.matchMedia('(prefers-reduced-motion: reduce)')
+            .matches
+            ? 0
+            : 200
+        const timeout = window.setTimeout(() => setPresent(false), duration)
+        onCleanup(() => window.clearTimeout(timeout))
+    })
 
     createEffect(() => {
         if (!props.open) return
@@ -103,11 +130,13 @@ export function Modal(props) {
 
     return (
         <Portal>
-            <Show when={props.open}>
+            <Show when={present()}>
                 {/* Backdrop */}
                 <div
-                    class="fixed inset-0 z-50 flex items-center justify-center p-4"
-                    style="background: rgba(42, 37, 32, 0.5)"
+                    class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
+                    data-open={visible() ? 'true' : 'false'}
+                    aria-hidden={!props.open}
+                    inert={!props.open}
                     onClick={e => {
                         if (
                             props.closeOnBackdrop !== false &&
@@ -121,12 +150,14 @@ export function Modal(props) {
                         ref={element => (panel = element)}
                         role="dialog"
                         aria-modal="true"
-                        aria-labelledby={props.title ? 'modal-title' : undefined}
+                        aria-labelledby={
+                            props.title ? 'modal-title' : undefined
+                        }
                         tabIndex={-1}
-                        class={`
+                        class={`modal-panel
                             relative w-full ${sizes[props.size ?? 'md']}
                             bg-surface border border-border
-                            rounded-sm shadow-sm
+                            rounded-lg shadow-lg
                             flex flex-col
                         `}
                     >
@@ -136,7 +167,7 @@ export function Modal(props) {
                                 {props.title && (
                                     <h2
                                         id="modal-title"
-                                        class="font-serif text-lg text-ink-dark leading-snug"
+                                        class="font-sans font-medium text-lg text-ink-dark leading-snug"
                                     >
                                         {props.title}
                                     </h2>

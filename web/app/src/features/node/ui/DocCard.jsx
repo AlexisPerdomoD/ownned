@@ -97,7 +97,7 @@ export function DocCard(props) {
                 </span>
                 <span class="w-full">
                     <span
-                        class="block w-full font-serif text-sm text-ink-dark leading-snug line-clamp-2 break-words"
+                        class="block w-full font-sans font-medium text-sm text-ink-dark leading-snug line-clamp-2 break-words"
                         title={documentName()}
                     >
                         {documentName() || 'Untitled'}

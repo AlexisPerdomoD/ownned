@@ -57,7 +57,7 @@ Card.Header = function CardHeader({
         >
             <div class="flex flex-col gap-0.5">
                 {title && (
-                    <h3 class="font-serif text-base text-ink-dark leading-snug">
+                    <h3 class="font-sans font-medium text-base text-ink-dark leading-snug">
                         {title}
                     </h3>
                 )}

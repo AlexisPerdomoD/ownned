@@ -5,8 +5,12 @@ export function NotFoundView() {
     return (
         <section class="flex flex-col items-center justify-center h-screen">
             <div class="max-w-md w-full text-center px-6">
-                <h1 class="text-3xl font-serif text-ink-dark mb-2">404</h1>
-                <p class="text-lg text-ink font-serif mb-2">Page Not Found</p>
+                <h1 class="text-3xl font-sans font-medium text-ink-dark mb-2">
+                    404
+                </h1>
+                <p class="text-lg text-ink font-sans font-medium mb-2">
+                    Page Not Found
+                </p>
                 <p class="text-sm text-muted mb-6">
                     The page you're looking for doesn't exist or has been moved.
                 </p>

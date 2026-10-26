@@ -58,7 +58,7 @@ AppShell.Sidebar = function Sidebar({
             {/* Brand */}
             {brand && (
                 <div class="px-4 py-4 border-b border-border-subtle">
-                    <span class="font-serif text-base text-ink-dark">
+                    <span class="font-sans font-medium text-base text-ink-dark">
                         {brand}
                     </span>
                 </div>
@@ -200,14 +200,10 @@ export function PageHeader({
                     </div>
                 )}
                 {breadcrumb}
-                <h1 class="font-serif text-2xl text-ink-dark leading-tight">
+                <h1 class="font-sans font-medium text-2xl text-ink-dark leading-tight">
                     {title}
                 </h1>
-                {subtitle && (
-                    <p class="text-sm text-muted">
-                        {subtitle}
-                    </p>
-                )}
+                {subtitle && <p class="text-sm text-muted">{subtitle}</p>}
             </div>
             {actions && (
                 <div class="flex items-center gap-2 shrink-0 mt-1">

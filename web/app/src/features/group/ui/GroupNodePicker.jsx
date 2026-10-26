@@ -1,3 +1,4 @@
+import { FileText, Folder } from 'lucide-solid'
 import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js'
 
 import { apiGetNode, apiGetRoot, apiPaginateNodes } from '@/entities/nodes/api'
@@ -48,7 +49,9 @@ export function GroupNodePicker(props) {
         try {
             setRoots((await apiGetRoot()) ?? [])
         } catch (error) {
-            setLoadError(getErrorMessage(error, 'Could not load accessible nodes.'))
+            setLoadError(
+                getErrorMessage(error, 'Could not load accessible nodes.')
+            )
         } finally {
             setLoading(false)
         }
@@ -125,9 +128,7 @@ export function GroupNodePicker(props) {
             setSearch('')
             setSearchPage(1)
         } catch (error) {
-            setLoadError(
-                getErrorMessage(error, 'Could not open this folder.')
-            )
+            setLoadError(getErrorMessage(error, 'Could not open this folder.'))
         } finally {
             setLoading(false)
         }
@@ -228,7 +229,10 @@ export function GroupNodePicker(props) {
                 </Show>
 
                 <Show when={loading() || searchLoading()}>
-                    <p class="py-4 text-center text-sm text-muted" role="status">
+                    <p
+                        class="py-4 text-center text-sm text-muted"
+                        role="status"
+                    >
                         Loading nodes…
                     </p>
                 </Show>
@@ -281,9 +285,19 @@ export function GroupNodePicker(props) {
                                                 : selectNode(node)
                                         }
                                     >
-                                        <span class="mr-2" aria-hidden="true">
-                                            {node.type === 'folder' ? '📁' : '📄'}
-                                        </span>
+                                        {node.type === 'folder' ? (
+                                            <Folder
+                                                class="mr-2 inline"
+                                                size={16}
+                                                aria-hidden="true"
+                                            />
+                                        ) : (
+                                            <FileText
+                                                class="mr-2 inline"
+                                                size={16}
+                                                aria-hidden="true"
+                                            />
+                                        )}
                                         <span class="text-sm font-medium">
                                             {node.name || 'Untitled'}
                                         </span>

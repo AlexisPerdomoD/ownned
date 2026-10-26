@@ -1,11 +1,18 @@
 import { readFileSync } from 'node:fs'
-
 import { describe, expect, it } from 'vitest'
 
 const css = readFileSync(new URL('../index.css', import.meta.url), 'utf8')
 const lightBlock = css.match(/@theme\s*\{([\s\S]*?)\n\}/)?.[1] ?? ''
 const darkBlock =
     css.match(/\[data-theme='dark'\]\s*\{([\s\S]*?)\n\}/)?.[1] ?? ''
+const paletteNames = [
+    'obsidian',
+    'carbon',
+    'graphite',
+    'slate',
+    'warm',
+    'aurora'
+]
 
 function parseColors(block) {
     return Object.fromEntries(
@@ -18,9 +25,14 @@ function parseColors(block) {
 
 function luminance(hex) {
     const normalized = hex.slice(1)
-    const channels = normalized.length === 3
-        ? [...normalized].map(channel => `${channel}${channel}`)
-        : [normalized.slice(0, 2), normalized.slice(2, 4), normalized.slice(4, 6)]
+    const channels =
+        normalized.length === 3
+            ? [...normalized].map(channel => `${channel}${channel}`)
+            : [
+                  normalized.slice(0, 2),
+                  normalized.slice(2, 4),
+                  normalized.slice(4, 6)
+              ]
     const [red, green, blue] = channels.map(channel => {
         const value = parseInt(channel, 16) / 255
         return value <= 0.04045
@@ -37,10 +49,40 @@ function contrastRatio(first, second) {
     return (lighter + 0.05) / (darker + 0.05)
 }
 
-const themes = {
-    light: parseColors(lightBlock),
-    dark: { ...parseColors(lightBlock), ...parseColors(darkBlock) }
+function parseSelector(selector) {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const block =
+        css.match(new RegExp(`${escaped}\\s*\\{([\\s\\S]*?)\\n\\}`))?.[1] ?? ''
+    return parseColors(block)
 }
+
+const baseLight = parseColors(lightBlock)
+const baseDark = { ...baseLight, ...parseColors(darkBlock) }
+const themes = Object.fromEntries(
+    paletteNames.flatMap(palette => {
+        const light = {
+            ...baseLight,
+            ...(palette === 'obsidian'
+                ? {}
+                : parseSelector(`[data-palette='${palette}']`))
+        }
+        const dark = {
+            ...baseDark,
+            ...(palette === 'obsidian'
+                ? {}
+                : parseSelector(`[data-palette='${palette}']`)),
+            ...(palette === 'obsidian'
+                ? {}
+                : parseSelector(
+                      `[data-theme='dark'][data-palette='${palette}']`
+                  ))
+        }
+        return [
+            [`${palette} light`, light],
+            [`${palette} dark`, dark]
+        ]
+    })
+)
 
 describe('semantic theme contrast', () => {
     for (const [themeName, colors] of Object.entries(themes)) {

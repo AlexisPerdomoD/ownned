@@ -5,11 +5,11 @@ export function LoginView() {
         <section class="flex flex-col items-center justify-center h-screen">
             <section class="max-w-md w-full">
                 <section class="mb-4 py-4">
-                    <h1 class="text-2xl font-semibold text-center font-serif pb-2">
+                    <h1 class="text-2xl font-semibold text-center font-sans font-medium pb-2">
                         Login to your account
                     </h1>
                     <p class="text-sm text-center">
-                        If you don't have an account, why are you here? 
+                        If you don't have an account, why are you here?
                     </p>
                 </section>
 

@@ -120,7 +120,7 @@ export function NodeCard(props) {
                 </span>
 
                 <h3
-                    class="w-full font-serif text-sm text-ink-dark leading-snug line-clamp-2 wrap-break-word"
+                    class="w-full font-sans font-medium text-sm text-ink-dark leading-snug line-clamp-2 wrap-break-word"
                     title={displayName(own.node)}
                 >
                     {displayName(own.node)}

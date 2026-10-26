@@ -65,7 +65,7 @@ export function NodeList(props) {
                             {props.title && (
                                 <h2
                                     class="
-                                    font-serif text-lg text-ink-dark
+                                    font-sans font-medium text-lg text-ink-dark
                                 "
                                 >
                                     {props.title}

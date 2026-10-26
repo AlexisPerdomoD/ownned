@@ -83,7 +83,9 @@ export function ErrView(props) {
         >
             <div class="max-w-md w-full text-center space-y-6">
                 <div class="space-y-2">
-                    <h1 class="font-serif text-4xl text-ink">{title()}</h1>
+                    <h1 class="font-sans font-medium text-4xl text-ink">
+                        {title()}
+                    </h1>
                 </div>
 
                 <p class="text-base text-muted leading-relaxed">{message()}</p>
@@ -96,10 +98,10 @@ export function ErrView(props) {
                         <ul class="text-sm text-muted space-y-1">
                             <For each={props.error.issues}>
                                 {issue => (
-                                <li class="flex gap-2">
-                                    <span class="text-danger">•</span>
-                                    <span>{issue.message}</span>
-                                </li>
+                                    <li class="flex gap-2">
+                                        <span class="text-danger">•</span>
+                                        <span>{issue.message}</span>
+                                    </li>
                                 )}
                             </For>
                         </ul>
@@ -115,7 +117,7 @@ export function ErrView(props) {
                         >
                             Hide technical details
                         </button>
-                            <pre class="mt-2 p-3 bg-bg-2 rounded-sm text-xs text-muted overflow-x-auto whitespace-pre-wrap break-all font-mono">
+                        <pre class="mt-2 p-3 bg-bg-2 rounded-sm text-xs text-muted overflow-x-auto whitespace-pre-wrap break-all font-mono">
                             {props.error.stack}
                         </pre>
                     </div>

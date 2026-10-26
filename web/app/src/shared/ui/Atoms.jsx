@@ -11,10 +11,19 @@ import { Show } from 'solid-js'
 export function Divider({ orientation = 'horizontal', class: cls = '' }) {
     if (orientation === 'vertical') {
         return (
-            <span class={`inline-block w-px self-stretch bg-border-subtle ${cls}`} role="separator" aria-orientation="vertical" />
+            <span
+                class={`inline-block w-px self-stretch bg-border-subtle ${cls}`}
+                role="separator"
+                aria-orientation="vertical"
+            />
         )
     }
-    return <hr class={`border-none border-t border-border-subtle ${cls}`} role="separator" />
+    return (
+        <hr
+            class={`border-none border-t border-border-subtle ${cls}`}
+            role="separator"
+        />
+    )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -53,7 +62,11 @@ export function Avatar({ src, name = '', size = 'md', class: cls = '' }) {
                 ${avatarSizes[size]} ${cls}
             `}
         >
-            {src ? <img src={src} alt={name} class="w-full h-full object-cover" /> : initials || '?'}
+            {src ? (
+                <img src={src} alt={name} class="w-full h-full object-cover" />
+            ) : (
+                initials || '?'
+            )}
         </span>
     )
 }
@@ -115,7 +128,7 @@ export function EmptyState(props) {
             <Show when={props.icon}>
                 <span class="text-border mb-1 opacity-60">{props.icon}</span>
             </Show>
-            <p class="font-serif text-base text-ink">
+            <p class="font-sans font-medium text-base text-ink">
                 {props.title ?? 'Sin resultados'}
             </p>
             <Show when={props.description}>

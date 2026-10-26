@@ -1,7 +1,7 @@
 import { splitProps } from 'solid-js'
 
 const variants = {
-    primary: 'bg-ink-dark text-bg border-ink-dark hover:bg-ink',
+    primary: 'bg-accent text-on-accent border-accent hover:bg-accent-hover',
     ghost: 'bg-transparent text-ink border-border hover:bg-bg-2',
     accent: 'bg-accent text-on-accent border-accent hover:bg-accent-hover',
     danger: 'bg-transparent text-danger border-danger hover:bg-danger-soft'

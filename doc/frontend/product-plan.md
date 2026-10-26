@@ -32,7 +32,7 @@ Este es el plan vivo para alinear el cliente SolidJS con el contrato público de
 - `NodeView` muestra `display_path` y combina rol/asignación para sus acciones. `HomeView` aún debe alinear la presentación y affordances de raíces.
 - `NodeView` consume paginación para búsqueda de nodos/documentos, ordena localmente hijos y oculta dotfiles por defecto con preferencia persistida; el tema tiene toggle persistido. La subida de carpetas es todavía parcial y no recursiva.
 - Helpers de upload/download/delete/logout con `fetch` relativo no apuntan a API al correr Vite en un origen separado. La configuración `.env.example`/`MODE` también necesita alineación para CORS/cookies local.
-- El estilo ya centraliza tokens y tiene overrides dark, pero actualmente usa una paleta tierra y hay clases arbitrarias de CSS variables en vistas. Las animaciones son puntuales (transiciones de color/spinner), no una política global.
+- El sistema visual centraliza tokens semánticos y ahora ofrece seis paletas claro/oscuro, tipografías locales sin Google Fonts, iconografía SVG y transiciones de entrada para vistas/modales. Requiere revisión visual manual en los seis esquemas antes de darlo por cerrado.
 
 ## Reglas y criterios de aceptación
 
@@ -92,7 +92,7 @@ Actualizar estado/criterios al cerrar cada bloque. Estados: **Pendiente**, **En 
 | P1        | Contrato completo                | Integrar paginación de nodos y documentos con filtros; planificar implementación backend de `PUT node` y descarga de carpeta sin marcar stubs como terminados.                                                        | Pendiente / Bloqueado backend              |
 | P1        | Grupos                           | Cambiar update a PATCH, verificar filtros, estados 403 y selector visual de nodos en lugar de UUID manual.                                                                                                            | Pendiente                                  |
 | P2        | Explorador de archivos           | Prototipo responsive, navegación por carpeta, orden local acordado y dotfiles ocultos por defecto con control ver/ocultar.                                                                                             | En revisión                                  |
-| P2        | Design system                    | Paleta neutra accesible centralizada, toggle claro/oscuro persistido, reducción de clases variables arbitrarias y movimiento con soporte reduced-motion.                                                              | Pendiente                                  |
+| P2        | Design system                    | Paletas Obsidian + alternativas, fuentes self-hosted, iconografía SVG, movimiento de vistas/modales y contraste AA.                                                                                                      | En curso                                   |
 | P3        | Subida de carpetas               | Comparativa de navegador, límites, fallos parciales/atomicidad y recomendación documentada; después decidir MVP cliente o endpoint batch backend.                                                                     | Decisión pendiente                         |
 | P3        | Verificación                     | Añadir/definir pruebas de contrato y flujos críticos. El frontend actualmente no declara script ni framework de pruebas en `package.json`; elegir estrategia antes de prometer cobertura automatizada.                | Decisión pendiente                         |
 
