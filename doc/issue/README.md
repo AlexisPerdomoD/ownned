@@ -59,6 +59,7 @@ Issues 24–26 cerradas; resúmenes técnicos en [`../history/web_closure_fase4_
 
 Issues 27 y 28 cerradas; resúmenes técnicos en [`../history/web_closure_fase5_folder_upload.md`](../history/web_closure_fase5_folder_upload.md) y [`../history/web_closure_fase5_folder_download.md`](../history/web_closure_fase5_folder_download.md). La Propuesta A de subida queda implementada; la carga es parcial y no atómica. El botón de descarga de carpeta permanece visible y notifica el error `501`.
 Issue 29 cerrada; resumen técnico en [`../history/web_closure_fase5_verification.md`](../history/web_closure_fase5_verification.md). La matriz authz y las validaciones de usuario están cubiertas con Vitest; **queda pendiente explícito** el checklist manual E2E de los 9 flujos.
+Issue 30 cerrada; resumen técnico en [`../history/web_closure_fase5_cierre_docs.md`](../history/web_closure_fase5_cierre_docs.md). Fase 5 completada; `contract-coverage.md`, `canonical-flows.md`, `product-plan.md` y README reflejan el estado real post-cierre.
 | 30 | [Reporte final y actualización documental](30.web_closure_fase5.web.app.cierre_docs.md) | revisión | todas las funcionales |
 
 ## Épica: restructuración de `cmd/` (server + CLI unificado) — cerrada

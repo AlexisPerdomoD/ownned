@@ -158,7 +158,7 @@ Run modes: set `MODE=local` in `.env` for local HTTP (including the separate Vit
 
 ## Frontend design and coverage
 
-The frontend follows the backend's public HTTP contract. `doc/frontend/contract-coverage.md` records each endpoint, its backend state, current client integration, and gaps. `doc/frontend/product-plan.md` records the UX direction, folder-upload evaluation, acceptance criteria, and progress. Frontend coding instructions are in `web/app/AGENTS.md`.
+The frontend follows the backend's public HTTP contract. `doc/frontend/contract-coverage.md` records each endpoint, its backend state, current client integration, and gaps. `doc/frontend/product-plan.md` records the UX direction, product decisions (folder upload is implemented as client-side orchestration; folder download reports the backend `501`), and progress. Frontend coding instructions are in `web/app/AGENTS.md`.
 
 ## Project structure
 

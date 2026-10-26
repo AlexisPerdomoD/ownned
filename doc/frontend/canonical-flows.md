@@ -1,6 +1,6 @@
 # Flujos canónicos del cliente web
 
-**Baseline del cliente:** 2026-10-22. Este documento convierte la dirección de producto y el contrato HTTP en recorridos de usuario que `web/app` debe soportar. Describe el resultado esperado, el estado comprobable en el código y las brechas que deben convertirse en trabajo; no afirma que una ruta registrada o un control visible sea un flujo funcional.
+**Baseline del cliente:** 2026-10-22 · **Cierre documentado:** 2026-10-26 (issue 30). Este documento convierte la dirección de producto y el contrato HTTP en recorridos de usuario que `web/app` debe soportar. Describe el resultado esperado, el estado comprobable en el código y las brechas que deben convertirse en trabajo; no afirma que una ruta registrada o un control visible sea un flujo funcional.
 
 ## Cómo usar este documento
 
@@ -23,15 +23,16 @@
 
 | Recorrido                                | Estado hoy                      | Principal límite para considerarlo cubierto                                                                                                                     |
 | ---------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Iniciar, recuperar y cerrar sesión       | Parcial/desalineado             | La restauración puede quedarse cargando ante errores distintos de `401`; logout no usa el origen API de Vite.                                                   |
-| Explorar raíces, carpetas y archivos     | Bloqueado por backend + parcial | Raíces/nodo solicitado ya traen `display_path` y `access_level`, pero la UI no los usa; hijos no traen metadata `doc` ni acceso.                                |
-| Crear, editar y eliminar carpetas        | Parcial                         | Crear y eliminar tienen integración; editar depende de `PUT /nodes/{nodeID}`, que responde `501`. Falta gating combinado por rol y nivel de asignación.          |
-| Subir, descargar y borrar archivos       | Parcial/bloqueado por backend   | La UI sube un archivo por vez; falta gating por acceso/rol y la identidad DocID/NodeID/storage key no permite declarar descarga/borrado fiables.                |
-| Comentar en un nodo                      | Desalineado                     | Las rutas GET/POST/DELETE del cliente no corresponden al contrato; falta edición y el límite de longitud discrepa.                                              |
-| Administrar grupos y compartir nodos     | Parcial/desalineado             | La actualización usa `PUT` en lugar de `PATCH`; asociación de nodos requiere teclear UUID y falta gating coherente por permisos.                                |
-| Administrar usuarios                     | Parcial/desalineado             | Crear serializa un campo no admitido y no está restringido visualmente a superusuarios; borrar no existe en el backend.                                         |
-| Subir carpetas completas                 | Decisión pendiente              | No hay contrato batch; debe elegirse entre orquestar en navegador y diseñar una operación backend.                                                              |
-| Presentación transversal y accesibilidad | Parcial                         | Hay componentes comunes y tokens, pero faltan tema persistente, política global de movimiento y cobertura responsive/accesible verificada.                      |
+| Iniciar, recuperar y cerrar sesión       | Operativo con brechas           | Login/logout/restauración usan el client común y errores ≠`401` terminan en estado visible; falta validación local completa (checklist manual E2E pendiente).      |
+| Explorar raíces, carpetas y archivos     | Operativo con brechas           | Hijos traen `doc`/`access_level`, orden local y render paginado a 100; búsqueda usa paginación API; `display_path` inconsistente entre GET y paginación (backend).  |
+| Crear, editar y eliminar carpetas        | Operativo con brechas           | Gating combinado rol × `access_level` en UI; editar depende de `PUT /nodes/{nodeID}`, que responde `501`.                                                          |
+| Subir, descargar y borrar archivos       | Operativo con brechas           | Descarga de carpeta en `501` (botón visible que notifica); DocID→storage key sigue inconsistente en backend para descarga/borrado de documento.                    |
+| Comentar en un nodo                      | Operativo con brechas           | Rutas anidadas, límite 255 y edición/eliminación integrados; regla D1 aplicada en UI (limited no comenta) queda pendiente de alinear en backend.                  |
+| Administrar grupos y compartir nodos     | Operativo con brechas           | Update usa `PATCH` y selector de nodos integrado; el listado no expone el filtro `usr_id` del API.                                                                 |
+| Administrar usuarios                     | Operativo con brechas           | Creación con validación backend replicada y gating super; el GET individual sigue sin flujo UI identificado.                                                       |
+| Subir carpetas completas                 | Operativo con brechas           | Propuesta A implementada (pool 20, progreso, cancelación, retry); sin directorios vacíos por límite del picker y sin atomicidad.                                   |
+| Presentación transversal y accesibilidad | Operativo con brechas           | Tema persistente, tokens semánticos y contraste AA verificados con tests; contraste/responsive por dispositivo queda en el checklist manual pendiente.             |
+| Verificación E2E manual (9 flujos)       | **Pendiente explícito**         | El checklist no se ejecutó en navegador; quedar documentado por flujo antes de dar los recorridos por cerrados (ver historia de la issue 29).                     |
 
 ## Modelo de autorización para la UI
 
@@ -74,7 +75,7 @@ Abrir app -> GET /usrs/me -> ¿sesión válida?
 4. Tras el éxito, entrar a las rutas protegidas; ante credenciales incorrectas u otro error, informar sin perder el formulario.
 5. Al cerrar sesión, llamar `DELETE /api/v1/auth/logout`, limpiar el estado local y volver a login.
 
-**Estado actual:** existen login, restauración de sesión en `AuthProvider`, guard de rutas y acción de logout. El `401` de `me` se considera sesión anónima; un error distinto no completa `checked` y puede dejar el guard en el spinner. El helper de logout hace `fetch` relativo, por lo que con Vite puede llamar al origen del cliente en vez de la API. La integración general de transporte/CORS/cookies requiere validación local.
+**Estado actual:** existen login, restauración de sesión en `AuthProvider`, guard de rutas y acción de logout. El `401` de `me` resuelve sesión anónima; errores distintos terminan en `checked` con `error` visible en lugar de dejar el guard en carga indefinida. Logout y login usan el client común (`reqJSON`/`reqForm`) con el origen API centralizado. La comprobación integral de cookies/origen en despliegues reales queda en el checklist manual pendiente.
 
 **Cierre verificable:** cada transición (carga inicial, sesión válida, anónima, error de red, login fallido/exitoso y logout) termina en un estado visible y recuperable; cookies y origen funcionan tanto en despliegue integrado como en desarrollo Vite.
 
@@ -117,7 +118,7 @@ Carpeta -> Crear / Editar -> Validar -> Guardar -> Vista actualizada
 
 **Contrato implicado:** `POST /api/v1/nodes` crea; `PUT /api/v1/nodes/{nodeID}` actualiza; `DELETE /api/v1/nodes/{nodeID}` elimina.
 
-**Estado actual:** el formulario y llamada de creación existen; la actualización ya está en UI pero el handler backend devuelve `501`; la eliminación está integrada. El backend elimina también los descendientes, por lo que la confirmación debe advertir ese alcance. El nodo solicitado ya trae `access_level`, pero la UI no lo consume ni combina nivel con rol para mostrar/ocultar edición, creación o borrado.
+**Estado actual:** el formulario y llamada de creación existen; la edición está integrada y el handler backend devuelve `501`, que la UI comunica como no disponible; la eliminación está integrada. El backend elimina también los descendientes y la confirmación advierte ese alcance. La UI combina `access_level` del nodo con el rol (y reglas específicas) para mostrar/ocultar edición, creación y borrado; en paginación usa `Node.name` como `display_path` hasta que el backend lo incluya.
 
 **Cierre verificable:** creación/edición validan los límites del contrato y actualizan la vista; se comunica `501` como no disponible mientras siga vigente; el borrado recursivo se explica y requiere confirmación explícita; affordances combinan `access_level` con rol; `403`, conflicto, no encontrado y fallo no se presentan como éxito.
 
@@ -150,7 +151,7 @@ Nodo -> Ver comentarios -> Crear comentario -> Lista actualizada
 
 **Contrato implicado:** `GET/POST /api/v1/nodes/{nodeID}/comments`, `PATCH/DELETE /api/v1/nodes/comments/{nodeCommentID}`; contenido máximo 255 caracteres. Edición limitada al autor.
 
-**Estado actual:** la UI lista, crea y elimina, pero el cliente llama `/api/v1/comments` (y manda `node_id` en el body) en vez de las rutas anidadas del contrato. El formulario admite hasta 10,000 caracteres frente al límite backend de 255. No hay integración de edición aunque el endpoint backend está implementado. La pantalla actual muestra comentarios para carpetas. Crear comentario requiere solo lectura; editar/borrar siguen reglas de autor/superusuario y no se deducen únicamente de `access_level`.
+**Estado actual:** alineado con el contrato: rutas anidadas (`/nodes/{nodeID}/comments` y `/nodes/comments/{id}`), `content` limitado a 255 y edición/eliminación integradas en `NodeView` (`useUpdateComment`/`useDeleteComment`), con reglas de autor/superusuario y borradores preservados ante error. Regla D1 aplicada en UI: `limited_usr_role` no recibe el affordance de comentar; el backend todavía lo permite (alineación backend fuera de alcance frontend).
 
 **Cierre verificable:** todas las operaciones usan la ruta/método/cuerpo exactos; límite y validación coinciden; solo se ofrece editar/borrar cuando corresponda y el servidor sigue siendo autoridad; se refresca el contenido sin perder el borrador ante errores.
 
@@ -167,7 +168,7 @@ Grupos -> Crear / Buscar -> Detalle
 
 **Contrato implicado:** paginación/búsqueda de grupos; `POST`, `GET`, `PATCH`, `DELETE /api/v1/groups`; operaciones `POST/DELETE` para integrantes y nodos. El backend publica permisos y restricciones por rol; no deben inferirse solo por el rol visible.
 
-**Estado actual:** existen listado con búsqueda/paginación, creación, detalle, eliminación y acciones de integrantes/nodos. `GroupNodePicker` permite navegar raíces/carpetas y buscar nodos antes de asociarlos; un `403` comunica que el nodo no se puede compartir y la relación se refresca tras asociar/quitar. La actualización permanece desalineada: el cliente envía `PUT`, el backend registra `PATCH`. El listado no expone el filtro `usr_id` del API. La administración depende del acceso al grupo, no del `access_level` del nodo; el backend conserva la autorización final.
+**Estado actual:** existen listado con búsqueda/paginación, creación, detalle, eliminación y acciones de integrantes/nodos. `GroupNodePicker` permite navegar raíces/carpetas y buscar nodos antes de asociarlos; un `403` comunica que el nodo no se puede compartir y la relación se refresca tras asociar/quitar. La actualización usa `PATCH` alineado con el handler. El listado no expone el filtro `usr_id` del API. La administración depende del acceso al grupo, no del `access_level` del nodo; el backend conserva la autorización final.
 
 **Cierre verificable:** búsqueda/paginación y filtros definidos coinciden con API; update usa `PATCH`; selector de nodos ayuda a escoger un nodo accesible; miembros pueden asignarse/quitarse con niveles permitidos; acciones de propietario/lectura/escritura se presentan acorde al permiso y los errores no dejan estado optimista incorrecto.
 
@@ -197,7 +198,7 @@ Acción -> Cargando -> Éxito -> Actualizar vista
                    └─ Error -> Mensaje útil + conservar contexto/reintentar
 ```
 
-**Estado actual:** existen spinner, vistas/tabla vacías, toast, boundary y un cliente JSON con varias clases de error. No todos los helpers comparten transporte y normalización; los helpers de archivo manejan errores por separado. La UI aún no consume `access_level`, y el `422` de validación backend no tiene un caso explícito en el mapper común.
+**Estado actual:** existen spinner, vistas/tabla vacías, toast, boundary y un cliente común con clases de error tipadas; los helpers de archivo usan el mismo transporte y normalización. La UI consume `access_level` en `NodeView` y derivative cards; el `422` de validación backend no tiene un caso explícito en el mapper común. La política común está verificada con tests unitarios para errores y lógica pura; los estados por flujo quedan en el checklist manual pendiente.
 
 **Cierre verificable:** se usa una política común sin ocultar errores de contrato; las acciones repetibles muestran estado de operación; el formulario preserva datos corregibles; ninguna pantalla queda bloqueada indefinidamente; focus/teclado, tamaños de viewport y `prefers-reduced-motion` forman parte de la validación visual.
 
@@ -218,13 +219,13 @@ Sistema: reduced motion -> Reducir/desactivar movimiento no esencial
 
 ## Decisiones abiertas antes de fijar algunas issues
 
-1. **Contenido y acceso de hijos:** incluir `doc` y `access_level` en cada hijo o decidir consulta por hijo antes de renderizar affordances; no heredar el permiso del padre.
-2. **Permiso de comentar para `limited_usr_role`:** el contrato actual acepta comentarios con solo lectura; decidir si este rol puede usarlos o si se requiere una restricción específica de rol.
+1. **Contenido y acceso de hijos (resuelto):** cada hijo de `GET /nodes/{id}` trae `doc` y `access_level` y la UI los consume para sus affordances, sin heredar el permiso del padre.
+2. **Permiso de comentar para `limited_usr_role` (resuelto en UI):** regla D1 aplicada — `limited_usr_role` no comenta en ningún nivel; la alineación del permiso backend queda pendiente y fuera de alcance frontend.
 3. **Paginación y orden del explorador (resuelto):** las búsquedas usan la paginación API y sus filtros; el orden del contenido de `GET /nodes/{id}` se aplica localmente al conjunto completo, porque el contrato paginado no define `sort_by`/`sort_order`. El render se limita a 100 elementos por página.
-4. **Subida de carpetas:** decidir navegadores/plataformas soportados, límites, duplicados, cancelación/reintentos, tratamiento de fallos parciales y si basta orquestación cliente o hace falta batch backend.
-5. **Borrado de usuario:** retirar la acción sin soporte o diseñar operación backend (método, autorización y consecuencias).
+4. **Subida de carpetas (resuelto):** Propuesta A implementada en la issue 27 — pool de 20 requests, progreso por elementos, cancelación, reintento selectivo, sin límites frontend de cantidad/profundidad/bytes; cuotas futuras y rechazos se informan por elemento.
+5. **Borrado de usuario (resuelto):** sin endpoint backend ni affordance en el cliente; el flujo queda oculto hasta que exista contrato explícito.
 6. **Preferencias locales (resuelto):** tema y «mostrar ocultos» persisten en `localStorage`; la preferencia de tema guardada prevalece sobre la del sistema.
-7. **Verificación automatizada:** acordar estrategia de pruebas de flujos API/navegador; el frontend no declara actualmente un framework/script de pruebas.
+7. **Verificación automatizada (resuelto):** Vitest con matriz authz completa, DTOs y errores; el checklist manual E2E de los 9 flujos queda pendiente explícito (historia de la issue 29).
 
 ## Paquetes de trabajo que se desprenden de los flujos
 
