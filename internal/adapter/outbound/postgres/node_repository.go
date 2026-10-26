@@ -101,7 +101,7 @@ func (r *nodeRepository) GetByID(ctx context.Context, id domain.NodeID) (*domain
 }
 
 func (r *nodeRepository) GetChildren(ctx context.Context, folderPath domain.NodePath, depth *uint) ([]domain.Node, error) {
-	q := fmt.Sprintf("%s\nWHERE n.path <@ $1::ltree", getNodeQuery)
+	q := fmt.Sprintf("%s\nWHERE n.path <@ $1::ltree AND nlevel(n.path) > nlevel($1::ltree)", getNodeQuery)
 	params := []any{folderPath}
 
 	if depth != nil {
