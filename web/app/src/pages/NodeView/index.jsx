@@ -1,27 +1,38 @@
+import {
+    Download,
+    FileText,
+    Folder,
+    FolderUp,
+    MessageCircle,
+    Trash2
+} from 'lucide-solid'
 import { For, Show, createEffect, createSignal } from 'solid-js'
 
-import {
-    apiDocURL,
-    apiDownloadDoc,
-    apiDownloadFolder
-} from '@/entities/docs/api'
+import { apiDownloadDoc, apiDownloadFolder } from '@/entities/docs/api'
 import { useAuth } from '@/features/auth/providers/AuthProvider'
-import { CommentForm, CommentsList } from '@/features/comments/ui/CommentsList'
+import { CommentsDrawer } from '@/features/comments/ui/CommentsDrawer'
 import {
     useCreateComment,
     useDeleteComment,
     useGetComments,
     useUpdateComment
 } from '@/features/comments/usecase'
-import { DocCard, NodeCard } from '@/features/node/ui'
+import {
+    formatBytes,
+    formatRelativeDate
+} from '@/features/node/lib/formatMetadata'
+import {
+    CompactNodeRow,
+    DocCard,
+    NodeCard,
+    NodeSearch
+} from '@/features/node/ui'
 import {
     useCreateDoc,
     useCreateFolder,
     useDeleteDoc,
     useDeleteNode,
-    useGetNode,
-    usePaginateDocs,
-    usePaginateNodes
+    useGetNode
 } from '@/features/node/usecase'
 import {
     CHILDREN_PAGE_SIZE,
@@ -36,233 +47,20 @@ import {
     canUploadDoc
 } from '@/shared/authz'
 import { getErrorMessage } from '@/shared/errors'
-import { Button, ConfirmDialog, Modal, Spinner, toast } from '@/shared/ui'
-import { useNavigate, useParams } from '@solidjs/router'
+import { Button, ConfirmDialog, Spinner, toast } from '@/shared/ui'
+import { useLocation, useNavigate, useParams } from '@solidjs/router'
 
-const MIN_SEARCH_CHARS = 2
-
-const isViewableMime = mime =>
-    /^(image\/|text\/|application\/pdf)/.test(mime ?? '')
-
-const formatBytes = bytes => {
-    if (!bytes) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
-}
-
-const formatRelativeDate = dateStr => {
-    if (!dateStr) return ''
-    const diffDays = Math.floor((new Date() - new Date(dateStr)) / 86400000)
-    if (diffDays <= 0) return 'Today'
-    if (diffDays === 1) return 'Yesterday'
-    if (diffDays < 30)
-        return new Date(dateStr).toLocaleDateString('es-ES', {
-            month: 'short',
-            day: 'numeric'
-        })
-    return new Date(dateStr).toLocaleDateString('es-ES', {
-        month: 'short',
-        year: 'numeric'
-    })
-}
-
-const FolderRowIcon = () => (
-    <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-    >
-        <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
-    </svg>
-)
-
-const FileRowIcon = () => (
-    <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-    >
-        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-        <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-    </svg>
-)
-
-const TrashRowIcon = () => (
-    <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-    >
-        <path d="M3 6h18" />
-        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-2-2-2V6" />
-        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-    </svg>
-)
-
-const DownloadRowIcon = () => (
-    <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-    >
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-        <polyline points="7 10 12 15 17 10" />
-        <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-)
-
-/**
- * Fila compacta estilo lista (search dropdown y vista lista).
- *
- * @param {Object} props
- * @param {import('solid-js').JSX.Element} props.icon
- * @param {import('solid-js').JSX.Element} props.title
- * @param {import('solid-js').JSX.Element} [props.subtitle]
- * @param {() => void} [props.onOpen]
- * @param {import('solid-js').JSX.Element} [props.actions]
- */
-function CompactItemRow(props) {
-    return (
-        <div class="group flex items-center gap-3 px-3 py-2 border-b border-border-subtle last:border-b-0 hover:bg-bg-2">
-            <button
-                type="button"
-                class="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-                aria-label={`Open ${props.title}`}
-                onClick={() => props.onOpen?.()}
-            >
-                <span class="shrink-0 text-muted">{props.icon}</span>
-                <span class="min-w-0 flex-1">
-                    <span class="block text-sm text-ink-dark truncate">
-                        {props.title}
-                    </span>
-                    <Show when={props.subtitle}>
-                        <span class="block text-xs text-muted truncate">
-                            {props.subtitle}
-                        </span>
-                    </Show>
-                </span>
-            </button>
-            <div class="flex items-center gap-1 shrink-0">{props.actions}</div>
-        </div>
-    )
-}
-
-function NodeForm(props) {
-    const [name, setName] = createSignal('')
-    const [description, setDescription] = createSignal('')
-
-    createEffect(() => {
-        if (props.open) {
-            setName(props.node?.name ?? '')
-            setDescription(props.node?.description ?? '')
-        }
-    })
-
-    const handleSubmit = e => {
-        e.preventDefault()
-        if (name().trim()) {
-            props.onSubmit?.(name().trim(), description().trim())
-        }
-    }
-
-    return (
-        <Modal
-            open={props.open}
-            onClose={props.onClose}
-            title={props.node ? 'Edit Node' : 'New Folder'}
-            size="md"
-        >
-                    <form onSubmit={handleSubmit} class="flex flex-col gap-4">
-                        <div class="flex flex-col gap-1">
-                            <label
-                                for="node-name"
-                                class="text-xs text-muted uppercase tracking-wide"
-                            >
-                                Name *
-                            </label>
-                            <input
-                                type="text"
-                                id="node-name"
-                                data-autofocus
-                                value={name()}
-                                onInput={e => setName(e.target.value)}
-                                maxLength={255}
-                                class="
-                                    w-full font-sans font-light text-sm
-                                    text-ink-dark
-                                    bg-bg border border-border rounded-xs
-                                    px-3 py-2
-                                    focus:outline-none focus:border-ink
-                                "
-                                required
-                            />
-                        </div>
-
-                        <div class="flex flex-col gap-1">
-                            <label
-                                for="node-description"
-                                class="text-xs text-muted uppercase tracking-wide"
-                            >
-                                Description
-                            </label>
-                            <textarea
-                                id="node-description"
-                                value={description()}
-                                onInput={e => setDescription(e.target.value)}
-                                rows={2}
-                                maxLength={255}
-                                class="
-                                    w-full font-sans font-light text-sm
-                                    text-ink-dark
-                                    bg-bg border border-border rounded-xs
-                                    px-3 py-2 resize-none
-                                    focus:outline-none focus:border-ink
-                                "
-                            />
-                        </div>
-
-                        <div class="flex justify-end gap-2">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                onClick={() => props.onClose?.()}
-                            >
-                                Cancel
-                            </Button>
-                            <Button type="submit" loading={props.loading}>
-                                {props.node ? 'Update' : 'Create'}
-                            </Button>
-                        </div>
-                    </form>
-        </Modal>
-    )
-}
+import { NodeForm } from './NodeForm'
 
 export function NodeView() {
     const params = useParams()
     const navigate = useNavigate()
+    const location = useLocation()
+    const returnTo = () => location.state?.returnTo || '/nodes'
+    const openNode = nodeId =>
+        navigate(`/nodes/${nodeId}`, {
+            state: { returnTo: location.pathname }
+        })
     const auth = useAuth()
     const { node, loading, error, refresh } = useGetNode(() => params.id)
     const nodeData = () => node()
@@ -279,15 +77,6 @@ export function NodeView() {
         localStorage.getItem('owned.viewMode') ?? 'grid'
     )
 
-    const pager = usePaginateNodes()
-    const docsPager = usePaginateDocs()
-    const [searchInput, setSearchInput] = createSignal('')
-    const [searchScope, setSearchScope] = createSignal('folder') // 'folder' | 'global'
-    const [showAdvanced, setShowAdvanced] = createSignal(false)
-    const [searchOpen, setSearchOpen] = createSignal(false)
-    const [docMime, setDocMime] = createSignal('')
-    const [docMinSize, setDocMinSize] = createSignal('')
-    const [docMaxSize, setDocMaxSize] = createSignal('')
     const [sortBy, setSortBy] = createSignal('name')
     const [sortDir, setSortDir] = createSignal('asc')
     const [showDotfiles, setShowDotfiles] = createSignal(
@@ -306,55 +95,6 @@ export function NodeView() {
     // Cuando el backend lo incluya la UI lo consumirá sin cambios.
     const parentPath = () => nodeData()?.display_path || nodeData()?.name || ''
 
-    // debounce search (>=300ms, min 2 chars folders-only in node mode)
-    const runSearch = async page => {
-        const q = searchInput().trim()
-        if (q.length < MIN_SEARCH_CHARS) return
-        const rootId = searchScope() === 'global' ? undefined : nodeData()?.id
-        if (searchScope() === 'folder' && !rootId) return
-        if (showAdvanced()) {
-            await docsPager.run(rootId, {
-                page,
-                limit: 10,
-                search: q,
-                mimetype: docMime().trim() || undefined,
-                minSize: docMinSize() || undefined,
-                maxSize: docMaxSize() || undefined
-            })
-        } else {
-            await pager.run(rootId, {
-                page,
-                limit: 10,
-                search: q,
-                type: 'folder'
-            })
-        }
-    }
-
-    createEffect(() => {
-        const q = searchInput().trim()
-        const scope = searchScope()
-        // subscribed so the debounce restarts when filters change
-        const _mime = docMime()
-        const _minSize = docMinSize()
-        const _maxSize = docMaxSize()
-        const _advanced = showAdvanced()
-        const rootId = scope === 'global' ? undefined : nodeData()?.id
-        if (q.length >= MIN_SEARCH_CHARS) {
-            pager.clear()
-            docsPager.clear()
-        }
-        const timer = setTimeout(() => {
-            if (q.length < MIN_SEARCH_CHARS) {
-                pager.clear()
-                docsPager.clear()
-                return
-            }
-            if (rootId || scope === 'global') runSearch(1)
-        }, 300)
-        return () => clearTimeout(timer)
-    })
-
     const { create, loading: creating } = useCreateFolder()
     const { remove } = useDeleteNode()
 
@@ -366,9 +106,6 @@ export function NodeView() {
     const [deleteTarget, setDeleteTarget] = createSignal(null)
     const [deleteDocTarget, setDeleteDocTarget] = createSignal(null)
     const [showDeleteDoc, setShowDeleteDoc] = createSignal(false)
-    const [newName, setNewName] = createSignal('')
-    const [newDesc, setNewDesc] = createSignal('')
-
     const {
         comments,
         loading: commentsLoading,
@@ -392,23 +129,21 @@ export function NodeView() {
             toast.error(getErrorMessage(result, 'Delete failed'))
             return
         }
-        if (target.id === nodeData()?.id) navigate('/nodes')
+        if (target.id === nodeData()?.id) navigate(returnTo())
         else refresh()
     }
 
-    const handleCreate = async () => {
+    const handleCreate = async (name, description) => {
         const [success, result] = await create(
             nodeData()?.id,
-            newName(),
-            newDesc()
+            name,
+            description
         )
         if (!success) {
             toast.error(getErrorMessage(result, 'Create failed'))
             return
         }
         setShowCreate(false)
-        setNewName('')
-        setNewDesc('')
         refresh()
     }
 
@@ -427,9 +162,7 @@ export function NodeView() {
                 toast.error(getErrorMessage(result, 'Upload failed'))
                 continue
             }
-            takenNames?.add?.(
-                result?.name ?? batchFile.name
-            )
+            takenNames?.add?.(result?.name ?? batchFile.name)
         }
     }
 
@@ -472,7 +205,9 @@ export function NodeView() {
                 }
             }
 
-            const takenRoot = new Set((nodeData()?.children ?? []).map(n => n.name))
+            const takenRoot = new Set(
+                (nodeData()?.children ?? []).map(n => n.name)
+            )
             let created = 0
             for (const [name, fileList] of Object.entries(groups)) {
                 const [ok, result] = await create(parentId, name, '')
@@ -487,7 +222,9 @@ export function NodeView() {
             }
             await uploadBatch(looseFiles, undefined, takenRoot)
             refresh()
-            toast.success(`Uploaded ${created} folder${created === 1 ? '' : 's'}`)
+            toast.success(
+                `Uploaded ${created} folder${created === 1 ? '' : 's'}`
+            )
         } finally {
             setBatchUploading(false)
         }
@@ -506,9 +243,7 @@ export function NodeView() {
             await apiDownloadFolder(nodeData()?.id)
             toast.success('Folder download started')
         } catch (e) {
-            toast.error(
-                getErrorMessage(e, 'Folder download not available yet')
-            )
+            toast.error(getErrorMessage(e, 'Folder download not available yet'))
         }
     }
 
@@ -587,20 +322,7 @@ export function NodeView() {
             minute: '2-digit'
         })
 
-    const searchResultItems = () =>
-        showAdvanced() ? docsPager.results() : pager.results()
-    const searchPage = () => (showAdvanced() ? docsPager.page() : pager.page())
-    const hasSearchQuery = () => searchInput().trim().length >= MIN_SEARCH_CHARS
-    const searchLoading = () =>
-        showAdvanced() ? docsPager.loading() : pager.loading()
-    const searchError = () =>
-        showAdvanced() ? docsPager.error() : pager.error()
-    const searchHasSearched = () =>
-        showAdvanced() ? docsPager.hasSearched() : pager.hasSearched()
-    const searchTotalPages = () =>
-        showAdvanced() ? docsPager.totalPages() : pager.totalPages()
-
-    // rows for list view and search dropdown
+    // Contextual row actions for the folder's compact list view.
     const folderRowActions = folderNode => (
         <Show when={canDeleteNode(role(), folderNode.access_level)}>
             <button
@@ -612,7 +334,7 @@ export function NodeView() {
                     handleDelete(folderNode)
                 }}
             >
-                <TrashRowIcon />
+                <Trash2 size={14} aria-hidden="true" />
             </button>
         </Show>
     )
@@ -621,8 +343,7 @@ export function NodeView() {
         <>
             <Show
                 when={
-                    fileNode.doc &&
-                    canReadNode(role(), fileNode.access_level)
+                    fileNode.doc && canReadNode(role(), fileNode.access_level)
                 }
             >
                 <button
@@ -635,7 +356,7 @@ export function NodeView() {
                         handleDownload(fileNode.doc)
                     }}
                 >
-                    <DownloadRowIcon />
+                    <Download size={14} aria-hidden="true" />
                 </button>
             </Show>
             <Show when={canDeleteNode(role(), fileNode.access_level)}>
@@ -649,7 +370,7 @@ export function NodeView() {
                         handleDeleteDoc(fileNode.doc ?? fileNode)
                     }}
                 >
-                    <TrashRowIcon />
+                    <Trash2 size={14} aria-hidden="true" />
                 </button>
             </Show>
         </>
@@ -682,15 +403,16 @@ export function NodeView() {
             >
                 {/* ── Header: título (+ ruta), metas y acciones ── */}
                 <header class="mb-6">
-                    <a
-                        href="/nodes"
+                    <button
+                        type="button"
+                        onClick={() => navigate(returnTo())}
                         class="text-sm text-accent hover:underline"
                     >
                         ← Back
-                    </a>
+                    </button>
                     <div class="mt-2 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div class="min-w-0">
-                            <h1 class="font-serif text-2xl text-ink-dark truncate">
+                            <h1 class="font-sans font-medium text-2xl text-ink-dark truncate">
                                 {nodeData()?.name || 'Node'}
                             </h1>
                             <Show when={parentPath()}>
@@ -725,7 +447,11 @@ export function NodeView() {
                                     variant="ghost"
                                     onClick={() => setShowComments(v => !v)}
                                 >
-                                    💬 Comments ({comments().length})
+                                    <MessageCircle
+                                        size={15}
+                                        aria-hidden="true"
+                                    />
+                                    Comments ({comments().length})
                                 </Button>
                             </Show>
                             <Show when={canDeleteNode(role(), accessLevel())}>
@@ -782,7 +508,8 @@ export function NodeView() {
                                     loading={batchUploading()}
                                     onClick={() => folderInput()?.click()}
                                 >
-                                    📁 Upload folder
+                                    <FolderUp size={16} aria-hidden="true" />
+                                    Upload folder
                                 </Button>
                             </Show>
                         </Show>
@@ -791,314 +518,18 @@ export function NodeView() {
                             variant="ghost"
                             onClick={handleDownloadFolder}
                         >
-                            ⬇ Download folder
+                            <Download size={16} aria-hidden="true" />
+                            Download folder
                         </Button>
                     </div>
 
-                    {/* ── Search flotante ── */}
-                    <section class="relative z-30 mb-5">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <input
-                                type="text"
-                                placeholder={`Search folders (min ${MIN_SEARCH_CHARS} characters)...`}
-                                aria-label="Search folders and documents"
-                                value={searchInput()}
-                                onInput={e => setSearchInput(e.target.value)}
-                                onFocus={() => setSearchOpen(true)}
-                                onKeyDown={e => {
-                                    if (e.key === 'Escape') setSearchOpen(false)
-                                }}
-                                class="w-full max-w-xl font-sans font-light text-sm text-ink-dark bg-surface border border-border rounded-xs px-3 py-2 focus:outline-none focus:border-ink"
-                            />
-                            <div class="flex items-center rounded-xs border border-border overflow-hidden shrink-0 text-sm">
-                                <button
-                                    type="button"
-                                    class={`px-3 py-1.5 cursor-pointer transition-colors ${
-                                        searchScope() === 'folder'
-                                            ? 'bg-bg-2 text-ink'
-                                            : 'text-muted hover:bg-bg-2'
-                                    }`}
-                                    onClick={() => setSearchScope('folder')}
-                                    title="Search inside the current folder"
-                                >
-                                    📂 Current folder
-                                </button>
-                                <button
-                                    type="button"
-                                    class={`px-3 py-1.5 cursor-pointer border-l border-border transition-colors ${
-                                        searchScope() === 'global'
-                                            ? 'bg-bg-2 text-ink'
-                                            : 'text-muted hover:bg-bg-2'
-                                    }`}
-                                    onClick={() => setSearchScope('global')}
-                                    title="Search everywhere"
-                                >
-                                    🌐 Everywhere
-                                </button>
-                            </div>
-                        </div>
-                        <button
-                            type="button"
-                            class="mt-1.5 text-xs text-muted underline self-start"
-                            onClick={() => setShowAdvanced(v => !v)}
-                        >
-                            {showAdvanced()
-                                ? 'Hide filters'
-                                : 'Search documents with filters'}
-                        </button>
-
-                        {/* Filtros avanzados organizados */}
-                        <Show when={showAdvanced()}>
-                            <div class="mt-2 flex flex-wrap items-end gap-3 max-w-xl bg-bg-2 border border-border-subtle rounded-sm px-3 py-2">
-                                <label class="flex flex-col gap-0.5 text-xs text-muted">
-                                    Mimetype
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. application/pdf"
-                                        value={docMime()}
-                                        onInput={e =>
-                                            setDocMime(e.target.value)
-                                        }
-                                        class="bg-surface border border-border rounded-xs px-2 py-1 text-sm w-48"
-                                    />
-                                </label>
-                                <label class="flex flex-col gap-0.5 text-xs text-muted">
-                                    Min size
-                                    <input
-                                        type="number"
-                                        placeholder="0"
-                                        min="0"
-                                        value={docMinSize()}
-                                        onInput={e =>
-                                            setDocMinSize(e.target.value)
-                                        }
-                                        class="bg-surface border border-border rounded-xs px-2 py-1 text-sm w-24"
-                                    />
-                                </label>
-                                <label class="flex flex-col gap-0.5 text-xs text-muted">
-                                    Max size
-                                    <input
-                                        type="number"
-                                        placeholder="∞"
-                                        min="0"
-                                        value={docMaxSize()}
-                                        onInput={e =>
-                                            setDocMaxSize(e.target.value)
-                                        }
-                                        class="bg-surface border border-border rounded-xs px-2 py-1 text-sm w-24"
-                                    />
-                                </label>
-                                <button
-                                    type="button"
-                                    class="text-xs text-muted underline pb-1"
-                                    onClick={() => {
-                                        setDocMime('')
-                                        setDocMinSize('')
-                                        setDocMaxSize('')
-                                    }}
-                                >
-                                    Clear
-                                </button>
-                            </div>
-                        </Show>
-
-                        {/* Dropdown flotante de resultados */}
-                        <Show
-                            when={
-                                searchOpen() &&
-                                hasSearchQuery() &&
-                                (searchLoading() ||
-                                    searchError() ||
-                                    searchHasSearched())
-                            }
-                        >
-                            <div
-                                class="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-sm shadow-lg max-h-96 overflow-y-auto"
-                                role="listbox"
-                                aria-label="Search results"
-                            >
-                                <div class="sticky top-0 bg-surface border-b border-border-subtle flex items-center justify-between px-3 py-1.5 z-10">
-                                    <span class="text-xs text-muted">
-                                        {showAdvanced()
-                                            ? 'Documents'
-                                            : 'Folders'}
-                                        {' · '}
-                                        page {searchPage()} of{' '}
-                                        {searchTotalPages() || 1}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        aria-label="Close results"
-                                        class="text-muted hover:text-ink text-sm cursor-pointer"
-                                        onClick={() => setSearchOpen(false)}
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                                <Show when={searchLoading()}>
-                                    <p class="px-3 py-4 text-sm text-muted" role="status">
-                                        Searching…
-                                    </p>
-                                </Show>
-                                <Show when={searchError()}>
-                                    <p class="px-3 py-4 text-sm text-danger" role="alert">
-                                        {searchError()}
-                                    </p>
-                                </Show>
-                                <Show
-                                    when={
-                                        searchHasSearched() &&
-                                        !searchLoading() &&
-                                        !searchError() &&
-                                        searchResultItems().length === 0
-                                    }
-                                >
-                                    <p class="px-3 py-4 text-sm text-muted">
-                                        No matching{' '}
-                                        {showAdvanced() ? 'documents' : 'folders'}.
-                                    </p>
-                                </Show>
-                                <Show
-                                    when={searchResultItems().length > 0}
-                                >
-                                    <Show
-                                        when={!showAdvanced()}
-                                        fallback={
-                                        <>
-                                            <For each={docsPager.results()}>
-                                                {singleDoc => (
-                                                    <CompactItemRow
-                                                        icon={<FileRowIcon />}
-                                                        title={singleDoc.title}
-                                                        subtitle={`${singleDoc.filename} · ${singleDoc.mime_type} · ${formatBytes(singleDoc.size_in_bytes)}`}
-                                                        onOpen={() => {
-                                                            setSearchOpen(false)
-                                                            navigate(
-                                                                `/nodes/${singleDoc.node_id}`
-                                                            )
-                                                        }}
-                                                        actions={
-                                                            <>
-                                                                <button
-                                                                    type="button"
-                                                                    aria-label="Download"
-                                                                    title="Download"
-                                                                    class="p-1.5 rounded-xs text-muted hover:text-ink transition-colors"
-                                                                    onClick={e => {
-                                                                        e.stopPropagation()
-                                                                        handleDownload(
-                                                                            singleDoc
-                                                                        )
-                                                                    }}
-                                                                >
-                                                                    <DownloadRowIcon />
-                                                                </button>
-                                                                <Show
-                                                                    when={isViewableMime(
-                                                                        singleDoc.mime_type
-                                                                    )}
-                                                                >
-                                                                    <a
-                                                                        href={apiDocURL(
-                                                                            singleDoc.id
-                                                                        )}
-                                                                        target="_blank"
-                                                                        rel="noopener"
-                                                                        aria-label="Open in browser"
-                                                                        title="Open in browser"
-                                                                        class="p-1.5 rounded-xs text-muted hover:text-ink text-xs"
-                                                                        onClick={e =>
-                                                                            e.stopPropagation()
-                                                                        }
-                                                                    >
-                                                                        ↗
-                                                                    </a>
-                                                                </Show>
-                                                            </>
-                                                        }
-                                                    />
-                                                )}
-                                            </For>
-                                            <div class="flex items-center gap-2 px-3 py-1.5 border-t border-border-subtle text-xs">
-                                                <button
-                                                    type="button"
-                                                    class="text-accent disabled:opacity-40 hover:underline"
-                                                    disabled={searchPage() <= 1}
-                                                    onClick={() =>
-                                                        runSearch(
-                                                            searchPage() - 1
-                                                        )
-                                                    }
-                                                >
-                                                    ← Prev
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    class="text-accent disabled:opacity-40 hover:underline"
-                                                    disabled={
-                                                        searchPage() >=
-                                                        searchTotalPages()
-                                                    }
-                                                    onClick={() =>
-                                                        runSearch(
-                                                            searchPage() + 1
-                                                        )
-                                                    }
-                                                >
-                                                    Next →
-                                                </button>
-                                            </div>
-                                        </>
-                                        }
-                                    >
-                                    <For each={pager.results()}>
-                                        {folderResult => (
-                                            <CompactItemRow
-                                                icon={<FolderRowIcon />}
-                                                title={folderResult.name}
-                                                subtitle={`Folder · updated ${formatRelativeDate(folderResult.updated_at)}`}
-                                                onOpen={() => {
-                                                    setSearchOpen(false)
-                                                    navigate(
-                                                        `/nodes/${folderResult.id}`
-                                                    )
-                                                }}
-                                                actions={folderRowActions(
-                                                    folderResult
-                                                )}
-                                            />
-                                        )}
-                                    </For>
-                                    <div class="flex items-center gap-2 px-3 py-1.5 border-t border-border-subtle text-xs">
-                                        <button
-                                            type="button"
-                                            class="text-accent disabled:opacity-40 disabled:hover:no-underline hover:underline"
-                                            disabled={searchPage() <= 1}
-                                            onClick={() =>
-                                                runSearch(searchPage() - 1)
-                                            }
-                                        >
-                                            ← Prev
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="text-accent disabled:opacity-40 hover:underline"
-                                            disabled={
-                                                searchPage() >=
-                                                searchTotalPages()
-                                            }
-                                            onClick={() =>
-                                                runSearch(searchPage() + 1)
-                                            }
-                                        >
-                                            Next →
-                                        </button>
-                                    </div>
-                                    </Show>
-                                </Show>
-                            </div>
-                        </Show>
-                    </section>
+                    <NodeSearch
+                        rootId={() => nodeData()?.id}
+                        onOpenNode={openNode}
+                        onDownloadDoc={handleDownload}
+                        folderActions={folderRowActions}
+                        triggerClass="w-full justify-start sm:w-auto"
+                    />
 
                     {/* ── Controles: sort, vista, ocultos ── */}
                     <div class="flex flex-wrap items-center gap-2 text-sm mb-2">
@@ -1164,9 +595,7 @@ export function NodeView() {
                     {/* ── Grid/lista principal único ── */}
                     <section class="flex-1">
                         <Show
-                            when={
-                                paginatedChildren().total > 0
-                            }
+                            when={paginatedChildren().total > 0}
                             fallback={
                                 <p class="text-sm text-muted">
                                     This folder is empty
@@ -1179,14 +608,17 @@ export function NodeView() {
                                     <div class="border border-border rounded-sm">
                                         <For each={paginatedChildren().folders}>
                                             {nodeItem => (
-                                                <CompactItemRow
-                                                    icon={<FolderRowIcon />}
+                                                <CompactNodeRow
+                                                    icon={
+                                                        <Folder
+                                                            size={16}
+                                                            aria-hidden="true"
+                                                        />
+                                                    }
                                                     title={nodeItem.name}
                                                     subtitle={`Folder · updated ${formatRelativeDate(nodeItem.updated_at)}`}
                                                     onOpen={() =>
-                                                        navigate(
-                                                            `/nodes/${nodeItem.id}`
-                                                        )
+                                                        openNode(nodeItem.id)
                                                     }
                                                     actions={folderRowActions(
                                                         nodeItem
@@ -1196,8 +628,13 @@ export function NodeView() {
                                         </For>
                                         <For each={paginatedChildren().files}>
                                             {fileNode => (
-                                                <CompactItemRow
-                                                    icon={<FileRowIcon />}
+                                                <CompactNodeRow
+                                                    icon={
+                                                        <FileText
+                                                            size={16}
+                                                            aria-hidden="true"
+                                                        />
+                                                    }
                                                     title={fileNode.name}
                                                     subtitle={[
                                                         'File',
@@ -1213,9 +650,7 @@ export function NodeView() {
                                                         .filter(Boolean)
                                                         .join(' · ')}
                                                     onOpen={() =>
-                                                        navigate(
-                                                            `/nodes/${fileNode.id}`
-                                                        )
+                                                        openNode(fileNode.id)
                                                     }
                                                     actions={fileRowActions(
                                                         fileNode
@@ -1231,9 +666,7 @@ export function NodeView() {
                                         {nodeItem => (
                                             <NodeCard
                                                 node={nodeItem}
-                                                onClick={n =>
-                                                    navigate(`/nodes/${n.id}`)
-                                                }
+                                                onClick={n => openNode(n.id)}
                                                 onDelete={
                                                     canDeleteNode(
                                                         role(),
@@ -1277,11 +710,10 @@ export function NodeView() {
                         </Show>
                         <Show
                             when={
-                                paginatedChildren().total >
-                                CHILDREN_PAGE_SIZE
+                                paginatedChildren().total > CHILDREN_PAGE_SIZE
                             }
                         >
-                            <div class="mt-3 flex items-center justify-between text-xs text-muted">
+                            <div class="mt-3 flex flex-col gap-2 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
                                 <span>
                                     Showing{' '}
                                     {(paginatedChildren().page - 1) *
@@ -1293,7 +725,8 @@ export function NodeView() {
                                             CHILDREN_PAGE_SIZE,
                                         paginatedChildren().total
                                     )}{' '}
-                                    of {paginatedChildren().total} items · 100 per page
+                                    of {paginatedChildren().total} items · 100
+                                    per page
                                 </span>
                                 <div class="flex items-center gap-2">
                                     <button
@@ -1333,83 +766,29 @@ export function NodeView() {
                     <DocCard doc={nodeData()?.doc} />
                 </Show>
 
-                {/* ── Comentarios: drawer lateral con toggle ── */}
-                <Show when={showComments() && isFolderNode()}>
-                    <div
-                        class="fixed inset-0 z-40 bg-black/30 sm:hidden"
-                        onClick={() => setShowComments(false)}
-                        aria-hidden="true"
-                    />
-                    <aside
-                        role="complementary"
-                        aria-label="Comments"
-                        class="fixed top-0 right-0 h-full w-full sm:w-96 z-50 bg-surface border-l border-border shadow-md flex flex-col overflow-hidden"
-                    >
-                        <div class="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
-                            <h3 class="font-serif text-lg text-ink-dark">
-                                Comments
-                            </h3>
-                            <button
-                                type="button"
-                                aria-label="Close comments"
-                                class="text-muted hover:text-ink px-1 text-lg cursor-pointer"
-                                onClick={() => setShowComments(false)}
-                            >
-                                ✕
-                            </button>
-                        </div>
-                        <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-                            <Show when={commentsError()}>
-                                <div
-                                    class="flex flex-col items-start gap-2"
-                                    role="alert"
-                                >
-                                    <p class="text-sm text-danger">
-                                        {commentsError()}
-                                    </p>
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => refreshComments()}
-                                    >
-                                        Retry
-                                    </Button>
-                                </div>
-                            </Show>
-                            <Show when={!commentsError()}>
-                                <CommentsList
-                                    comments={comments()}
-                                    loading={commentsLoading()}
-                                    currentUsrId={auth.state.usr?.id}
-                                    isSuper={auth.role() === 'super_usr_role'}
-                                    onEdit={handleUpdateComment}
-                                    onDelete={handleDeleteComment}
-                                />
-                            </Show>
-                            <Show
-                                when={canCommentOnNode(
-                                    auth.role(),
-                                    nodeData()?.access_level
-                                )}
-                            >
-                                <CommentForm
-                                    loading={addingComment()}
-                                    onSubmit={handleCreateComment}
-                                />
-                            </Show>
-                        </div>
-                    </aside>
-                </Show>
+                <CommentsDrawer
+                    open={showComments() && isFolderNode()}
+                    onClose={() => setShowComments(false)}
+                    comments={comments()}
+                    loading={commentsLoading()}
+                    error={commentsError()}
+                    onRetry={() => refreshComments()}
+                    currentUsrId={auth.state.usr?.id}
+                    isSuper={auth.role() === 'super_usr_role'}
+                    canComment={canCommentOnNode(
+                        auth.role(),
+                        nodeData()?.access_level
+                    )}
+                    creating={addingComment()}
+                    onEdit={handleUpdateComment}
+                    onDelete={handleDeleteComment}
+                    onCreate={handleCreateComment}
+                />
 
                 <NodeForm
                     open={showCreate()}
-                    node={null}
                     loading={creating()}
-                    onSubmit={(name, desc) => {
-                        setNewName(name)
-                        setNewDesc(desc)
-                        handleCreate()
-                    }}
+                    onSubmit={handleCreate}
                     onClose={() => setShowCreate(false)}
                 />
 

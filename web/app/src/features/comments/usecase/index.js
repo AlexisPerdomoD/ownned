@@ -4,7 +4,9 @@ import {
     apiCreateComment,
     apiDeleteComment,
     apiGetComments,
-    apiUpdateComment
+    apiUpdateComment,
+    buildCreateCommentDTO,
+    buildUpdateCommentDTO
 } from '@/entities/comments/api'
 import { getErrorMessage } from '@/shared/errors'
 
@@ -62,8 +64,6 @@ export function useCreateComment() {
      * @returns {Promise<[true, import('@/entities/nodes').NodeComment] | [false, { message: string, reason?: string }]>}
      */
     const create = async (nodeId, content) => {
-        const { buildCreateCommentDTO } =
-            await import('@/entities/comments/api')
         const [valid, dto] = buildCreateCommentDTO(nodeId, content)
         if (!valid) return [false, dto]
 
@@ -94,8 +94,6 @@ export function useUpdateComment() {
         /** @type {string} */ commentId,
         /** @type {string} */ content
     ) => {
-        const { buildUpdateCommentDTO } =
-            await import('@/entities/comments/api')
         const [valid, dto] = buildUpdateCommentDTO(content)
         if (!valid) return [false, dto]
 

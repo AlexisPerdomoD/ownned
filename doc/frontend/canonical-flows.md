@@ -93,14 +93,14 @@ Raíces(display_path, access_level) -> Carpeta -> Contenido
 **Recorrido:**
 
 1. La vista `/nodes` presenta raíces del usuario (`GET /api/v1/nodes`) con `display_path` y `access_level`.
-2. Al elegir una carpeta, `/nodes/{nodeID}` muestra su `display_path`, metadata y nivel de acceso, más carpetas hijas y archivos.
+2. Al elegir una carpeta, `/nodes/{nodeID}` muestra su `display_path`, metadata y nivel de acceso, más carpetas hijas y archivos. El control Back regresa al origen conservado durante la navegación; una URL abierta directamente vuelve a `/nodes`.
 3. Al elegir un archivo, mostrar su metadata y las acciones disponibles.
 4. Mostrar u ocultar acciones usando el acceso del nodo actual junto con el rol/reglas de la operación; nunca propagar el permiso del padre a un hijo.
 5. En el conjunto explorado, permitir la navegación y presentación definidas para móvil, teclado, listas vacías, carga y errores.
 6. Si la cantidad de contenido lo requiere, consumir `GET /api/v1/nodes/paginate` y/o `GET /api/v1/nodes/docs/paginate` con sus filtros; definir qué vista consume cada paginación.
 7. Aplicar el criterio acordado: carpetas primero, nombre A–Z inicialmente; controles de orden por nombre/creación/modificación; ocultar nombres que empiezan por `.` inicialmente, con control para mostrarlos.
 
-**Estado actual:** `NodeView` presenta el path del nodo, consume metadata/acceso propios de los hijos, usa `Node.name` como filename, limita el render local a 100 elementos por página y ofrece carga/error/reintento. La cuadrícula y la vista de lista comparten el mismo conjunto ordenado/paginado; las tarjetas y filas tienen controles nativos de teclado con foco visible. La búsqueda de carpetas y documentos usa los endpoints paginados; orden y dotfiles se aplican localmente sobre los hijos completos. Las raíces de `HomeView` y la subida recursiva de carpetas conservan brechas documentadas en sus issues.
+**Estado actual:** `NodeView` presenta el path del nodo, consume metadata/acceso propios de los hijos, usa `Node.name` como filename, limita el render local a 100 elementos por página y ofrece carga/error/reintento. La cuadrícula y la vista de lista comparten el mismo conjunto ordenado/paginado; las tarjetas y filas tienen controles nativos de teclado con foco visible. `HomeView` y `NodeView` comparten el diálogo de búsqueda de carpetas/documentos, con búsqueda global desde Home y alcance de carpeta/global desde el detalle. Orden y dotfiles se aplican localmente sobre los hijos completos. Las raíces de `HomeView` aún conservan brechas de presentación/permisos y la subida recursiva de carpetas conserva sus brechas documentadas.
 
 **Decisiones relacionadas:** definir si metadata y acceso efectivo de cada hijo se incluyen en la respuesta o se consultan por hijo; definir si el orden se aplica localmente al conjunto completo o si el contrato paginado requiere orden (el API actual no lo expone). El nombre real del archivo debe estar disponible para filtrar dotfiles.
 
