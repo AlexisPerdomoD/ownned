@@ -38,13 +38,15 @@ export function useCreateDoc(getParentId, onSuccess) {
      * @param {string} description
      * @param {string} [parentIdOverride]
      * @param {Iterable<string>} [takenNames] - nombres de nodo ya ocupados en el destino
+     * @param {AbortSignal} [signal]
      * @returns {Promise<[true, any] | [false, { general?: string, reason?: string, message?: string }]>}
      */
     const upload = async (
         file,
         description = '',
         parentIdOverride,
-        takenNames
+        takenNames,
+        signal
     ) => {
         const parentId = parentIdOverride ?? getParentId()
         if (!parentId) return [false, { general: 'No parent folder selected' }]
@@ -76,7 +78,9 @@ export function useCreateDoc(getParentId, onSuccess) {
                     formData.append('size', String(activeFile.size))
                     formData.append('file', activeFile)
 
-                    const doc = await reqForm('/api/v1/nodes/docs', formData)
+                    const doc = await reqForm('/api/v1/nodes/docs', formData, {
+                        signal
+                    })
                     onSuccess?.()
                     if (activeFile.name !== file.name) {
                         toast.warning(
@@ -85,6 +89,9 @@ export function useCreateDoc(getParentId, onSuccess) {
                     }
                     return [true, doc]
                 } catch (e) {
+                    if (signal?.aborted) {
+                        return [false, { general: 'Upload cancelled.' }]
+                    }
                     if (
                         e instanceof ApiConflictError &&
                         attempt < MAX_NAME_RETRIES

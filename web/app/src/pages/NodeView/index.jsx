@@ -24,15 +24,16 @@ import {
 import {
     CompactNodeRow,
     DocCard,
+    FolderUploadQueue,
     NodeCard,
     NodeSearch
 } from '@/features/node/ui'
 import {
-    useCreateDoc,
     useCreateFolder,
     useDeleteDoc,
     useDeleteNode,
-    useGetNode
+    useGetNode,
+    useUploadFolder
 } from '@/features/node/usecase'
 import {
     CHILDREN_PAGE_SIZE,
@@ -51,6 +52,10 @@ import { Button, ConfirmDialog, Spinner, toast } from '@/shared/ui'
 import { useLocation, useNavigate, useParams } from '@solidjs/router'
 
 import { NodeForm } from './NodeForm'
+
+const supportsDirectoryUpload = () =>
+    typeof document !== 'undefined' &&
+    'webkitdirectory' in document.createElement('input')
 
 export function NodeView() {
     const params = useParams()
@@ -71,7 +76,6 @@ export function NodeView() {
     const [fileInput, setFileInput] = createSignal(null)
     const [folderInput, setFolderInput] = createSignal(null)
     const [showComments, setShowComments] = createSignal(false)
-    const [batchUploading, setBatchUploading] = createSignal(false)
     const [childrenPage, setChildrenPage] = createSignal(1)
     const [viewMode, setViewMode] = createSignal(
         localStorage.getItem('owned.viewMode') ?? 'grid'
@@ -98,7 +102,11 @@ export function NodeView() {
     const { create, loading: creating } = useCreateFolder()
     const { remove } = useDeleteNode()
 
-    const { upload } = useCreateDoc(() => params.id)
+    const folderUpload = useUploadFolder(
+        () => params.id,
+        () => nodeData()?.children ?? [],
+        refresh
+    )
     const { remove: deleteDoc } = useDeleteDoc()
 
     const [showCreate, setShowCreate] = createSignal(false)
@@ -147,87 +155,17 @@ export function NodeView() {
         refresh()
     }
 
-    // Subidas en lote: takenNames se acumula localmente con el nombre que
-    // devuelve el backend (result.name, ya resuelto), así los duplicados del
-    // mismo lote enumeran a (1), a (2)... sin consultas extra.
-    const uploadBatch = async (files, parentIdOverride, takenNames) => {
-        for (const batchFile of files) {
-            const [success, result] = await upload(
-                batchFile,
-                '',
-                parentIdOverride,
-                takenNames ? [...takenNames] : []
-            )
-            if (!success) {
-                toast.error(getErrorMessage(result, 'Upload failed'))
-                continue
-            }
-            takenNames?.add?.(result?.name ?? batchFile.name)
-        }
-    }
-
     const handleFilePickerChange = async e => {
         const files = Array.from(e.target?.files ?? [])
         e.target.value = ''
         if (!files.length) return
-        const taken = new Set((nodeData()?.children ?? []).map(n => n.name))
-        setBatchUploading(true)
-        try {
-            await uploadBatch(files, undefined, taken)
-            refresh()
-        } finally {
-            setBatchUploading(false)
-        }
+        await folderUpload.start(files)
     }
 
-    // NOTE: subcarpetas locales se recrean como carpetas hijas del nivel 1
-    // (webkitRelativePath); el backend no expone recursividad de subidas.
-    // Cada subcarpeta recién creada arranca con un set vacío y los nombres
-    // que este lote ya resolvió se acumulan ahí (doc.name).
     const handleFolderPickerChange = async e => {
         const files = Array.from(e.target?.files ?? [])
         e.target.value = ''
-        const parentId = nodeData()?.id
-        if (!parentId) return
-        setBatchUploading(true)
-
-        try {
-            const groups = {}
-            const looseFiles = []
-            for (const singleFile of files) {
-                const rel = singleFile.webkitRelativePath || singleFile.name
-                const first = rel.split('/')[0]
-                if (first && first !== singleFile.name) {
-                    groups[first] = groups[first] ?? []
-                    groups[first].push(singleFile)
-                } else {
-                    looseFiles.push(singleFile)
-                }
-            }
-
-            const takenRoot = new Set(
-                (nodeData()?.children ?? []).map(n => n.name)
-            )
-            let created = 0
-            for (const [name, fileList] of Object.entries(groups)) {
-                const [ok, result] = await create(parentId, name, '')
-                if (!ok) {
-                    toast.error(
-                        getErrorMessage(result, `Could not create "${name}"`)
-                    )
-                    continue
-                }
-                created += 1
-                await uploadBatch(fileList, result.id, new Set())
-            }
-            await uploadBatch(looseFiles, undefined, takenRoot)
-            refresh()
-            toast.success(
-                `Uploaded ${created} folder${created === 1 ? '' : 's'}`
-            )
-        } finally {
-            setBatchUploading(false)
-        }
+        await folderUpload.start(files)
     }
 
     const handleDownload = async doc => {
@@ -473,6 +411,7 @@ export function NodeView() {
                         <Show when={canCreateFolder(role(), accessLevel())}>
                             <Button
                                 size="sm"
+                                disabled={folderUpload.uploading()}
                                 onClick={() => setShowCreate(true)}
                             >
                                 + New Folder
@@ -488,29 +427,38 @@ export function NodeView() {
                             />
                             <Button
                                 size="sm"
-                                loading={batchUploading()}
+                                loading={folderUpload.uploading()}
                                 onClick={() => fileInput()?.click()}
                             >
                                 ⬆ Upload file
                             </Button>
-                            <input
-                                type="file"
-                                multiple
-                                hidden
-                                webkitdirectory="true"
-                                directory=""
-                                ref={setFolderInput}
-                                onChange={handleFolderPickerChange}
-                            />
                             <Show when={role() === 'super_usr_role'}>
+                                <Show
+                                    when={supportsDirectoryUpload()}
+                                    fallback={
+                                        <p class="text-xs text-muted" role="status">
+                                            Folder upload is not supported in this browser.
+                                        </p>
+                                    }
+                                >
+                                    <input
+                                        type="file"
+                                        multiple
+                                        hidden
+                                        webkitdirectory="true"
+                                        directory=""
+                                        ref={setFolderInput}
+                                        onChange={handleFolderPickerChange}
+                                    />
                                 <Button
                                     size="sm"
-                                    loading={batchUploading()}
+                                    loading={folderUpload.uploading()}
                                     onClick={() => folderInput()?.click()}
                                 >
                                     <FolderUp size={16} aria-hidden="true" />
                                     Upload folder
                                 </Button>
+                                </Show>
                             </Show>
                         </Show>
                         <Button
@@ -522,6 +470,28 @@ export function NodeView() {
                             Download folder
                         </Button>
                     </div>
+
+                    <Show
+                        when={
+                            folderUpload.items().length > 0 ||
+                            folderUpload.error()
+                        }
+                    >
+                        <div class="mb-4">
+                            <FolderUploadQueue
+                                items={folderUpload.items}
+                                progress={folderUpload.progress}
+                                failedItems={folderUpload.failedItems}
+                                retryItems={folderUpload.retryItems}
+                                uploading={folderUpload.uploading}
+                                cancelled={folderUpload.cancelled}
+                                error={folderUpload.error}
+                                onCancel={folderUpload.cancel}
+                                onRetry={() => folderUpload.retryFailed()}
+                                onClear={folderUpload.clear}
+                            />
+                        </div>
+                    </Show>
 
                     <NodeSearch
                         rootId={() => nodeData()?.id}

@@ -57,9 +57,10 @@ Issues 24–26 cerradas; resúmenes técnicos en [`../history/web_closure_fase4_
 
 ### Fase 5 — Capacidades avanzadas, verificación y cierre
 
+Issue 27 cerrada; resumen técnico en [`../history/web_closure_fase5_folder_upload.md`](../history/web_closure_fase5_folder_upload.md). La Propuesta A queda implementada; la carga es parcial y no atómica.
+
 | ID | Título | Estado | Depende de |
 | --- | --- | --- | --- |
-| 27 | [Subida de carpetas (Propuesta A — cliente)](27.web_closure_fase5.web.app.upload_carpetas.md) | revisión | D4 resuelta; fases 1–2 |
 | 28 | [Descarga de carpeta (bloqueada por 501)](28.web_closure_fase5.web.app.download_carpeta.md) | revisión | backend (501) |
 | 29 | [Verificación automatizada (Vitest + checklist)](29.web_closure_fase5.web.app.verificacion.md) | revisión | D7 resuelta; fases 1–4 |
 | 30 | [Reporte final y actualización documental](30.web_closure_fase5.web.app.cierre_docs.md) | revisión | todas las funcionales |

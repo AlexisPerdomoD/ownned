@@ -127,8 +127,9 @@ export const buildUpdateNodeDTO = UpdateNodeDTO.build
  * @param {CreateFolderDTO} dto
  * @returns {Promise<import('@/entities/nodes').Folder>}
  */
-export async function apiCreateFolder(dto) {
+export async function apiCreateFolder(dto, options = {}) {
     return await reqJSON('/api/v1/nodes', {
+        ...options,
         method: 'POST',
         body: JSON.stringify(dto)
     })

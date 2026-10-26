@@ -6,6 +6,6 @@ import { reqJSON } from '@/shared/api/client'
  * @param {string} nodeId
  * @returns {Promise<import('@/entities/nodes').Folder | import('@/entities/nodes').File>}
  */
-export async function apiGetNode(nodeId) {
-    return await reqJSON(`/api/v1/nodes/${nodeId}`)
+export async function apiGetNode(nodeId, options = {}) {
+    return await reqJSON(`/api/v1/nodes/${nodeId}`, options)
 }

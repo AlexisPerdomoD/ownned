@@ -119,11 +119,14 @@ export async function reqJSON(path, opts = {}) {
  * @param {FormData} form
  * @returns {Promise<any>} parsed json response
  */
-export async function reqForm(path, form = new FormData()) {
+export async function reqForm(path, form = new FormData(), opts = {}) {
+    const { headers, ...init } = opts
     const r = await fetch(apiURL(path), {
+        ...init,
         method: 'POST',
         credentials,
-        body: form
+        body: form,
+        headers
     })
 
     if (!r.ok) await throwForApiError(r)

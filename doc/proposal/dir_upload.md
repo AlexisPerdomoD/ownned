@@ -1,17 +1,17 @@
 # Propuesta: subida de directorios (dir upload)
 
-**Fecha:** 2026-10-22 · **Estado:** decisión D4 resuelta — iniciar por la **Propuesta A (cliente)** · **Plan asociado:** [`../frontend/issues/plan-cierre-cliente-web.md`](../frontend/issues/plan-cierre-cliente-web.md), issue 5.1
+**Fecha:** 2026-10-22 · **Estado:** decisión D4 resuelta — Propuesta A (cliente) · **Plan asociado:** [`./plan-cierre-cliente-web.md`](./plan-cierre-cliente-web.md), issue 27
 
 ---
 
 ## 1. Contexto
 
-El cliente web hoy soporta subida de archivos individuales vía `UploadDropzone` + `POST /nodes/{nodeID}/doc` (multipart). El objetivo es poder subir una **estructura de carpetas completa** (árbol con varios niveles y archivos), manteniendo el inventario de nodos del backend consistente.
+El cliente web soporta subida de archivos individuales vía `POST /api/v1/nodes/docs` (multipart). El objetivo es subir una **estructura de carpetas completa** (árbol con varios niveles y archivos), manteniendo el inventario de nodos del backend consistente.
 
 Contrato disponible sin tocar el backend:
 
 - `POST /api/v1/nodes` — crea carpeta (padre + nombre).
-- `POST /api/v1/nodes/{nodeID}/doc` — sube el archivo de un nodo documento (multipart).
+- `POST /api/v1/nodes/docs` — sube un archivo al nodo padre (`parent_id`) por request multipart.
 
 Es decir, el backend ya ofrece las dos operaciones primitivas necesarias; la discusión es **quién orquesta** el árbol: el cliente (Propuesta A) o un nuevo endpoint batch (Propuesta B).
 
@@ -19,16 +19,16 @@ Es decir, el backend ya ofrece las dos operaciones primitivas necesarias; la dis
 
 ### Descripción
 
-El navegador reconstruye el árbol (APIs nativas: `webkitdirectory`/`DataTransferItem.webkitGetAsEntry`), lo aplana a una cola de elementos ordenada **padres-antes-que-hijos**, y ejecuta llamadas secuenciales:
+El navegador reconstruye el árbol visible en `webkitRelativePath`, lo aplana a una cola deduplicada por ruta relativa y ejecuta un pool rolling con **máximo 20 requests concurrentes**. Las carpetas se crean por niveles, padres antes que hijos; los archivos empiezan después de crear sus carpetas. Los workers toman el siguiente elemento al liberar una petición. El input de directorio solo entrega archivos y sus rutas, por lo que no expone carpetas vacías.
 
 1. `POST /nodes` por cada carpeta (recibiendo el `NodeID` real que devuelve el backend).
-2. `POST /nodes/{nodeID}/doc` por cada archivo, contra la carpeta creada en el paso anterior.
+2. `POST /nodes/docs` por cada archivo, contra la carpeta creada en el paso anterior.
 
 ### Pros
 
 1. **Cero cambios de backend:** se reutilizan endpoints ya registrados, validados y con permisos vigentes. El riesgo de contrato es cero.
 2. **Estados por archivo de forma natural:** cada llamada es transaccional y observable — progreso, reintento por unidad y lista de fallidos con su ruta relativa son casi gratis.
-3. **Cancelación trivial:** detener la cola local no deja estado semitransaccionado en backend (pueden quedar carpetas creadas, pero son nodos válidos y bien formados — no un "zip a medias").
+3. **Cancelación efectiva:** detener la cola y abortar requests activos; pueden quedar carpetas/archivos ya creados, pero son nodos válidos y la UI muestra el estado parcial.
 4. **Evolución gradual:** el UX (cola, progreso, reintentos) queda en una feature aislada (`features/node/usecase/*`), migrable a batch sin reescribir la UI.
 5. **Puntos de validación en cada paso:** las reglas de permisos (`403`) aplican por carpeta objetivo, exactamente como interactúa el usuario hoy; no se necesita un "modo batch" con semántica distinta de permisos.
 
@@ -36,11 +36,11 @@ El navegador reconstruye el árbol (APIs nativas: `webkitdirectory`/`DataTransfe
 
 | Contra | Mitigación |
 | --- | --- |
-| Muchas peticiones dependientes de latencia (1 por carpeta + 1 por archivo) | Cola **secuencial** con límite de concurrencia (2–3 peticiones en paralelo para carpetas); presupuesto total documentado (p. ej. ≤ 500 elementos) |
+| Muchas peticiones dependientes de latencia (1 por carpeta + 1 por archivo) | Pool rolling limitado a **20 requests concurrentes**; sin límite frontend de conteo, profundidad o tamaño total por decisión del usuario. |
 | Sin atomicidad global: fallo a mitad deja árbol parcial | Se reporta por archivo/carpeta con botón "reintentar fallidos"; desduplicación por ruta relativa evita recrear lo ya creado si se repite la misma subida |
-| Falta de IDs estables ante retry necesitan trazabilidad | Guardar en memoria la ruta relativa → `NodeID` creado; al reintentar, si el `POST /nodes` por ruta ya existe en la sesión, reutiliza el `NodeID` |
+| Falta de IDs estables ante retry necesitan trazabilidad | Guardar en memoria la ruta relativa → `NodeID` creado; al reintentar, reutilizar IDs/rutas creados durante la sesión. |
 | Dependencia si usa `webkitdirectory` (no estándar pero ampliamente soportado en navegadores de facto) | Fallback explícito: sin directorio, se deshabilita el affordance y se explica |
-| Sin límite server-side duro aún | Validación previa en cliente: número de elementos y tamaño agregado; comunicarlo antes de iniciar |
+| Las cuotas por usuario pueden variar o no estar disponibles en todos los despliegues | El cliente no fija cuotas; muestra el resultado por elemento y permite reintentar los fallidos. El flujo queda agnóstico a cuotas futuras del backend. |
 
 ### Veredicto para MVP
 
@@ -78,26 +78,26 @@ Vale la pena **solo si** se detecta a futuro: (a) árboles con miles de archivos
 | Cambios de backend | Ninguno | Nuevo endpoint + worker + tests |
 | Cambios de contrato | Ninguno | Sí (+ docs `contract-coverage.md`) |
 | Complejidad inicial | Baja — feature aislada en `web/app` | Alta |
-| Progreso por archivo | Nativo | Requiere protocolo de progreso |
-| Cancelación | Trivial | Requiere acuerdo y manejo server-side |
+| Progreso por elemento | Nativo (carpetas + archivos, actual/total) | Requiere protocolo de progreso |
+| Cancelación | Aborta peticiones activas y detiene tareas pendientes; deja estado parcial visible | Requiere acuerdo y manejo server-side |
 | Atomicidad estricta del árbol | No (parcial visible/legible) | Teórica (frágil ante fallos reales) |
-| Escalabilidad con árboles enormes | Limitada (límite en cliente) | Mejor |
+| Escalabilidad con árboles enormes | Limitada por viajes de red, sin límite frontend de conteo/profundidad/tamaño | Mejor |
 | Tiempo hasta MVP | Corto | Largo |
 | Riesgo de contrato | Cero | Alto |
 
 ## 5. Recomendación
 
-1. **Adoptar Propuesta A** para la issue 5.1 del plan, con estas garantías no negociables:
-   - Cola ordenada: padres antes que hijos, sin subida de archivo antes que su carpeta padre.
-   - Desduplicación por ruta relativa → reutilizar `NodeID` creado en la misma sesión de subida.
-   - Cancelación efectiva en cualquier momento, con resumen de estado resultante.
-   - Lista de fallidos con ruta relativa + botón de reintento (sin re-crear lo que no falló).
-   - Los límites (máx. elementos, profundidad, tamaño) se validan en cliente antes de iniciar, y se registran en la propia feature.
+1. **Adoptar Propuesta A** para la issue 27, con estas garantías no negociables:
+   - Pool rolling de máximo 20 requests concurrentes y carpetas procesadas por niveles padres-antes-que-hijos.
+   - Desduplicación por ruta relativa y reutilización de `NodeID` creado en la sesión.
+   - Cancelación efectiva: detener tareas pendientes y abortar requests activos; mostrar el estado parcial.
+   - Progreso de elementos actual/total (carpetas + archivos) y lista de fallidos con ruta relativa y reintento selectivo.
+   - Sin límites frontend de cantidad, profundidad o bytes totales por decisión del usuario; las cuotas disponibles del backend se muestran como fallos por elemento.
 2. **No descartar B** para un esfuerzo futuro; los criterios de migración son: árboles > 1000 elementos, o problemas de latencia/pérdida de estado que A no mitigue.
-3. **El plan de issues queda actualizado con esta decisión:** issue 5.1 = Propuesta A; la Propuesta B queda en este reporte como referencia para producto/hoja de ruta (no es issue).
+3. **El plan de issues queda actualizado con esta decisión:** issue 27 = Propuesta A; la Propuesta B queda en este reporte como referencia para producto/hoja de ruta (no es issue).
 
 ## 6. Referencias
 
-- Contrato carga de archivos: `internal/adapter/inbound/httpapi/node_handler.go` (rutas `POST /nodes` y `POST /nodes/{nodeID}/doc`).
-- Transporte de subida actual del cliente: `web/app/src/features/node/usecase/useCreateDoc.js` (a unificar en la issue 1.1).
-- Plan de cierre: `doc/proposal/plan-cierre-cliente-web.md` (issues 1.1 y 5.1).
+- Contrato de carga: `internal/adapter/inbound/httpapi/node_handler.go` (`POST /nodes` y `POST /nodes/docs`).
+- Transporte de subida: `web/app/src/shared/api/client.js` y `web/app/src/features/node/usecase/useCreateDoc.js`.
+- Plan de cierre: `doc/proposal/plan-cierre-cliente-web.md` (issue 27).

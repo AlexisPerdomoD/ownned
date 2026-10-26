@@ -123,7 +123,7 @@ Carpeta -> Crear / Editar -> Validar -> Guardar -> Vista actualizada
 
 ### 4. Subir, descargar y borrar documentos
 
-**Resultado esperado:** desde una carpeta, seleccionar uno o más archivos dentro de los límites acordados, ver progreso/resultado, descargar el archivo original y borrar el documento con confirmación.
+**Resultado esperado:** desde una carpeta, seleccionar archivos o una carpeta completa, ver progreso/resultado, descargar el archivo original y borrar el documento con confirmación.
 
 ```text
 Carpeta -> Seleccionar archivo -> Subir -> Progreso -> Resultado
@@ -133,11 +133,11 @@ Carpeta -> Seleccionar archivo -> Subir -> Progreso -> Resultado
 
 **Contrato implicado:** `POST /api/v1/nodes/docs` multipart acepta un archivo por request (`parent_id`, `size`, `file`, `description` opcional); descarga y borrado reciben `docID`.
 
-**Estado actual:** `UploadDropzone` y `useCreateDoc` suben un archivo por vez, sin progreso porcentual ni selector de directorio. La carpeta actual ya trae `access_level`, pero la UI no lo consume para gobernar la subida ni combina permisos de nodo y rol. Hay acciones de descarga/eliminación, pero sus helpers usan URL relativa en desarrollo. Además, el backend usa `nodeID` como clave de almacenamiento al crear y trata el `docID` recibido para descarga/borrado como si fuera esa clave; el borrado también descarta errores de storage. Estas divergencias impiden prometer descarga y limpieza fiables. La API permite un rango HTTP; el cliente descarga como Blob completo.
+**Estado actual:** la subida individual y recursiva usa el client común. `useUploadFolder` deduplica rutas, crea carpetas padres primero, mantiene un pool de hasta 20 requests, informa elementos actual/total, permite cancelar y reintentar fallidos; durante la cola se bloquean otros controles de subida. El cliente no limita cantidad, profundidad ni bytes y muestra cuotas/rechazos que devuelva el backend por elemento. La lista de selección del navegador solo contiene archivos, por lo que carpetas vacías sin archivos no se pueden reconstruir. La descarga de carpeta sigue en `501` (su affordance notifica el error por decisión del usuario).
 
-**Cierre verificable:** transporte/cookies apuntan correctamente a API; DocID, NodeID y clave de storage se resuelven de forma consistente; subida informa progreso y fallo por archivo conforme al alcance acordado; descarga conserva filename y errores; borrado confirmado produce una eliminación comprobable sin ocultar fallos.
+**Cierre verificable:** transporte/cookies apuntan correctamente a API; subida de carpetas representa la jerarquía disponible desde el picker y comunica carga/cancelación/fallos; descarga conserva filename y errores; borrado confirmado produce una eliminación comprobable sin ocultar fallos.
 
-**Fuera de este flujo hasta decisión:** carga completa de una carpeta. Véase «Subir carpetas completas» en decisiones abiertas; no afirmar atomicidad ni batch existente.
+**Límite del contrato:** la subida de árbol es orquestación parcial en cliente, no atómica ni batch backend; puede dejar carpetas/archivos válidos creados antes de un fallo.
 
 ### 5. Leer y gestionar comentarios
 
