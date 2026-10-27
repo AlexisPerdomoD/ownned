@@ -60,6 +60,9 @@ test-local: test-migrate-up
 	# @go test -v ./... | grep --color=always -v "^?"
 	$(DOCKER_COMPOSE) -f $(TEST_DB_COMPOSE_FILE) down
 
+test-web-app:
+	@pnpm run --dir=web/app test 
+
 ################################################################################
 # DOCKER COMMANDS
 ################################################################################
