@@ -3,6 +3,8 @@ package httpapi
 import (
 	"io/fs"
 	"net/http"
+	"path"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -14,9 +16,15 @@ func RegisterFrontend(r chi.Router, embeddedFiles fs.FS) {
 		panic(err)
 	}
 
-	r.Handle("/assets/*", http.FileServer(http.FS(distFS)))
+	distServer := http.FileServer(http.FS(distFS))
 
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		name := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
+		if info, err := fs.Stat(distFS, name); err == nil && !info.IsDir() {
+			distServer.ServeHTTP(w, r)
+			return
+		}
+
 		index, err := fs.ReadFile(distFS, "index.html")
 		if err != nil {
 			http.Error(w, "Index not found in embedded files", http.StatusNotFound)
