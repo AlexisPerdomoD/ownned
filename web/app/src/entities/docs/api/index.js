@@ -1,6 +1,6 @@
 import z from 'zod'
 
-import { reqBlob, reqJSON } from '@/shared/api/client'
+import { reqBlob, reqForm, reqJSON } from '@/shared/api/client'
 import { APP_MODE } from '@/shared/config/env'
 
 export class CreateDocDTO {
@@ -45,6 +45,27 @@ export class CreateDocDTO {
 }
 
 export const buildCreateDocDTO = CreateDocDTO.build
+
+/**
+ * @param {File} file
+ * @param {CreateDocDTO} dto
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<import('@/entities/nodes').Doc>}
+ */
+export async function apiCreateDoc(file, dto, signal) {
+    const formData = new FormData()
+    formData.append('parent_id', dto.parent_id)
+    if (dto.description) {
+        formData.append('description', dto.description)
+    }
+    formData.append('size', String(file.size))
+    formData.append('file', file)
+    const doc = await reqForm('/api/v1/nodes/docs', formData, {
+        signal
+    })
+
+    return doc
+}
 
 /**
  * @param {string} docId
