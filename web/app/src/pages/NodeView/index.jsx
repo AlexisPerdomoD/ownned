@@ -769,7 +769,7 @@ export function NodeView() {
                 </Show>
 
                 <CommentsDrawer
-                    open={showComments() && isFolderNode()}
+                    open={showComments()}
                     onClose={() => setShowComments(false)}
                     comments={comments()}
                     loading={commentsLoading()}

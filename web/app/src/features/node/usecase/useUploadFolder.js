@@ -11,7 +11,22 @@ import { runWithConcurrency } from './runWithConcurrency'
 export const FOLDER_UPLOAD_CONCURRENCY = 20
 
 /**
- * @typedef {{ folders: Array<{ id: string, path: string, parentPath: string, name: string, depth: number, status:string }>, files: Array<{ id: string, path: string, parentPath: string, file: File, status:string}> }} PrepatedPlan
+ * @typedef {{
+ * folders: Array<{
+ * id: string,
+ * type: 'folder',
+ * path: string,
+ * parentPath: string,
+ * name: string,
+ * depth: number,
+ * status:string }>,
+ * files: Array<{
+ * id: string,
+ * type: 'file',
+ * path: string,
+ * parentPath: string,
+ * file: File,
+ * status:string}> }} PrepatedPlan
  */
 
 /**
@@ -44,6 +59,7 @@ export function planFolderUpload(files) {
                 folders.set(path, {
                     id: `folder:${path}`,
                     path,
+                    type: 'folder',
                     relativePath: path,
                     parentPath,
                     name: directoryParts[index],
@@ -57,6 +73,7 @@ export function planFolderUpload(files) {
             plannedFiles.set(relativePath, {
                 id: `file:${relativePath}`,
                 path: relativePath,
+                type: 'file',
                 relativePath,
                 parentPath: directoryParts.join('/'),
                 file,
@@ -87,9 +104,10 @@ export function useUploadFolder(
 ) {
     /** @type {import('solid-js').Signal<PrepatedPlan>} */
     const [plan, setPlan] = createSignal({ folders: [], files: [] })
+    /** @type {import('solid-js').Signal<string | null>} */
+    const [error, setError] = createSignal(null)
     const [uploading, setUploading] = createSignal(false)
     const [cancelled, setCancelled] = createSignal(false)
-    const [error, setError] = createSignal(null)
 
     /** @type {AbortController | null} */
     let activeController = null
@@ -165,7 +183,14 @@ export function useUploadFolder(
             if (file.status === 'uploading') active += 1
         }
 
-        return { total, completed, failed, cancelled, active }
+        return {
+            total,
+            completed,
+            failed,
+            cancelled,
+            active,
+            current: completed + failed + cancelled
+        }
     }
 
     const failedItems = () => {
@@ -393,6 +418,7 @@ export function useUploadFolder(
         )
     }
 
+    /** @param {File[]} files , @param {() => import('@/entities/nodes').Node[]} [existingChildren] */
     const start = async (files, existingChildren = getExistingChildren()) => {
         if (uploading()) return false
 
