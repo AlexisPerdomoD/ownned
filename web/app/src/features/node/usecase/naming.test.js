@@ -4,31 +4,32 @@ import { fileBaseName, nameSuffix, uniqueFileName } from './naming'
 
 describe('node file naming', () => {
     it('keeps the original name when there is no collision', () => {
-        expect(uniqueFileName('a.txt', ['a.pdf'])).toBe('a.txt')
+        expect(uniqueFileName('a.txt', new Set(['a.pdf']))).toBe('a.txt')
     })
 
     it('uses the first available suffix among existing names', () => {
         expect(
-            uniqueFileName('a.txt', ['a.txt', 'a (1).txt', 'a (3).txt'])
-        ).toBe(
-            'a (2).txt'
-        )
+            uniqueFileName(
+                'a.txt',
+                new Set(['a.txt', 'a (1).txt', 'a (3).txt'])
+            )
+        ).toBe('a (2).txt')
     })
 
     it('does not cap enumeration at the retry limit', () => {
-        const taken = [
+        const taken = new Set([
             'a.txt',
             ...Array.from({ length: 15 }, (_, i) => `a (${i + 1}).txt`)
-        ]
+        ])
         expect(uniqueFileName('a.txt', taken)).toBe('a (16).txt')
     })
 
     it('preserves multi-part extensions and dotfiles', () => {
-        expect(uniqueFileName('archive.tar.gz', ['archive.tar.gz'])).toBe(
-            'archive.tar (1).gz'
-        )
+        expect(
+            uniqueFileName('archive.tar.gz', new Set(['archive.tar.gz']))
+        ).toBe('archive.tar (1).gz')
         expect(fileBaseName('.env')).toBe('.env')
-        expect(uniqueFileName('.env', ['.env'])).toBe('.env (1)')
+        expect(uniqueFileName('.env', new Set(['.env']))).toBe('.env (1)')
     })
 
     it('extracts suffixes when a filename has multiple extensions', () => {

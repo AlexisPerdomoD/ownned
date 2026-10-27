@@ -1,27 +1,18 @@
 import { createSignal } from 'solid-js'
 
-import { buildCreateDocDTO } from '@/entities/docs/api'
-import { reqForm } from '@/shared/api/client'
-import { ApiConflictError, getErrorMessage } from '@/shared/errors'
+import { apiCreateDoc, buildCreateDocDTO } from '@/entities/docs/api'
+import { getErrorMessage } from '@/shared/errors'
 import { toast } from '@/shared/ui'
-import {
-    MAX_NAME_RETRIES,
-    fileBaseName,
-    fileNameExtension,
-    nameSuffix,
-    uniqueFileName
-} from './naming'
 
-export {
-    MAX_NAME_RETRIES,
-    fileBaseName,
-    fileNameExtension,
-    uniqueFileName
-} from './naming'
+import { uniqueFileName } from './naming'
+
+export { fileBaseName, fileNameExtension, uniqueFileName } from './naming'
 
 function renamedFile(file, fileName) {
     return new File([file], fileName, { type: file.type })
 }
+
+export const TOAST_CODE_RENAMED_DOC = 'TOAST_CODE_RENAMED_DOC'
 
 /**
  * @param {() => string} getParentId - function that returns the parent node ID
@@ -39,7 +30,7 @@ export function useCreateDoc(getParentId, onSuccess) {
      * @param {string} [parentIdOverride]
      * @param {Iterable<string>} [takenNames] - nombres de nodo ya ocupados en el destino
      * @param {AbortSignal} [signal]
-     * @returns {Promise<[true, any] | [false, { general?: string, reason?: string, message?: string }]>}
+     * @returns {Promise<[true, any] | [false, { general: string }]>}
      */
     const upload = async (
         file,
@@ -55,67 +46,33 @@ export function useCreateDoc(getParentId, onSuccess) {
         if (!valid) return [false, dto]
 
         let activeFile = file
-        let lastSuffix = 0
-        const taken = takenNames ? Array.from(takenNames) : []
-        if (taken.length > 0) {
+        const taken = new Set(takenNames ?? [])
+        if (taken.size > 0) {
             const unique = uniqueFileName(file.name, taken)
             if (unique !== file.name) {
-                lastSuffix = nameSuffix(unique)
                 activeFile = renamedFile(file, unique)
             }
         }
 
         setLoading(true)
-        let attempt = 0
-        try {
-            while (attempt <= MAX_NAME_RETRIES) {
-                try {
-                    const formData = new FormData()
-                    formData.append('parent_id', dto.parent_id)
-                    if (dto.description) {
-                        formData.append('description', dto.description)
-                    }
-                    formData.append('size', String(activeFile.size))
-                    formData.append('file', activeFile)
 
-                    const doc = await reqForm('/api/v1/nodes/docs', formData, {
-                        signal
-                    })
-                    onSuccess?.()
-                    if (activeFile.name !== file.name) {
-                        toast.warning(
-                            `Name already existed; saved as "${activeFile.name}"`
-                        )
-                    }
-                    return [true, doc]
-                } catch (e) {
-                    if (signal?.aborted) {
-                        return [false, { general: 'Upload cancelled.' }]
-                    }
-                    if (
-                        e instanceof ApiConflictError &&
-                        attempt < MAX_NAME_RETRIES
-                    ) {
-                        attempt += 1
-                        const suffix = lastSuffix + attempt
-                        activeFile = renamedFile(
-                            file,
-                            `${fileBaseName(file.name)} (${suffix})${
-                                fileNameExtension(file.name)
-                            }`
-                        )
-                        continue
-                    }
-                    return [
-                        false,
-                        {
-                            general: getErrorMessage(e, 'Upload failed'),
-                            reason: e?.detail?.reason
-                        }
-                    ]
-                }
+        try {
+            const doc = await apiCreateDoc(activeFile, dto, signal)
+            onSuccess?.()
+            if (activeFile.name !== file.name) {
+                toast.warning(
+                    `Name already existed; saved as "${activeFile.name}"`,
+                    TOAST_CODE_RENAMED_DOC
+                )
             }
-            return [false, { general: 'Could not find a free name to upload.' }]
+
+            return [true, doc]
+        } catch (e) {
+            if (e instanceof Error && e.name === 'AbortError') {
+                return [false, { general: 'Upload cancelled.' }]
+            }
+
+            return [false, { general: getErrorMessage(e, 'Upload failed') }]
         } finally {
             setLoading(false)
         }

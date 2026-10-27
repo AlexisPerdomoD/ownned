@@ -1,24 +1,83 @@
 import { createSignal } from 'solid-js'
 
-import {
-    apiCreateFolder,
-    apiGetNode,
-    buildCreateFolderDTO
-} from '@/entities/nodes/api'
-import { ApiConflictError, getErrorMessage } from '@/shared/errors'
+import { apiCreateDoc, buildCreateDocDTO } from '@/entities/docs/api'
+import { apiCreateFolder, buildCreateFolderDTO } from '@/entities/nodes/api'
+import { APP_MODE } from '@/shared/config/env'
+import { ClientError, getErrorMessage } from '@/shared/errors'
 
-import { useCreateDoc } from './useCreateDoc'
-import { planFolderUpload } from './planFolderUpload'
-import { runWithConcurrency } from './runWithConcurrency'
 import { uniqueFileName } from './naming'
+import { runWithConcurrency } from './runWithConcurrency'
 
 export const FOLDER_UPLOAD_CONCURRENCY = 20
+
+/**
+ * @typedef {{ folders: Array<{ id: string, path: string, parentPath: string, name: string, depth: number, status:string }>, files: Array<{ id: string, path: string, parentPath: string, file: File, status:string}> }} PrepatedPlan
+ */
+
+/**
+ * Builds a deduplicated, parent-first directory plan from a directory input.
+ * The client intentionally does not cap depth, element count, or total bytes.
+ * @param {File[]} files
+ * @returns {PrepatedPlan}
+ */
+export function planFolderUpload(files) {
+    /** @type {Map<string, PrepatedPlan['folders'][number]>} */
+    const folders = new Map()
+    /** @type {Map<string, PrepatedPlan['files'][number]>} */
+    const plannedFiles = new Map()
+
+    for (const file of files) {
+        const relativePath = String(file.webkitRelativePath || file.name || '')
+            .replaceAll('\\', '/')
+            .split('/')
+            .filter(Boolean)
+            .join('/')
+
+        if (!relativePath) continue
+        const parts = relativePath.split('/')
+        const directoryParts = parts.slice(0, -1)
+
+        for (let index = 0; index < directoryParts.length; index += 1) {
+            const path = directoryParts.slice(0, index + 1).join('/')
+            const parentPath = directoryParts.slice(0, index).join('/')
+            if (!folders.has(path)) {
+                folders.set(path, {
+                    id: `folder:${path}`,
+                    path,
+                    relativePath: path,
+                    parentPath,
+                    name: directoryParts[index],
+                    depth: index + 1,
+                    status: 'queued'
+                })
+            }
+        }
+
+        if (!plannedFiles.has(relativePath)) {
+            plannedFiles.set(relativePath, {
+                id: `file:${relativePath}`,
+                path: relativePath,
+                relativePath,
+                parentPath: directoryParts.join('/'),
+                file,
+                status: 'queued'
+            })
+        }
+    }
+
+    return {
+        folders: [...folders.values()].sort(
+            (a, b) => a.depth - b.depth || a.path.localeCompare(b.path)
+        ),
+        files: [...plannedFiles.values()]
+    }
+}
 
 /**
  * Client-orchestrated recursive directory upload.
  *
  * @param {() => string} getParentId
- * @param {() => import('@/entities/nodes').Node[]} [getExistingChildren]
+ * @param {() => import('@/entities/nodes').Node[] | null} [getExistingChildren]
  * @param {() => void} [onSettled]
  */
 export function useUploadFolder(
@@ -26,276 +85,415 @@ export function useUploadFolder(
     getExistingChildren = () => [],
     onSettled
 ) {
-    const [items, setItems] = createSignal([])
+    /** @type {import('solid-js').Signal<PrepatedPlan>} */
+    const [plan, setPlan] = createSignal({ folders: [], files: [] })
     const [uploading, setUploading] = createSignal(false)
     const [cancelled, setCancelled] = createSignal(false)
     const [error, setError] = createSignal(null)
-    const { upload: uploadDoc } = useCreateDoc(getParentId)
 
+    /** @type {AbortController | null} */
     let activeController = null
+
+    /** @type {Map<string, string>} */
     let folderIdByPath = new Map()
+
+    /** @type {Map<string, Set<string>>} */
     let takenNamesByParent = new Map()
 
-    const updateItem = (itemId, updates) => {
-        setItems(previous =>
-            previous.map(item =>
-                item.id === itemId ? { ...item, ...updates } : item
-            )
-        )
+    const isRetryiable = item =>
+        item.status === 'failed' ||
+        item.status === 'cancelled' ||
+        item.status === 'queued'
+
+    /** @param {'folder' | 'file'} type
+     *
+     * @param {string} itemId
+     * @param {Record<string, any>} updates
+     */
+    const updateItem = (type, itemId, updates) => {
+        setPlan(prev => {
+            const clonedPlan = { ...prev }
+            switch (type) {
+                case 'folder':
+                    clonedPlan.folders = prev.folders.map(folder => {
+                        if (folder.id === itemId) {
+                            return { ...folder, ...updates }
+                        }
+
+                        return folder
+                    })
+                    break
+
+                case 'file':
+                    clonedPlan.files = prev.files.map(file => {
+                        if (file.id === itemId) {
+                            return { ...file, ...updates }
+                        }
+
+                        return file
+                    })
+                    break
+
+                default:
+                    throw new Error('Invalid type')
+            }
+
+            return clonedPlan
+        })
     }
 
     const progress = () => {
-        const currentItems = items()
-        const completed = currentItems.filter(
-            item => item.status === 'completed'
-        ).length
-        const failed = currentItems.filter(item => item.status === 'failed')
-        const cancelledItems = currentItems.filter(
-            item => item.status === 'cancelled'
-        )
-        const active = currentItems.filter(item => item.status === 'uploading')
+        let total = 0
+        let completed = 0
+        let failed = 0
+        let cancelled = 0
+        let active = 0
 
-        return {
-            total: currentItems.length,
-            completed,
-            failed,
-            cancelled: cancelledItems,
-            active,
-            current: completed + failed.length + cancelledItems.length
+        for (const folder of plan().folders) {
+            total += 1
+            if (folder.status === 'completed') completed += 1
+            if (folder.status === 'failed') failed += 1
+            if (folder.status === 'cancelled') cancelled += 1
+            if (folder.status === 'uploading') active += 1
         }
+
+        for (const file of plan().files) {
+            total += 1
+            if (file.status === 'completed') completed += 1
+            if (file.status === 'failed') failed += 1
+            if (file.status === 'cancelled') cancelled += 1
+            if (file.status === 'uploading') active += 1
+        }
+
+        return { total, completed, failed, cancelled, active }
     }
 
-    const failedItems = () =>
-        items().filter(item => item.status === 'failed')
-    const retryItems = () =>
-        items().filter(
-            item =>
-                item.status === 'failed' ||
-                item.status === 'cancelled' ||
-                (cancelled() && item.status === 'queued')
-        )
+    const failedItems = () => {
+        const failed = []
+        for (const folder of plan().folders) {
+            if (folder.status === 'failed') failed.push(folder)
+        }
 
-    const execute = async (tasks, controller) => {
-        const { signal } = controller
-        activeController = controller
-        setCancelled(false)
-        setUploading(true)
-        setError(null)
+        for (const file of plan().files) {
+            if (file.status === 'failed') failed.push(file)
+        }
 
-        try {
-            const folderTasks = tasks
-                .filter(item => item.type === 'folder')
-                .sort(
-                    (a, b) =>
-                        a.depth - b.depth || a.relativePath.localeCompare(b.relativePath)
-                )
-            const depths = [...new Set(folderTasks.map(item => item.depth))]
+        return failed
+    }
 
-            for (const depth of depths) {
-                if (signal.aborted) break
-                const level = folderTasks.filter(item => item.depth === depth)
-                await runWithConcurrency(
-                    level,
-                    FOLDER_UPLOAD_CONCURRENCY,
-                    async item => {
-                        if (signal.aborted) {
-                            updateItem(item.id, { status: 'cancelled' })
-                            return
-                        }
-                        const parentId = folderIdByPath.get(item.parentPath)
-                        if (!parentId) {
-                            updateItem(item.id, {
-                                status: 'failed',
-                                error: 'Parent folder could not be created.'
-                            })
-                            return
-                        }
+    const retryItems = () => {
+        const retryable = []
+        for (const folder of plan().folders) {
+            if (isRetryiable(folder)) retryable.push(folder)
+        }
 
-                        updateItem(item.id, { status: 'uploading', error: null })
-                        try {
-                            const [valid, dto] = buildCreateFolderDTO(
-                                parentId,
-                                item.name,
-                                ''
-                            )
-                            if (!valid) {
-                                throw new Error(getErrorMessage(dto, 'Invalid folder name.'))
-                            }
+        for (const file of plan().files) {
+            if (isRetryiable(file)) retryable.push(file)
+        }
 
-                            let folder
-                            try {
-                                folder = await apiCreateFolder(dto, { signal })
-                            } catch (cause) {
-                                if (!(cause instanceof ApiConflictError)) throw cause
-                                const parent = await apiGetNode(parentId, { signal })
-                                folder = parent.children?.find(
-                                    child =>
-                                        child.type === 'folder' &&
-                                        child.name === item.name
-                                )
-                                if (!folder) throw cause
-                                folder = await apiGetNode(folder.id, { signal })
-                            }
+        return retryable
+    }
 
-                            if (signal.aborted) {
-                                updateItem(item.id, { status: 'cancelled' })
-                                return
-                            }
-                            folderIdByPath.set(item.relativePath, folder.id)
-                            takenNamesByParent.set(
-                                folder.id,
-                                new Set((folder.children ?? []).map(child => child.name))
-                            )
-                            updateItem(item.id, { status: 'completed', error: null })
-                        } catch (cause) {
-                            updateItem(item.id, {
-                                status: signal.aborted ? 'cancelled' : 'failed',
-                                error: signal.aborted
-                                    ? null
-                                    : getErrorMessage(cause, 'Could not create folder.')
-                            })
-                        }
-                    },
-                    signal
-                )
-            }
+    /**
+     *  Executes a plan of uploads. this helper assumes validated plan argument as plan.total > 0 , plan.folders.length > 0 and sorted plan.folders by depth.
+     */
+    const execute = async () => {
+        // NOTE: already sorted ASC since plan.folders is guaranteed to be sorted by depth
+        const depths = [...new Set(plan().folders.map(item => item.depth))]
+        const { signal } = activeController ?? { signal: null }
 
-            if (!signal.aborted) {
-                const fileTasks = tasks.filter(item => item.type === 'file')
-                await runWithConcurrency(
-                    fileTasks,
-                    FOLDER_UPLOAD_CONCURRENCY,
-                    async item => {
-                        if (signal.aborted) {
-                            updateItem(item.id, { status: 'cancelled' })
-                            return
-                        }
-                        const parentId = folderIdByPath.get(item.parentPath)
-                        if (!parentId) {
-                            updateItem(item.id, {
-                                status: 'failed',
-                                error: 'Parent folder could not be created.'
-                            })
-                            return
-                        }
+        for (const depth of depths) {
+            const level = plan().folders.filter(item => item.depth === depth)
 
-                        const taken =
-                            takenNamesByParent.get(parentId) ?? new Set()
-                        takenNamesByParent.set(parentId, taken)
-                        const takenBeforeReservation = [...taken]
-                        const reservedName = uniqueFileName(
-                            item.file.name,
-                            takenBeforeReservation
+            await runWithConcurrency(
+                level,
+                FOLDER_UPLOAD_CONCURRENCY,
+                async item => {
+                    if (item.status !== 'queued') return
+
+                    if (signal?.aborted) {
+                        updateItem('folder', item.id, {
+                            status: 'cancelled'
+                        })
+                        return
+                    }
+
+                    const parentId = folderIdByPath.get(item.parentPath)
+
+                    if (!parentId || typeof parentId !== 'string') {
+                        updateItem('folder', item.id, {
+                            status: 'failed',
+                            error: 'Parent folder could not be created.'
+                        })
+                        return
+                    }
+
+                    updateItem('folder', item.id, {
+                        status: 'uploading',
+                        error: null
+                    })
+
+                    try {
+                        const [valid, dto] = buildCreateFolderDTO(
+                            parentId,
+                            item.name,
+                            ''
                         )
-                        taken.add(reservedName)
-                        updateItem(item.id, {
-                            status: 'uploading',
-                            uploadName: reservedName,
-                            error: null
+
+                        if (!valid) {
+                            throw new ClientError(
+                                getErrorMessage(dto, 'Invalid folder name.')
+                            )
+                        }
+
+                        const folder = await apiCreateFolder(dto, {
+                            signal
                         })
 
-                        const [success, result] = await uploadDoc(
-                            item.file,
-                            '',
-                            parentId,
-                            takenBeforeReservation,
-                            signal
-                        )
-                        taken.delete(reservedName)
-                        if (success) {
-                            const actualName = result?.name ?? reservedName
-                            taken.add(actualName)
-                            updateItem(item.id, {
-                                status: 'completed',
-                                uploadName: actualName,
-                                error: null
-                            })
-                        } else {
-                            updateItem(item.id, {
-                                status: signal.aborted ? 'cancelled' : 'failed',
-                                error: signal.aborted
-                                    ? null
-                                    : getErrorMessage(result, 'Upload failed.')
-                            })
-                        }
-                    },
-                    signal
-                )
-            }
+                        folderIdByPath.set(item.relativePath, folder.id)
 
-            if (signal.aborted) setCancelled(true)
-        } catch (cause) {
-            setError(getErrorMessage(cause, 'Folder upload failed.'))
-        } finally {
-            setUploading(false)
-            activeController = null
-            onSettled?.()
+                        let takenNames = takenNamesByParent.get(parentId)
+                        if (!takenNames) {
+                            takenNames = new Set()
+                            takenNamesByParent.set(parentId, takenNames)
+                        }
+                        takenNames.add(item.name)
+
+                        updateItem('folder', item.id, {
+                            status: 'completed',
+                            error: null
+                        })
+                    } catch (e) {
+                        if (e instanceof Error && e.name === 'AbortError') {
+                            updateItem('folder', item.id, {
+                                status: 'cancelled'
+                            })
+                            return
+                        }
+
+                        updateItem('folder', item.id, {
+                            status: 'failed',
+                            error: getErrorMessage(
+                                e,
+                                'Could not create folder.'
+                            )
+                        })
+
+                        if (APP_MODE === 'local') {
+                            globalThis.console.error(e)
+                        }
+                    }
+                },
+                // NOTE: signal is not passed to the worker since it is
+                // required to update elements status to cancelled so it is
+                // required to process the whole plan even with aborted signal.
+                null
+            )
         }
+
+        if (signal?.aborted) {
+            setPlan(prev => ({
+                ...prev,
+                files: prev.files.map(item => ({
+                    ...item,
+                    status: 'cancelled'
+                }))
+            }))
+
+            return
+        }
+
+        await runWithConcurrency(
+            plan().files,
+            FOLDER_UPLOAD_CONCURRENCY,
+            async item => {
+                if (item.status !== 'queued') return
+
+                if (signal?.aborted) {
+                    updateItem('file', item.id, { status: 'cancelled' })
+                    return
+                }
+
+                const parentId = folderIdByPath.get(item.parentPath)
+                if (!parentId || typeof parentId !== 'string') {
+                    updateItem('file', item.id, {
+                        status: 'failed',
+                        error: 'Parent folder could not be created.'
+                    })
+                    return
+                }
+
+                let takenNames = takenNamesByParent.get(parentId)
+                if (!takenNames) {
+                    takenNames = new Set()
+                    takenNamesByParent.set(parentId, takenNames)
+                }
+
+                const reservedName = uniqueFileName(item.file.name, takenNames)
+                let hasReservedName = false
+                if (reservedName !== item.file.name) {
+                    hasReservedName = true
+                    item.file = new File([item.file], reservedName, {
+                        type: item.file.type
+                    })
+
+                    takenNames.add(reservedName)
+                }
+
+                updateItem('file', item.id, {
+                    status: 'uploading',
+                    uploadName: reservedName,
+                    error: null
+                })
+
+                const [isValid, dto] = buildCreateDocDTO(parentId, '')
+                if (!isValid) {
+                    dto['general'] =
+                        'Invalid argument of body for document creation.'
+                    updateItem('file', item.id, {
+                        status: 'failed',
+                        error: dto
+                    })
+                    return
+                }
+
+                try {
+                    const doc = await apiCreateDoc(item.file, dto, signal)
+                    updateItem('file', item.id, {
+                        status: 'completed',
+                        uploadName: doc.title,
+                        error: null
+                    })
+                } catch (e) {
+                    if (hasReservedName) {
+                        takenNames.delete(reservedName)
+                    }
+
+                    if (e instanceof Error && e.name === 'AbortError') {
+                        updateItem('file', item.id, {
+                            status: 'cancelled'
+                        })
+                        return
+                    }
+
+                    updateItem('file', item.id, {
+                        status: 'failed',
+                        error: getErrorMessage(e, 'Could not create document.')
+                    })
+
+                    if (APP_MODE === 'local') {
+                        globalThis.console.error(e)
+                    }
+                }
+            },
+            // NOTE: signal is not passed to the worker since it is
+            // required to update elements status to cancelled so it is
+            // required to process the whole plan even with aborted signal.
+            null
+        )
     }
 
     const start = async (files, existingChildren = getExistingChildren()) => {
         if (uploading()) return false
+
         const parentId = getParentId()
+
         if (!parentId) {
             setError('No destination folder selected.')
             return false
         }
 
         const plan = planFolderUpload(files)
-        if (plan.total === 0) {
-            setItems([])
+        if (plan.folders.length === 0 && plan.files.length === 0) {
             setError('The selected directory contains no uploadable files.')
             return false
         }
+
+        setCancelled(false)
+        setError(null)
+        setUploading(true)
+        setPlan(plan)
 
         folderIdByPath = new Map([['', parentId]])
         takenNamesByParent = new Map([
             [parentId, new Set(existingChildren.map(child => child.name))]
         ])
-        const tasks = [
-            ...plan.folders.map(folder => ({ ...folder, type: 'folder', status: 'queued' })),
-            ...plan.files.map(file => ({ ...file, type: 'file', status: 'queued' }))
-        ]
-        setItems(tasks)
+        activeController = new AbortController()
 
-        await execute(tasks, new AbortController())
-        return true
+        return execute()
+            .then(() => true)
+            .catch(cause => {
+                if (APP_MODE === 'local') {
+                    globalThis.console.error(cause)
+                }
+
+                setError(getErrorMessage(cause, 'Folder upload failed.'))
+                return false
+            })
+            .finally(() => {
+                setUploading(false)
+                activeController = null
+                onSettled?.()
+            })
     }
 
-    const retryFailed = async () => {
+    const retryFailed = () => {
         if (uploading()) return false
+
         const retryable = retryItems()
         if (retryable.length === 0) return false
-        for (const item of retryable) {
-            updateItem(item.id, { status: 'queued', error: null })
-        }
-        const tasks = retryable.map(item => ({
-            ...item,
-            status: 'queued',
-            error: null
+
+        setPlan(prev => ({
+            folders: prev.folders.map(item => {
+                if (!isRetryiable(item)) return item
+                return { ...item, status: 'queued', error: null }
+            }),
+            files: prev.files.map(item => {
+                if (!isRetryiable(item)) return item
+                return { ...item, status: 'queued', error: null }
+            })
         }))
-        await execute(tasks, new AbortController())
-        return true
+
+        setCancelled(false)
+        setError(null)
+        setUploading(true)
+        activeController = new AbortController()
+        return execute()
+            .then(() => true)
+            .catch(cause => {
+                if (APP_MODE === 'local') {
+                    globalThis.console.error(cause)
+                }
+
+                setError(getErrorMessage(cause, 'Folder upload failed.'))
+                return false
+            })
+            .finally(() => {
+                setUploading(false)
+                activeController = null
+                onSettled?.()
+            })
     }
 
     const cancel = () => {
-        if (uploading()) {
-            setCancelled(true)
-            activeController?.abort()
-        }
+        if (!uploading()) return
+
+        setCancelled(true)
+        activeController?.abort()
     }
 
     const clear = () => {
         if (uploading()) return
-        setItems([])
+        setPlan({ folders: [], files: [] })
         setCancelled(false)
         setError(null)
         folderIdByPath = new Map()
         takenNamesByParent = new Map()
+        activeController = null
     }
 
     return {
-        items,
+        items: () => [...plan().folders, ...plan().files],
         uploading,
         cancelled,
         error,

@@ -1,5 +1,3 @@
-export const MAX_NAME_RETRIES = 10
-
 /**
  * Parte base de un filename antes de su última extensión. Un dotfile sin
  * otra extensión (por ejemplo `.env`) se trata como un nombre sin extensión.
@@ -22,19 +20,20 @@ export function fileNameExtension(fileName) {
  * se compara contra el Node.name completo, que ahora conserva el filename.
  * Devuelve el nombre original si no hay colisión.
  * @param {string} fileName
- * @param {Iterable<string>} takenNames
+ * @param {Set<string>} takenNames
  */
 export function uniqueFileName(fileName, takenNames) {
     const base = fileBaseName(fileName)
-    const taken = new Set(takenNames)
-    if (!taken.has(fileName)) return fileName
+    if (!takenNames.has(fileName)) return fileName
+
     const ext = fileNameExtension(fileName)
-    for (let n = 1; n <= taken.size + 1; n++) {
+    for (let n = 1; n <= takenNames.size + 1; n++) {
         const candidate = `${base} (${n})`
         const candidateFileName = `${candidate}${ext}`
-        if (!taken.has(candidateFileName)) return candidateFileName
+        if (!takenNames.has(candidateFileName)) return candidateFileName
     }
-    return null
+
+    throw new Error('Too many files with the same name')
 }
 
 /**
