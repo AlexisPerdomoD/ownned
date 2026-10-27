@@ -20,7 +20,7 @@ type CreateNodeFileDTO struct {
 	ParentID     domain.NodeID `validate:"required"`
 	Filename     string        `validate:"required,min=1"`
 	Description  string        `validate:"max=255"`
-	ExpectedSize uint64        `validate:"required,gte=0"`
+	ExpectedSize uint64
 	Mimetype     string        `validate:"required,max=255"`
 	File         io.ReadCloser `validate:"required"` // TODO: revisar ciclo de vida de File como argumento
 }
