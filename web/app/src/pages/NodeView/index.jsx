@@ -173,7 +173,7 @@ export function NodeView() {
         docUpload.upload(files[0], '', null, children)
     }
 
-    const handleFolderPickerChange = async e => {
+    const handleFolderPickerChange = e => {
         const files = Array.from(e.target?.files ?? [])
         e.target.value = ''
 
@@ -182,7 +182,7 @@ export function NodeView() {
             return
         }
 
-        await folderUpload.start(files)
+        folderUpload.start(files)
     }
 
     const handleDownload = doc => {
@@ -504,16 +504,11 @@ export function NodeView() {
                     </div>
 
                     <Show
-                        when={
-                            folderUpload.items().length > 0 ||
-                            folderUpload.error()
-                        }
+                        when={folderUpload.totalCount() || folderUpload.error()}
                     >
                         <div class="mb-4">
                             <FolderUploadQueue
-                                items={folderUpload.items}
                                 progress={folderUpload.progress}
-                                failedItems={folderUpload.failedItems}
                                 retryItems={folderUpload.retryItems}
                                 uploading={folderUpload.uploading}
                                 cancelled={folderUpload.cancelled}
@@ -521,6 +516,7 @@ export function NodeView() {
                                 onCancel={folderUpload.cancel}
                                 onRetry={folderUpload.retryFailed}
                                 onClear={folderUpload.clear}
+                                miliseconds={folderUpload.miliseconds}
                             />
                         </div>
                     </Show>

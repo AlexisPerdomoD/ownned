@@ -10,7 +10,9 @@ import { ClientError, getErrorMessage } from '@/shared/errors'
 import { uniqueFileName } from './naming'
 import { runWithConcurrency } from './runWithConcurrency'
 
-export const FOLDER_UPLOAD_CONCURRENCY = 100
+export const FOLDER_UPLOAD_CONCURRENCY = 20
+
+export const TOAST_CODE_FOLDER_UPLOAD = 'TOAST_CODE_FOLDER_UPLOAD'
 
 /**
  * @typedef {{
@@ -32,6 +34,7 @@ export const FOLDER_UPLOAD_CONCURRENCY = 100
  */
 
 /**
+ * @todo improve algoritm here avoid sort if posible
  * Builds a deduplicated, parent-first directory plan from a directory input.
  * The client intentionally does not cap depth, element count, or total bytes.
  * @param {File[]} files
@@ -103,13 +106,20 @@ export function planFolderUpload(files) {
 export function useUploadFolder(
     getParentId,
     getExistingChildren = () => [],
-    onSettled,
-    concurencyLimit = FOLDER_UPLOAD_CONCURRENCY
+    onSettled
 ) {
-    /** @type {import('solid-js').Signal<PrepatedPlan>} */
+    /** @type {ReturnType<typeof createSignal<PrepatedPlan>>} */
     const [plan, setPlan] = createSignal({ folders: [], files: [] })
-    /** @type {import('solid-js').Signal<string | null>} */
+    const [totalCount, setTotalCount] = createSignal(0)
+    const [completedCount, setCompletedCount] = createSignal(0)
+    const [failedCount, setFailedCount] = createSignal(0)
+    const [cancelledCount, setCancelledCount] = createSignal(0)
+    const [activeCount, setActiveCount] = createSignal(0)
+    const [miliseconds, setMiliseconds] = createSignal(0)
+
+    /** @type {ReturnType<typeof createSignal<string | null>>} */
     const [error, setError] = createSignal(null)
+
     const [uploading, setUploading] = createSignal(false)
     const [cancelled, setCancelled] = createSignal(false)
 
@@ -122,78 +132,84 @@ export function useUploadFolder(
     /** @type {Map<string, Set<string>>} */
     let takenNamesByParent = new Map()
 
-    const isRetryiable = item =>
-        item.status === 'failed' ||
-        item.status === 'cancelled' ||
-        item.status === 'queued'
+    /** @type {Map<string, Record<string, any>>} */
+    let updatesMap = new Map()
 
+    const flushUpdates = () => {
+        if (updatesMap.size === 0) return
+
+        setPlan(prev => {
+            const clonedPlan = { ...prev }
+            clonedPlan.folders = prev.folders.map(folder => {
+                const updates = updatesMap.get(`folder:${folder.id}`)
+                if (!updates) return folder
+
+                return { ...folder, ...updates }
+            })
+
+            clonedPlan.files = prev.files.map(file => {
+                const updates = updatesMap.get(`file:${file.id}`)
+                if (!updates) return file
+                return { ...file, ...updates }
+            })
+
+            return clonedPlan
+        })
+
+        updatesMap = new Map()
+    }
     /** @param {'folder' | 'file'} type
      *
      * @param {string} itemId
      * @param {Record<string, any>} updates
      */
     const updateItem = (type, itemId, updates) => {
-        setPlan(prev => {
-            const clonedPlan = { ...prev }
-            switch (type) {
-                case 'folder':
-                    clonedPlan.folders = prev.folders.map(folder => {
-                        if (folder.id === itemId) {
-                            return { ...folder, ...updates }
-                        }
-
-                        return folder
-                    })
-                    break
-
-                case 'file':
-                    clonedPlan.files = prev.files.map(file => {
-                        if (file.id === itemId) {
-                            return { ...file, ...updates }
-                        }
-
-                        return file
-                    })
-                    break
-
-                default:
-                    throw new Error('Invalid type')
-            }
-
-            return clonedPlan
-        })
+        const key = `${type}:${itemId}`
+        updatesMap.set(key, updates)
     }
 
+    const cancel = () => {
+        if (!uploading()) return
+
+        setCancelled(true)
+        activeController?.abort()
+    }
+
+    const clear = () => {
+        if (uploading()) return
+        setPlan({ folders: [], files: [] })
+        setCancelled(false)
+        setError(null)
+        folderIdByPath = new Map()
+        takenNamesByParent = new Map()
+        activeController = null
+        setTotalCount(0)
+        setCompletedCount(0)
+        setFailedCount(0)
+        setCancelledCount(0)
+        setActiveCount(0)
+        setMiliseconds(0)
+    }
+
+    const isRetryiable = item =>
+        item.status === 'failed' ||
+        item.status === 'cancelled' ||
+        item.status === 'queued'
+
     const progress = () => {
-        let total = 0
-        let completed = 0
-        let failed = 0
-        let cancelled = 0
-        let active = 0
-
-        for (const folder of plan().folders) {
-            total += 1
-            if (folder.status === 'completed') completed += 1
-            if (folder.status === 'failed') failed += 1
-            if (folder.status === 'cancelled') cancelled += 1
-            if (folder.status === 'uploading') active += 1
-        }
-
-        for (const file of plan().files) {
-            total += 1
-            if (file.status === 'completed') completed += 1
-            if (file.status === 'failed') failed += 1
-            if (file.status === 'cancelled') cancelled += 1
-            if (file.status === 'uploading') active += 1
-        }
-
+        const current = completedCount() + failedCount() + cancelledCount()
+        const total = totalCount()
+        const queued = total - current
+        const retryable = failedCount() + cancelledCount() + queued
         return {
             total,
-            completed,
-            failed,
-            cancelled,
-            active,
-            current: completed + failed + cancelled
+            completed: completedCount(),
+            failed: failedCount(),
+            cancelled: cancelledCount(),
+            active: activeCount(),
+            current,
+            queued,
+            retryable
         }
     }
 
@@ -223,27 +239,43 @@ export function useUploadFolder(
         return retryable
     }
 
+    const someItemsRetryable = () => {
+        for (const file of plan().files) {
+            if (isRetryiable(file)) return true
+        }
+
+        return false
+    }
+
     /**
      *  Executes a plan of uploads. this helper assumes validated plan argument as plan.total > 0 , plan.folders.length > 0 and sorted plan.folders by depth.
      */
     const execute = async () => {
         // NOTE: already sorted ASC since plan.folders is guaranteed to be sorted by depth
-        const depths = [...new Set(plan().folders.map(item => item.depth))]
         const { signal } = activeController ?? { signal: null }
 
-        for (const depth of depths) {
-            const level = plan().folders.filter(item => item.depth === depth)
+        /** @type {Map<number, Array<import('@/entities/nodes').Node>>} */
+        const depthMap = new Map()
+        for (const folder of plan().folders) {
+            if (!depthMap.has(folder.depth)) {
+                depthMap.set(folder.depth, [])
+            }
 
+            depthMap.get(folder.depth).push(folder)
+        }
+
+        for (const [_, level] of [...depthMap.entries()].sort(
+            (a, b) => a[0] - b[0]
+        )) {
             await runWithConcurrency(
                 level,
-                concurencyLimit,
+                FOLDER_UPLOAD_CONCURRENCY,
                 async item => {
                     if (item.status !== 'queued') return
 
                     if (signal?.aborted) {
-                        updateItem('folder', item.id, {
-                            status: 'cancelled'
-                        })
+                        // updateItem('folder', item.id, { status: 'cancelled' })
+                        setCancelledCount(prev => prev + 1)
                         return
                     }
 
@@ -254,13 +286,13 @@ export function useUploadFolder(
                             status: 'failed',
                             error: 'Parent folder could not be created.'
                         })
+                        setFailedCount(prev => prev + 1)
+
                         return
                     }
 
-                    updateItem('folder', item.id, {
-                        status: 'uploading',
-                        error: null
-                    })
+                    updateItem('folder', item.id, { status: 'uploading' })
+                    setActiveCount(prev => prev + 1)
 
                     try {
                         const [valid, dto] = buildCreateFolderDTO(
@@ -287,16 +319,14 @@ export function useUploadFolder(
                             takenNamesByParent.set(parentId, takenNames)
                         }
                         takenNames.add(item.name)
-
-                        updateItem('folder', item.id, {
-                            status: 'completed',
-                            error: null
-                        })
+                        updateItem('folder', item.id, { status: 'completed' })
+                        setCompletedCount(prev => prev + 1)
                     } catch (e) {
                         if (e instanceof Error && e.name === 'AbortError') {
                             updateItem('folder', item.id, {
                                 status: 'cancelled'
                             })
+                            setCancelledCount(prev => prev + 1)
                             return
                         }
 
@@ -307,10 +337,10 @@ export function useUploadFolder(
                                 'Could not create folder.'
                             )
                         })
-
-                        if (APP_MODE === 'local') {
-                            globalThis.console.error(e)
-                        }
+                        setFailedCount(prev => prev + 1)
+                        throw e
+                    } finally {
+                        setActiveCount(prev => prev - 1)
                     }
                 },
                 // NOTE: signal is not passed to the worker since it is
@@ -320,26 +350,36 @@ export function useUploadFolder(
             )
         }
 
+        flushUpdates()
+
         if (signal?.aborted) {
-            setPlan(prev => ({
-                ...prev,
-                files: prev.files.map(item => ({
-                    ...item,
-                    status: 'cancelled'
-                }))
-            }))
+            // let cancelledCount = 0
+            // setPlan(prev => ({
+            //     ...prev,
+            //     files: prev.files.map(item => {
+            //         if (item.status === 'queued') {
+            //             cancelledCount += 1
+            //             return { ...item, status: 'cancelled' }
+            //         }
+            //
+            //         return item
+            //     })
+            // }))
+
+            setCancelledCount(prev => prev + plan().files.length)
 
             return
         }
 
         await runWithConcurrency(
             plan().files,
-            concurencyLimit,
+            FOLDER_UPLOAD_CONCURRENCY,
             async item => {
                 if (item.status !== 'queued') return
 
                 if (signal?.aborted) {
-                    updateItem('file', item.id, { status: 'cancelled' })
+                    // updateItem('file', item.id, { status: 'cancelled' })
+                    setCancelledCount(prev => prev + 1)
                     return
                 }
 
@@ -349,6 +389,7 @@ export function useUploadFolder(
                         status: 'failed',
                         error: 'Parent folder could not be created.'
                     })
+                    setFailedCount(prev => prev + 1)
                     return
                 }
 
@@ -368,40 +409,39 @@ export function useUploadFolder(
 
                     takenNames.add(reservedName)
                 }
-
                 updateItem('file', item.id, {
                     status: 'uploading',
-                    uploadName: reservedName,
-                    error: null
+                    uploadName: reservedName
                 })
-
-                const [isValid, dto] = buildCreateDocDTO(parentId, '')
-                if (!isValid) {
-                    dto['general'] =
-                        'Invalid argument of body for document creation.'
-                    updateItem('file', item.id, {
-                        status: 'failed',
-                        error: dto
-                    })
-                    return
-                }
+                setActiveCount(prev => prev + 1)
 
                 try {
+                    const [isValid, dto] = buildCreateDocDTO(parentId, '')
+                    if (!isValid) {
+                        updateItem('file', item.id, {
+                            status: 'failed',
+                            error:
+                                dto.general ||
+                                'Invalid argument of body for document creation.'
+                        })
+
+                        return
+                    }
+
                     const doc = await apiCreateDoc(item.file, dto, signal)
                     updateItem('file', item.id, {
                         status: 'completed',
-                        uploadName: doc.title,
-                        error: null
+                        uploadName: doc.title
                     })
+                    setCompletedCount(prev => prev + 1)
                 } catch (e) {
                     if (hasReservedName) {
                         takenNames.delete(reservedName)
                     }
 
                     if (e instanceof Error && e.name === 'AbortError') {
-                        updateItem('file', item.id, {
-                            status: 'cancelled'
-                        })
+                        updateItem('file', item.id, { status: 'cancelled' })
+                        setCancelledCount(prev => prev + 1)
                         return
                     }
 
@@ -409,10 +449,13 @@ export function useUploadFolder(
                         status: 'failed',
                         error: getErrorMessage(e, 'Could not create document.')
                     })
+                    setFailedCount(prev => prev + 1)
 
                     if (APP_MODE === 'local') {
                         globalThis.console.error(e)
                     }
+                } finally {
+                    setActiveCount(prev => prev - 1)
                 }
             },
             // NOTE: signal is not passed to the worker since it is
@@ -420,10 +463,12 @@ export function useUploadFolder(
             // required to process the whole plan even with aborted signal.
             null
         )
+
+        flushUpdates()
     }
 
     /** @param {File[]} files , @param {() => import('@/entities/nodes').Node[]} [existingChildren] */
-    const start = async (files, existingChildren = getExistingChildren()) => {
+    const start = async files => {
         if (uploading()) return false
 
         const parentId = getParentId()
@@ -434,19 +479,30 @@ export function useUploadFolder(
         }
 
         const plan = planFolderUpload(files)
-        if (plan.folders.length === 0 && plan.files.length === 0) {
+        const currentCount = plan.folders.length + plan.files.length
+        if (currentCount === 0) {
             setError('The selected directory contains no uploadable files.')
             return false
         }
 
+        const start = performance.now()
+        setUploading(true)
         setCancelled(false)
         setError(null)
-        setUploading(true)
         setPlan(plan)
+        setTotalCount(currentCount)
+        setCompletedCount(0)
+        setFailedCount(0)
+        setCancelledCount(0)
+        setActiveCount(0)
+        setMiliseconds(0)
 
         folderIdByPath = new Map([['', parentId]])
         takenNamesByParent = new Map([
-            [parentId, new Set(existingChildren.map(child => child.name))]
+            [
+                parentId,
+                new Set(getExistingChildren()?.map(child => child.name) ?? [])
+            ]
         ])
         activeController = new AbortController()
 
@@ -464,29 +520,43 @@ export function useUploadFolder(
                 setUploading(false)
                 activeController = null
                 onSettled?.()
+                setMiliseconds(performance.now() - start)
             })
     }
 
     const retryFailed = () => {
         if (uploading()) return false
 
-        const retryable = retryItems()
-        if (retryable.length === 0) return false
+        if (!someItemsRetryable()) return false
 
-        setPlan(prev => ({
-            folders: prev.folders.map(item => {
-                if (!isRetryiable(item)) return item
-                return { ...item, status: 'queued', error: null }
-            }),
-            files: prev.files.map(item => {
-                if (!isRetryiable(item)) return item
-                return { ...item, status: 'queued', error: null }
-            })
-        }))
-
+        const start = performance.now()
+        setUploading(true)
         setCancelled(false)
         setError(null)
-        setUploading(true)
+        // setTotalCount(plan().folders.length + plan().files.length)
+        // setCompletedCount(0)
+        // setFailedCount(0)
+        // setCancelledCount(0)
+        setMiliseconds(0)
+
+        let cancelledCount = 0
+        setPlan(prev => ({
+            ...prev,
+            files: prev.files.map(item => {
+                if (isRetryiable(item)) {
+                    cancelledCount += 1
+                }
+
+                if (item.status === 'cancelled' || item.status === 'failed') {
+                    return { ...item, status: 'queued', error: null }
+                }
+
+                return item
+            })
+        }))
+        setCancelledCount(prev => prev - cancelledCount)
+        setActiveCount(0)
+
         activeController = new AbortController()
         return execute()
             .then(() => true)
@@ -502,28 +572,13 @@ export function useUploadFolder(
                 setUploading(false)
                 activeController = null
                 onSettled?.()
+                setMiliseconds(performance.now() - start)
             })
-    }
-
-    const cancel = () => {
-        if (!uploading()) return
-
-        setCancelled(true)
-        activeController?.abort()
-    }
-
-    const clear = () => {
-        if (uploading()) return
-        setPlan({ folders: [], files: [] })
-        setCancelled(false)
-        setError(null)
-        folderIdByPath = new Map()
-        takenNamesByParent = new Map()
-        activeController = null
     }
 
     return {
         items: () => [...plan().folders, ...plan().files],
+        totalCount,
         uploading,
         cancelled,
         error,
@@ -533,6 +588,7 @@ export function useUploadFolder(
         start,
         retryFailed,
         cancel,
-        clear
+        clear,
+        miliseconds
     }
 }

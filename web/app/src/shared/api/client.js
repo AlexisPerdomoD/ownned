@@ -38,6 +38,10 @@ async function throwForApiError(res, fallback = 'Request failed.') {
     const detail =
         typeof body === 'string' || body == null ? null : (body.detail ?? null)
 
+    if (APP_MODE === 'local' && detail) {
+        globalThis.console.dir(detail)
+    }
+
     switch (res.status) {
         case 400:
             throw new ApiBadRequestError(msg, detail)
