@@ -29,6 +29,7 @@ import {
     NodeSearch
 } from '@/features/node/ui'
 import {
+    useCreateDoc,
     useCreateFolder,
     useDeleteDoc,
     useDeleteNode,
@@ -68,10 +69,9 @@ export function NodeView() {
         })
     const auth = useAuth()
     const { node, loading, error, refresh } = useGetNode(() => params.id)
-    const nodeData = () => node()
     const role = () => auth.role()
-    const accessLevel = () => nodeData()?.access_level
-    const isFolderNode = () => nodeData()?.type === 'folder'
+    const accessLevel = () => node()?.access_level
+    const isFolderNode = () => node()?.type === 'folder'
 
     const [fileInput, setFileInput] = createSignal(null)
     const [folderInput, setFolderInput] = createSignal(null)
@@ -97,16 +97,17 @@ export function NodeView() {
 
     // NOTE: en paginación el backend no envía display_path; se usa el name.
     // Cuando el backend lo incluya la UI lo consumirá sin cambios.
-    const parentPath = () => nodeData()?.display_path || nodeData()?.name || ''
+    const parentPath = () => node()?.display_path || node()?.name || ''
 
-    const { create, loading: creating } = useCreateFolder()
-    const { remove } = useDeleteNode()
+    const { create: createFolder, loading: creatingFolder } = useCreateFolder()
+    const { remove: deleteNode } = useDeleteNode()
 
     const folderUpload = useUploadFolder(
         () => params.id,
-        () => nodeData()?.children ?? [],
+        () => node()?.children ?? [],
         refresh
     )
+    const docUpload = useCreateDoc(() => params.id, refresh)
     const { remove: deleteDoc } = useDeleteDoc()
 
     const [showCreate, setShowCreate] = createSignal(false)
@@ -125,25 +126,25 @@ export function NodeView() {
     const { remove: deleteComment } = useDeleteComment()
 
     const handleDelete = target => {
-        setDeleteTarget(target ?? nodeData())
+        setDeleteTarget(target ?? node())
         setShowDelete(true)
     }
 
     const confirmDelete = async () => {
         const target = deleteTarget()
         if (!target) return
-        const [success, result] = await remove(target.id)
+        const [success, result] = await deleteNode(target.id)
         if (!success) {
             toast.error(getErrorMessage(result, 'Delete failed'))
             return
         }
-        if (target.id === nodeData()?.id) navigate(returnTo())
+        if (target.id === node()?.id) navigate(returnTo())
         else refresh()
     }
 
     const handleCreate = async (name, description) => {
-        const [success, result] = await create(
-            nodeData()?.id,
+        const [success, result] = await createFolder(
+            node()?.id,
             name,
             description
         )
@@ -158,31 +159,46 @@ export function NodeView() {
     const handleFilePickerChange = async e => {
         const files = Array.from(e.target?.files ?? [])
         e.target.value = ''
-        if (!files.length) return
-        await folderUpload.start(files)
+        if (!files.length) {
+            toast.success('No file selected, nothing uploaded.')
+            return
+        }
+
+        let children = null
+        if (node().type === 'folder') {
+            children = []
+            node().children.forEach(child => children.push(child.name))
+        }
+
+        docUpload.upload(files[0], '', null, children)
     }
 
     const handleFolderPickerChange = async e => {
         const files = Array.from(e.target?.files ?? [])
         e.target.value = ''
+
+        if (!files.length) {
+            toast.success('Dir selected was empty, nothing uploaded.')
+            return
+        }
+
         await folderUpload.start(files)
     }
 
-    const handleDownload = async doc => {
-        try {
-            await apiDownloadDoc(doc.id, doc.title)
-        } catch (e) {
+    const handleDownload = doc => {
+        apiDownloadDoc(doc.id, doc.title).catch(e =>
             toast.error(getErrorMessage(e, 'Download failed'))
-        }
+        )
     }
 
-    const handleDownloadFolder = async () => {
-        try {
-            await apiDownloadFolder(nodeData()?.id)
-            toast.success('Folder download started')
-        } catch (e) {
-            toast.error(getErrorMessage(e, 'Folder download not available yet'))
-        }
+    const handleDownloadFolder = () => {
+        apiDownloadFolder(node()?.id)
+            .then(() => toast.success('Folder download started'))
+            .catch(e =>
+                toast.error(
+                    getErrorMessage(e, 'Folder download not available yet')
+                )
+            )
     }
 
     const handleDeleteDoc = doc => {
@@ -216,7 +232,7 @@ export function NodeView() {
     }
 
     const handleCreateComment = async content => {
-        const [success, result] = await addComment(nodeData()?.id, content)
+        const [success, result] = await addComment(node()?.id, content)
         if (!success) {
             toast.error(getErrorMessage(result, 'Comment failed'))
             return false
@@ -226,9 +242,9 @@ export function NodeView() {
     }
 
     const folderChildren = () =>
-        nodeData()?.children?.filter(n => n.type === 'folder') ?? []
+        node()?.children?.filter(n => n.type === 'folder') ?? []
     const fileChildren = () =>
-        nodeData()?.children?.filter(n => n.type === 'file') ?? []
+        node()?.children?.filter(n => n.type === 'file') ?? []
 
     const sortNodes = list =>
         sortNodeChildren(list, sortBy(), sortDir(), showDotfiles())
@@ -239,7 +255,7 @@ export function NodeView() {
         paginateChildren(sortedFolders(), sortedFiles(), childrenPage())
 
     createEffect(() => {
-        nodeData()?.id
+        node()?.id
         showDotfiles()
         sortBy()
         sortDir()
@@ -351,7 +367,7 @@ export function NodeView() {
                     <div class="mt-2 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div class="min-w-0">
                             <h1 class="font-sans font-medium text-2xl text-ink-dark truncate">
-                                {nodeData()?.name || 'Node'}
+                                {node()?.name || 'Node'}
                             </h1>
                             <Show when={parentPath()}>
                                 <p class="text-xs text-muted mt-0.5 truncate">
@@ -361,20 +377,20 @@ export function NodeView() {
                             <p class="text-sm text-muted mt-1">
                                 {isFolderNode() ? 'Folder' : 'File'}
                                 {' · '}
-                                Created {formatDate(nodeData()?.created_at)}
+                                Created {formatDate(node().created_at)}
                                 <Show
                                     when={
-                                        nodeData()?.updated_at !==
-                                        nodeData()?.created_at
+                                        node()?.updated_at !==
+                                        node()?.created_at
                                     }
                                 >
                                     {' · '}
-                                    Updated {formatDate(nodeData()?.updated_at)}
+                                    Updated {formatDate(node().updated_at)}
                                 </Show>
                             </p>
-                            <Show when={nodeData()?.description}>
+                            <Show when={node().description}>
                                 <p class="text-sm text-ink mt-1">
-                                    {nodeData()?.description}
+                                    {node()?.description}
                                 </p>
                             </Show>
                         </div>
@@ -411,7 +427,10 @@ export function NodeView() {
                         <Show when={canCreateFolder(role(), accessLevel())}>
                             <Button
                                 size="sm"
-                                disabled={folderUpload.uploading()}
+                                disabled={
+                                    folderUpload.uploading() ||
+                                    docUpload.loading()
+                                }
                                 onClick={() => setShowCreate(true)}
                             >
                                 + New Folder
@@ -427,7 +446,10 @@ export function NodeView() {
                             />
                             <Button
                                 size="sm"
-                                loading={folderUpload.uploading()}
+                                loading={
+                                    folderUpload.uploading() ||
+                                    docUpload.loading()
+                                }
                                 onClick={() => fileInput()?.click()}
                             >
                                 ⬆ Upload file
@@ -436,8 +458,12 @@ export function NodeView() {
                                 <Show
                                     when={supportsDirectoryUpload()}
                                     fallback={
-                                        <p class="text-xs text-muted" role="status">
-                                            Folder upload is not supported in this browser.
+                                        <p
+                                            class="text-xs text-muted"
+                                            role="status"
+                                        >
+                                            Folder upload is not supported in
+                                            this browser.
                                         </p>
                                     }
                                 >
@@ -450,14 +476,20 @@ export function NodeView() {
                                         ref={setFolderInput}
                                         onChange={handleFolderPickerChange}
                                     />
-                                <Button
-                                    size="sm"
-                                    loading={folderUpload.uploading()}
-                                    onClick={() => folderInput()?.click()}
-                                >
-                                    <FolderUp size={16} aria-hidden="true" />
-                                    Upload folder
-                                </Button>
+                                    <Button
+                                        size="sm"
+                                        loading={
+                                            folderUpload.uploading() ||
+                                            docUpload.loading()
+                                        }
+                                        onClick={() => folderInput()?.click()}
+                                    >
+                                        <FolderUp
+                                            size={16}
+                                            aria-hidden="true"
+                                        />
+                                        Upload folder
+                                    </Button>
                                 </Show>
                             </Show>
                         </Show>
@@ -487,14 +519,14 @@ export function NodeView() {
                                 cancelled={folderUpload.cancelled}
                                 error={folderUpload.error}
                                 onCancel={folderUpload.cancel}
-                                onRetry={() => folderUpload.retryFailed()}
+                                onRetry={folderUpload.retryFailed}
                                 onClear={folderUpload.clear}
                             />
                         </div>
                     </Show>
 
                     <NodeSearch
-                        rootId={() => nodeData()?.id}
+                        rootId={() => node()?.id}
                         onOpenNode={openNode}
                         onDownloadDoc={handleDownload}
                         folderActions={folderRowActions}
@@ -732,8 +764,8 @@ export function NodeView() {
                     </section>
                 </Show>
 
-                <Show when={!isFolderNode() && nodeData()?.type === 'file'}>
-                    <DocCard doc={nodeData()?.doc} />
+                <Show when={node()?.type === 'file'}>
+                    <DocCard doc={node().doc} />
                 </Show>
 
                 <CommentsDrawer
@@ -747,7 +779,7 @@ export function NodeView() {
                     isSuper={auth.role() === 'super_usr_role'}
                     canComment={canCommentOnNode(
                         auth.role(),
-                        nodeData()?.access_level
+                        node()?.access_level
                     )}
                     creating={addingComment()}
                     onEdit={handleUpdateComment}
@@ -757,7 +789,7 @@ export function NodeView() {
 
                 <NodeForm
                     open={showCreate()}
-                    loading={creating()}
+                    loading={creatingFolder()}
                     onSubmit={handleCreate}
                     onClose={() => setShowCreate(false)}
                 />
