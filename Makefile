@@ -114,6 +114,8 @@ start-http: build-http
 	@echo "Starting running HTTP Server..."
 	@$(HTTP_SERVER_BINARY)
 
+start-server-local: db-local-up start-http
+
 superusr: 
 	GOTRACEBACK=all go run ./cmd/cli superusr $(ARGS)
 
