@@ -1,3 +1,5 @@
+// TODO: Check this code since algorithm is not optimal and block the UI on cancelled uploads
+//
 import { createSignal } from 'solid-js'
 
 import { apiCreateDoc, buildCreateDocDTO } from '@/entities/docs/api'
@@ -8,7 +10,7 @@ import { ClientError, getErrorMessage } from '@/shared/errors'
 import { uniqueFileName } from './naming'
 import { runWithConcurrency } from './runWithConcurrency'
 
-export const FOLDER_UPLOAD_CONCURRENCY = 20
+export const FOLDER_UPLOAD_CONCURRENCY = 100
 
 /**
  * @typedef {{
@@ -96,11 +98,13 @@ export function planFolderUpload(files) {
  * @param {() => string} getParentId
  * @param {() => import('@/entities/nodes').Node[] | null} [getExistingChildren]
  * @param {() => void} [onSettled]
+ * @param {number} [concurencyLimit]
  */
 export function useUploadFolder(
     getParentId,
     getExistingChildren = () => [],
-    onSettled
+    onSettled,
+    concurencyLimit = FOLDER_UPLOAD_CONCURRENCY
 ) {
     /** @type {import('solid-js').Signal<PrepatedPlan>} */
     const [plan, setPlan] = createSignal({ folders: [], files: [] })
@@ -232,7 +236,7 @@ export function useUploadFolder(
 
             await runWithConcurrency(
                 level,
-                FOLDER_UPLOAD_CONCURRENCY,
+                concurencyLimit,
                 async item => {
                     if (item.status !== 'queued') return
 
@@ -330,7 +334,7 @@ export function useUploadFolder(
 
         await runWithConcurrency(
             plan().files,
-            FOLDER_UPLOAD_CONCURRENCY,
+            concurencyLimit,
             async item => {
                 if (item.status !== 'queued') return
 
