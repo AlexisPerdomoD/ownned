@@ -11,16 +11,6 @@ import (
 	"ownned/internal/domain"
 )
 
-type LoginPwdDTO struct {
-	Username string `json:"username" validate:"required,email"`
-	Pwd      string `json:"password" validate:"required,min=8,max=255"`
-}
-
-func (dto LoginPwdDTO) normalize() LoginPwdDTO {
-	dto.Username = strings.ToLower(strings.TrimSpace(dto.Username))
-	return dto
-}
-
 type LoginPwdUseCase struct {
 	usrs      usr.UsrRepository
 	usrPwds   usr.UsrPwdRepository
@@ -38,7 +28,18 @@ func NewLoginPwdUseCase(
 		usrs:      usrs,
 		usrPwds:   usrPwds,
 		pwdHasher: pwdHasher,
-		jwt:       jwt}
+		jwt:       jwt,
+	}
+}
+
+type LoginPwdDTO struct {
+	Username string `json:"username" validate:"required,email"`
+	Pwd      string `json:"password" validate:"required,min=8,max=255"`
+}
+
+func (dto LoginPwdDTO) normalize() LoginPwdDTO {
+	dto.Username = strings.ToLower(strings.TrimSpace(dto.Username))
+	return dto
 }
 
 func (uc *LoginPwdUseCase) Execute(

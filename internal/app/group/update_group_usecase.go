@@ -8,17 +8,17 @@ import (
 	"ownned/internal/domain"
 )
 
-type UpdateGroupDTO struct {
-	Name        *string `json:"name" validate:"min=1,max=255,excludes=\\/"`
-	Description *string `json:"description" validate:"max=1000"`
-}
-
 type UpdateGroupUseCase struct {
 	groupRepository GroupRepository
 }
 
 func NewUpdateGroupUseCase(group GroupRepository) *UpdateGroupUseCase {
 	return &UpdateGroupUseCase{group}
+}
+
+type UpdateGroupDTO struct {
+	Name        *string `json:"name" validate:"min=1,max=255,excludes=\\/"`
+	Description *string `json:"description" validate:"max=1000"`
 }
 
 func (uc *UpdateGroupUseCase) Execute(

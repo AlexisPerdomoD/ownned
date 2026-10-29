@@ -10,12 +10,6 @@ import (
 	"ownned/internal/domain"
 )
 
-type DownloadNodeFileInput struct {
-	DocID  domain.DocID
-	Offset uint64
-	Limit  uint64
-}
-
 type DownloadNodeFileUseCase struct {
 	group.AccessChecker
 	nodes   NodeRepository
@@ -35,6 +29,12 @@ func NewDownloadDocUseCase(
 		docs:          docs,
 		storage:       storage,
 	}
+}
+
+type DownloadNodeFileInput struct {
+	DocID  domain.DocID
+	Offset uint64
+	Limit  uint64
 }
 
 func (uc *DownloadNodeFileUseCase) Execute(ctx context.Context, in DownloadNodeFileInput) (*domain.Doc, io.ReadCloser, error) {

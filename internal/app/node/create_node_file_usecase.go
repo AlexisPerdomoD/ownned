@@ -16,15 +16,6 @@ import (
 	"ownned/internal/domain"
 )
 
-type CreateNodeFileDTO struct {
-	ParentID     domain.NodeID `validate:"required"`
-	Filename     string        `validate:"required,min=1"`
-	Description  string        `validate:"max=255"`
-	ExpectedSize uint64
-	Mimetype     string        `validate:"required,max=255"`
-	File         io.ReadCloser `validate:"required"` // TODO: revisar ciclo de vida de File como argumento
-}
-
 type CreateNodeFileTx interface {
 	tx.TxCtx
 	NodeRepository() NodeRepository
@@ -37,7 +28,7 @@ type CreateNodeFileUseCase struct {
 	nodes     NodeRepository
 	txFactory tx.TxFactory[CreateNodeFileTx]
 	storage   storage.Storage
-	logger    *slog.Logger
+	log       *slog.Logger
 }
 
 func NewCreateDocUseCase(
@@ -55,8 +46,37 @@ func NewCreateDocUseCase(
 		nodes:         nodes,
 		txFactory:     txFactory,
 		storage:       storage,
-		logger:        logger,
+		log:           logger,
 	}
+}
+
+type CreateNodeFileDTO struct {
+	ParentID     domain.NodeID `validate:"required"`
+	Filename     string        `validate:"required,min=1"`
+	Description  string        `validate:"max=255"`
+	ExpectedSize uint64
+	Mimetype     string        `validate:"required,max=255"`
+	File         io.ReadCloser `validate:"required"`
+}
+
+func (uc *CreateNodeFileUseCase) persist(ctx context.Context, node *domain.Node, doc *domain.Doc) error {
+	err := uc.txFactory.Do(ctx, func(t CreateNodeFileTx) error {
+		if err := t.NodeRepository().Create(t.Ctx(), node); err != nil {
+			return err
+		}
+
+		if err := t.DocRepository().Create(t.Ctx(), doc); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		_ = uc.storage.Delete(ctx, node.ID)
+		return err
+	}
+
+	return nil
 }
 
 func (uc *CreateNodeFileUseCase) Execute(ctx context.Context, dto CreateNodeFileDTO) (*FileNode, error) {
@@ -90,7 +110,7 @@ func (uc *CreateNodeFileUseCase) Execute(ctx context.Context, dto CreateNodeFile
 
 	yes, err := uc.HasNodeAccessToFromPath(ctx, folder.Path, domain.GroupWriteAccess)
 	if err != nil {
-		uc.logger.WarnContext(ctx, "failed to check if user can access node", "nodeID", folder.ID, "error", err)
+		uc.log.WarnContext(ctx, "failed to check if user can access node", "nodeID", folder.ID, "error", err)
 		return nil, err
 	}
 	if !yes {
@@ -149,24 +169,4 @@ func (uc *CreateNodeFileUseCase) Execute(ctx context.Context, dto CreateNodeFile
 		Doc:         *doc,
 		DisplayPath: displayPath,
 	}, nil
-}
-
-func (uc *CreateNodeFileUseCase) persist(ctx context.Context, node *domain.Node, doc *domain.Doc) error {
-	err := uc.txFactory.Do(ctx, func(t CreateNodeFileTx) error {
-		if err := t.NodeRepository().Create(t.Ctx(), node); err != nil {
-			return err
-		}
-
-		if err := t.DocRepository().Create(t.Ctx(), doc); err != nil {
-			return err
-		}
-
-		return nil
-	})
-	if err != nil {
-		_ = uc.storage.Delete(ctx, node.ID)
-		return err
-	}
-
-	return nil
 }

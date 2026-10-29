@@ -25,21 +25,6 @@ type CreateUsrTx interface {
 	GroupNodeUpsertor() GroupNodeUpsertor
 }
 
-type CreateUsrDTO struct {
-	Role      domain.UsrRole `json:"role" validate:"required,oneof=super_usr_role normal_usr_role limited_usr_role"`
-	Firstname string         `json:"firstname" validate:"required,min=2,max=50"`
-	Lastname  string         `json:"lastname" validate:"required,min=2,max=50"`
-	Username  string         `json:"username" validate:"required,email"`
-	Pwd       string         `json:"password" validate:"required,min=8,max=255"`
-}
-
-func (dto CreateUsrDTO) normalize() CreateUsrDTO {
-	dto.Firstname = strings.ToLower(strings.TrimSpace(dto.Firstname))
-	dto.Lastname = strings.ToLower(strings.TrimSpace(dto.Lastname))
-	dto.Username = strings.ToLower(strings.TrimSpace(dto.Username))
-	return dto
-}
-
 type CreateUsrUseCase struct {
 	usrs      UsrRepository
 	txFactory tx.TxFactory[CreateUsrTx]
@@ -60,6 +45,21 @@ func NewCreateUsrUseCase(
 		pwdHasher: pwdHasher,
 		log:       logger,
 	}
+}
+
+type CreateUsrDTO struct {
+	Role      domain.UsrRole `json:"role" validate:"required,oneof=super_usr_role normal_usr_role limited_usr_role"`
+	Firstname string         `json:"firstname" validate:"required,min=2,max=50"`
+	Lastname  string         `json:"lastname" validate:"required,min=2,max=50"`
+	Username  string         `json:"username" validate:"required,email"`
+	Pwd       string         `json:"password" validate:"required,min=8,max=255"`
+}
+
+func (dto CreateUsrDTO) normalize() CreateUsrDTO {
+	dto.Firstname = strings.ToLower(strings.TrimSpace(dto.Firstname))
+	dto.Lastname = strings.ToLower(strings.TrimSpace(dto.Lastname))
+	dto.Username = strings.ToLower(strings.TrimSpace(dto.Username))
+	return dto
 }
 
 func (uc *CreateUsrUseCase) Execute(

@@ -10,14 +10,6 @@ import (
 	"ownned/internal/domain"
 )
 
-type CreateNodeFolderDTO struct {
-	// NOTE: evaluate if we could need to get back to this aproach
-	// ParentID    string `json:"parent_id" validate:"required,uuid"`
-	ParentID    domain.NodeID `json:"parent_id" validate:"required"`
-	Name        string        `json:"name" validate:"required,min=1,max=255,excludes=\\/"`
-	Description string        `json:"description" validate:"max=255"`
-}
-
 type CreateNodeFolderUseCase struct {
 	group.AccessChecker
 	nodes NodeRepository
@@ -28,6 +20,12 @@ func NewCreateNodeFolderUseCase(
 	nodes NodeRepository,
 ) *CreateNodeFolderUseCase {
 	return &CreateNodeFolderUseCase{ac, nodes}
+}
+
+type CreateNodeFolderDTO struct {
+	ParentID    domain.NodeID `json:"parent_id" validate:"required"`
+	Name        string        `json:"name" validate:"required,min=1,max=255,excludes=\\/"`
+	Description string        `json:"description" validate:"max=255"`
 }
 
 func (uc *CreateNodeFolderUseCase) Execute(
