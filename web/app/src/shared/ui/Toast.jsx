@@ -20,8 +20,9 @@ const [toasts, setToasts] = createSignal([])
 let nextId = 0
 
 /**
+ * Adds a toast to the queede, if type 'spinner' is selected no timeout is applied. Else yes.
  * @param {string} message
- * @param {'default' | 'success' | 'error' | 'warning'} [type='default']
+ * @param {'default' | 'success' | 'error' | 'warning' | 'spinner'} [type='default']
  * @param {string} [code='default']
  * @param {number} [duration=3500]
  */
@@ -33,9 +34,19 @@ function addToast(
 ) {
     const id = ++nextId
     setToasts(prev => [...prev, { id, message, type, code }])
-    setTimeout(() => {
-        setToasts(prev => prev.filter(t => t.id !== id))
-    }, duration)
+
+    if (type !== 'spinner') {
+        setTimeout(() => {
+            setToasts(prev => prev.filter(t => t.id !== id))
+        }, duration)
+    }
+}
+/**
+ * @param {number} id
+ */
+
+function clearToastByID(id) {
+    setToasts(prev => prev.filter(t => t.id === id))
 }
 
 function clearToasts() {
@@ -71,12 +82,15 @@ export const toast = Object.assign(
         /** clear all toasts */
         clear: clearToasts,
         /** clear toasts by code */
-        clearCode: clearToastsByCode
+        clearCode: clearToastsByCode,
+        /** clear toasts by id */
+        clearID: clearToastByID
     }
 )
 
 const typeStyles = {
     default: 'bg-ink-dark text-bg',
+    spinner: 'bg-ink-dark text-bg',
     success: 'bg-success text-on-success',
     error: 'bg-danger text-on-danger',
     warning: 'bg-warning text-on-warning'
@@ -84,6 +98,31 @@ const typeStyles = {
 
 const typeIcons = {
     default: null,
+    spinner: (
+        <svg
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            style={{ animation: 'spin 0.8s linear infinite' }}
+        >
+            <path
+                d="M7 1.5a5.5 5.5 0 1 1-3.89 1.61"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+            />
+            <animateTransform
+                attributeName="transform"
+                type="rotate"
+                from="0 7 7"
+                to="360 7 7"
+                dur="0.8s"
+                repeatCount="indefinite"
+            />
+        </svg>
+    ),
+
     success: (
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path
