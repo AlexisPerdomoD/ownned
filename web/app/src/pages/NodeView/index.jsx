@@ -49,6 +49,7 @@ import {
     canUploadDoc
 } from '@/shared/authz'
 import { getErrorMessage } from '@/shared/errors'
+import { formatDate } from '@/shared/format'
 import { Button, ConfirmDialog, Spinner, toast } from '@/shared/ui'
 import { useLocation, useNavigate, useParams } from '@solidjs/router'
 
@@ -80,41 +81,27 @@ export function NodeView() {
     const [viewMode, setViewMode] = createSignal(
         localStorage.getItem('owned.viewMode') ?? 'grid'
     )
-
     const [sortBy, setSortBy] = createSignal('name')
     const [sortDir, setSortDir] = createSignal('asc')
     const [showDotfiles, setShowDotfiles] = createSignal(
         localStorage.getItem('owned.showDotfiles') === 'true'
     )
-
-    // persist preferences (D6)
-    createEffect(() => {
-        localStorage.setItem('owned.showDotfiles', String(showDotfiles()))
-    })
-    createEffect(() => {
-        localStorage.setItem('owned.viewMode', viewMode())
-    })
-
-    // NOTE: en paginación el backend no envía display_path; se usa el name.
-    // Cuando el backend lo incluya la UI lo consumirá sin cambios.
-    const parentPath = () => node()?.display_path || node()?.name || ''
+    const [showCreate, setShowCreate] = createSignal(false)
+    const [showDelete, setShowDelete] = createSignal(false)
+    const [deleteTarget, setDeleteTarget] = createSignal(null)
+    const [deleteDocTarget, setDeleteDocTarget] = createSignal(null)
+    const [showDeleteDoc, setShowDeleteDoc] = createSignal(false)
 
     const { create: createFolder, loading: creatingFolder } = useCreateFolder()
-    const { remove: deleteNode } = useDeleteNode()
-
+    const { remove: deleteNode, loading: deletingNode } = useDeleteNode()
     const folderUpload = useUploadFolder(
         () => params.id,
         () => node()?.children ?? [],
         refresh
     )
     const docUpload = useCreateDoc(() => params.id, refresh)
-    const { remove: deleteDoc } = useDeleteDoc()
+    const { remove: deleteDoc, loading: delitingDoc } = useDeleteDoc()
 
-    const [showCreate, setShowCreate] = createSignal(false)
-    const [showDelete, setShowDelete] = createSignal(false)
-    const [deleteTarget, setDeleteTarget] = createSignal(null)
-    const [deleteDocTarget, setDeleteDocTarget] = createSignal(null)
-    const [showDeleteDoc, setShowDeleteDoc] = createSignal(false)
     const {
         comments,
         loading: commentsLoading,
@@ -254,29 +241,6 @@ export function NodeView() {
     const paginatedChildren = () =>
         paginateChildren(sortedFolders(), sortedFiles(), childrenPage())
 
-    createEffect(() => {
-        node()?.id
-        showDotfiles()
-        sortBy()
-        sortDir()
-        setChildrenPage(1)
-    })
-
-    createEffect(() => {
-        const { page } = paginatedChildren()
-        if (childrenPage() !== page) setChildrenPage(page)
-    })
-
-    const formatDate = dateStr =>
-        new Date(dateStr).toLocaleDateString('es-ES', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        })
-
-    // Contextual row actions for the folder's compact list view.
     const folderRowActions = folderNode => (
         <Show when={canDeleteNode(role(), folderNode.access_level)}>
             <button
@@ -330,6 +294,27 @@ export function NodeView() {
         </>
     )
 
+    createEffect(() => {
+        node()?.id
+        showDotfiles()
+        sortBy()
+        sortDir()
+        setChildrenPage(1)
+    })
+
+    createEffect(() => {
+        const { page } = paginatedChildren()
+        if (childrenPage() !== page) setChildrenPage(page)
+    })
+
+    createEffect(() => {
+        localStorage.setItem('owned.showDotfiles', String(showDotfiles()))
+    })
+
+    createEffect(() => {
+        localStorage.setItem('owned.viewMode', viewMode())
+    })
+
     return (
         <section class="flex flex-col p-4 sm:p-6">
             <Show
@@ -369,9 +354,9 @@ export function NodeView() {
                             <h1 class="font-sans font-medium text-2xl text-ink-dark truncate">
                                 {node()?.name || 'Node'}
                             </h1>
-                            <Show when={parentPath()}>
+                            <Show when={node()?.displayPath}>
                                 <p class="text-xs text-muted mt-0.5 truncate">
-                                    {parentPath()}
+                                    {node()?.displayPath}
                                 </p>
                             </Show>
                             <p class="text-sm text-muted mt-1">
@@ -503,11 +488,10 @@ export function NodeView() {
                         </Button>
                     </div>
 
-                    <Show
-                        when={folderUpload.totalCount() || folderUpload.error()}
-                    >
+                    <Show when={folderUpload.currentStep().status !== 'idle'}>
                         <div class="mb-4">
                             <FolderUploadQueue
+                                currentStep={folderUpload.currentStep}
                                 progress={folderUpload.progress}
                                 retryItems={folderUpload.retryItems}
                                 uploading={folderUpload.uploading}

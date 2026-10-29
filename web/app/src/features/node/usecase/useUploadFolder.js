@@ -30,7 +30,7 @@ export const TOAST_CODE_FOLDER_UPLOAD = 'TOAST_CODE_FOLDER_UPLOAD'
  * path: string,
  * parentPath: string,
  * file: File,
- * status:string}> }} PrepatedPlan
+ * status:string}> }} PreparedPlan
  */
 
 /**
@@ -38,22 +38,23 @@ export const TOAST_CODE_FOLDER_UPLOAD = 'TOAST_CODE_FOLDER_UPLOAD'
  * Builds a deduplicated, parent-first directory plan from a directory input.
  * The client intentionally does not cap depth, element count, or total bytes.
  * @param {File[]} files
- * @returns {PrepatedPlan}
+ * @returns {PreparedPlan}
  */
 export function planFolderUpload(files) {
-    /** @type {Map<string, PrepatedPlan['folders'][number]>} */
+    /** @type {Map<string, PreparedPlan['folders'][number]>} */
     const folders = new Map()
-    /** @type {Map<string, PrepatedPlan['files'][number]>} */
+    /** @type {Map<string, PreparedPlan['files'][number]>} */
     const plannedFiles = new Map()
 
     for (const file of files) {
-        const relativePath = String(file.webkitRelativePath || file.name || '')
+        const relativePath = String(file.webkitRelativePath)
             .replaceAll('\\', '/')
             .split('/')
             .filter(Boolean)
             .join('/')
 
         if (!relativePath) continue
+
         const parts = relativePath.split('/')
         const directoryParts = parts.slice(0, -1)
 
@@ -88,10 +89,8 @@ export function planFolderUpload(files) {
     }
 
     return {
-        folders: [...folders.values()].sort(
-            (a, b) => a.depth - b.depth || a.path.localeCompare(b.path)
-        ),
-        files: [...plannedFiles.values()]
+        folders: Array.from(folders.values()),
+        files: Array.from(plannedFiles.values())
     }
 }
 
@@ -108,23 +107,32 @@ export function useUploadFolder(
     getExistingChildren = () => [],
     onSettled
 ) {
-    /** @type {ReturnType<typeof createSignal<PrepatedPlan>>} */
+    /** @type {ReturnType<typeof createSignal<PreparedPlan>>} */
     const [plan, setPlan] = createSignal({ folders: [], files: [] })
+
     const [totalCount, setTotalCount] = createSignal(0)
     const [completedCount, setCompletedCount] = createSignal(0)
     const [failedCount, setFailedCount] = createSignal(0)
     const [cancelledCount, setCancelledCount] = createSignal(0)
     const [activeCount, setActiveCount] = createSignal(0)
-    const [miliseconds, setMiliseconds] = createSignal(0)
 
     /** @type {ReturnType<typeof createSignal<string | null>>} */
     const [error, setError] = createSignal(null)
-
     const [uploading, setUploading] = createSignal(false)
     const [cancelled, setCancelled] = createSignal(false)
+    const [miliseconds, setMiliseconds] = createSignal(0)
+
+    /** @type {ReturnType<typeof createSignal<{status :'idle' | 'planning' |  'creating folders' | 'uploading files' | 'stopped'; miliseconds:number }>>} */
+    const [currentStep, setCurrentStep] = createSignal({
+        status: 'idle',
+        miliseconds: 0
+    })
 
     /** @type {AbortController | null} */
     let activeController = null
+
+    /** @type {number | null} */
+    let startMilisecs = null
 
     /** @type {Map<string, string>} */
     let folderIdByPath = new Map()
@@ -137,23 +145,28 @@ export function useUploadFolder(
 
     const flushUpdates = () => {
         if (updatesMap.size === 0) return
+        setPlan(plan => {
+            /** @type PreparedPlan */
+            const currentPlan = { folders: [], files: [] }
 
-        setPlan(prev => {
-            const clonedPlan = { ...prev }
-            clonedPlan.folders = prev.folders.map(folder => {
-                const updates = updatesMap.get(`folder:${folder.id}`)
-                if (!updates) return folder
+            for (const n of [...plan.folders, ...plan.files]) {
+                if (n.status === 'completed') {
+                    // NOTE: does not include complete nodes in order to aovid
+                    // using memory innecesary
+                    continue
+                }
 
-                return { ...folder, ...updates }
-            })
+                const updates = updatesMap.get(`${n.type}:${n.id}`)
 
-            clonedPlan.files = prev.files.map(file => {
-                const updates = updatesMap.get(`file:${file.id}`)
-                if (!updates) return file
-                return { ...file, ...updates }
-            })
+                const targetK = `${n.type}s`
+                if (updates) {
+                    currentPlan[targetK].push({ ...n, ...updates })
+                    continue
+                }
 
-            return clonedPlan
+                currentPlan[targetK].push(n)
+            }
+            return currentPlan
         })
 
         updatesMap = new Map()
@@ -189,6 +202,7 @@ export function useUploadFolder(
         setCancelledCount(0)
         setActiveCount(0)
         setMiliseconds(0)
+        setCurrentStep({ status: 'idle', miliseconds: 0 })
     }
 
     const isRetryiable = item =>
@@ -213,46 +227,30 @@ export function useUploadFolder(
         }
     }
 
-    const failedItems = () => {
-        const failed = []
-        for (const folder of plan().folders) {
-            if (folder.status === 'failed') failed.push(folder)
-        }
-
-        for (const file of plan().files) {
-            if (file.status === 'failed') failed.push(file)
-        }
-
-        return failed
-    }
-
     const retryItems = () => {
-        const retryable = []
-        for (const folder of plan().folders) {
-            if (isRetryiable(folder)) retryable.push(folder)
+        const items = []
+        for (const n of [...plan().folders, ...plan().files]) {
+            if (isRetryiable(n)) {
+                items.push(n)
+            }
         }
 
-        for (const file of plan().files) {
-            if (isRetryiable(file)) retryable.push(file)
-        }
-
-        return retryable
+        return items
     }
 
-    const someItemsRetryable = () => {
-        for (const file of plan().files) {
-            if (isRetryiable(file)) return true
-        }
-
-        return false
-    }
-
+    const failedItems = () => retryItems().filter(n => n.status === 'failed')
     /**
      *  Executes a plan of uploads. this helper assumes validated plan argument as plan.total > 0 , plan.folders.length > 0 and sorted plan.folders by depth.
      */
     const execute = async () => {
         // NOTE: already sorted ASC since plan.folders is guaranteed to be sorted by depth
+
         const { signal } = activeController ?? { signal: null }
+
+        setCurrentStep({
+            status: 'creating folders',
+            miliseconds: performance.now() - startMilisecs
+        })
 
         /** @type {Map<number, Array<import('@/entities/nodes').Node>>} */
         const depthMap = new Map()
@@ -264,9 +262,11 @@ export function useUploadFolder(
             depthMap.get(folder.depth).push(folder)
         }
 
-        for (const [_, level] of [...depthMap.entries()].sort(
+        const sortedFolders = [...depthMap.entries()].sort(
             (a, b) => a[0] - b[0]
-        )) {
+        )
+
+        for (const [_, level] of sortedFolders) {
             await runWithConcurrency(
                 level,
                 FOLDER_UPLOAD_CONCURRENCY,
@@ -337,7 +337,9 @@ export function useUploadFolder(
                                 'Could not create folder.'
                             )
                         })
+
                         setFailedCount(prev => prev + 1)
+
                         throw e
                     } finally {
                         setActiveCount(prev => prev - 1)
@@ -350,26 +352,16 @@ export function useUploadFolder(
             )
         }
 
-        flushUpdates()
-
         if (signal?.aborted) {
-            // let cancelledCount = 0
-            // setPlan(prev => ({
-            //     ...prev,
-            //     files: prev.files.map(item => {
-            //         if (item.status === 'queued') {
-            //             cancelledCount += 1
-            //             return { ...item, status: 'cancelled' }
-            //         }
-            //
-            //         return item
-            //     })
-            // }))
-
             setCancelledCount(prev => prev + plan().files.length)
-
             return
         }
+
+        setCurrentStep({
+            status: 'uploading files',
+
+            miliseconds: performance.now() - startMilisecs
+        })
 
         await runWithConcurrency(
             plan().files,
@@ -478,24 +470,27 @@ export function useUploadFolder(
             return false
         }
 
-        const plan = planFolderUpload(files)
-        const currentCount = plan.folders.length + plan.files.length
+        startMilisecs = performance.now()
+        setUploading(true)
+        setCancelled(false)
+        setError(null)
+        setMiliseconds(0)
+
+        setCurrentStep({ status: 'planning', miliseconds: 0 })
+        const p = planFolderUpload(files)
+        const currentCount = p.folders.length + p.files.length
+
         if (currentCount === 0) {
             setError('The selected directory contains no uploadable files.')
             return false
         }
 
-        const start = performance.now()
-        setUploading(true)
-        setCancelled(false)
-        setError(null)
-        setPlan(plan)
+        setPlan(p)
         setTotalCount(currentCount)
         setCompletedCount(0)
         setFailedCount(0)
         setCancelledCount(0)
         setActiveCount(0)
-        setMiliseconds(0)
 
         folderIdByPath = new Map([['', parentId]])
         takenNamesByParent = new Map([
@@ -517,20 +512,26 @@ export function useUploadFolder(
                 return false
             })
             .finally(() => {
+                const end = performance.now() - performance.now()
                 setUploading(false)
                 activeController = null
+                startMilisecs = null
+                setMiliseconds(end)
+                setCurrentStep({
+                    status: 'stopped',
+                    miliseconds: end
+                })
+
                 onSettled?.()
-                setMiliseconds(performance.now() - start)
             })
     }
 
     const retryFailed = () => {
-        if (uploading()) return false
+        if (uploading() || !retryItems().length) return false
 
-        if (!someItemsRetryable()) return false
-
-        const start = performance.now()
+        startMilisecs = performance.now()
         setUploading(true)
+        setCurrentStep({ status: 'idle', miliseconds: 0 })
         setCancelled(false)
         setError(null)
         // setTotalCount(plan().folders.length + plan().files.length)
@@ -569,10 +570,17 @@ export function useUploadFolder(
                 return false
             })
             .finally(() => {
+                const end = performance.now() - startMilisecs
                 setUploading(false)
                 activeController = null
+                startMilisecs = null
+                setMiliseconds(end)
+                setCurrentStep({
+                    status: 'stopped',
+                    miliseconds: end
+                })
+
                 onSettled?.()
-                setMiliseconds(performance.now() - start)
             })
     }
 
@@ -589,6 +597,7 @@ export function useUploadFolder(
         retryFailed,
         cancel,
         clear,
-        miliseconds
+        miliseconds,
+        currentStep
     }
 }

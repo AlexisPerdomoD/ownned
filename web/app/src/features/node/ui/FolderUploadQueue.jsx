@@ -1,4 +1,4 @@
-import { For, Show } from 'solid-js'
+import { For, Show, createEffect, createSignal } from 'solid-js'
 
 import { Button } from '@/shared/ui'
 
@@ -13,10 +13,48 @@ import { Button } from '@/shared/ui'
  * @param {() => void} props.onRetry
  * @param {() => void} props.onClear
  * @param {() => number} props.miliseconds
+ * @param {()=> {status :'idle' | 'planning' | 'creating folders' | 'uploading files' | 'stopped'; miliseconds:number }} props.currentStep
  */
 export function FolderUploadQueue(props) {
     const progress = () => props.progress()
     const retryItems = () => props.retryItems()
+
+    const [stepMessage, setStepMessage] = createSignal('')
+    const [stepMilisecs, setStepMilisecs] = createSignal(0)
+
+    createEffect(() => {
+        const step = props.currentStep()
+
+        if (step.status === 'idle') {
+            setStepMessage('')
+            setStepMilisecs(0)
+            return
+        }
+
+        let msg
+        switch (step.status) {
+            case 'planning':
+                msg = 'Starting planning state for Folder updload.'
+                break
+            case 'creating folders':
+                msg = 'Starting folders tree creations.'
+
+                break
+            case 'uploading files':
+                msg = 'Starting file uploading process.'
+                break
+
+            case 'stopped':
+                msg = 'Upload folder process stopped.'
+                break
+
+            default:
+                msg = ''
+        }
+
+        setStepMessage(msg)
+        setStepMilisecs(prev => step.miliseconds - prev)
+    })
 
     return (
         <section
@@ -97,6 +135,13 @@ export function FolderUploadQueue(props) {
                 </div>
             </Show>
 
+            <Show when={stepMessage()}>
+                <p class="text-xs text-accent" role="status">
+                    {stepMessage()} Last step took{' '}
+                    {(stepMilisecs() / 1000).toFixed()} seconds.
+                </p>
+            </Show>
+
             <Show when={!props.uploading() && props.miliseconds()}>
                 <p class="text-xs text-muted" role="status">
                     Took {(props.miliseconds() / 1000).toFixed(2)} seconds to
@@ -124,7 +169,12 @@ export function FolderUploadQueue(props) {
                     </Button>
                 </Show>
 
-                <Show when={!props.uploading() && progress().retryable}>
+                <Show
+                    when={
+                        !props.currentStep().status === 'stopped' &&
+                        !progress().retryable
+                    }
+                >
                     <Button size="sm" variant="ghost" onClick={props.onClear}>
                         Dismiss
                     </Button>
