@@ -89,5 +89,36 @@ type BatchNodeTreeDTO struct {
 }
 
 func (uc *BatchNodeTreeUseCase) Execute(ctx context.Context, dto BatchNodeTreeDTO) error {
+	yes, err := uc.HasNodeAccessTo(ctx, dto.ParentID, domain.GroupWriteAccess)
+	if err != nil {
+		return err
+	}
+
+	if !yes {
+		detail := make(map[string]string)
+		detail["reason"] = "User does not have required access to specified node"
+		return apperror.ErrForbidden(detail)
+	}
+
+	parent, err := uc.nodes.GetByID(ctx, dto.ParentID)
+	if err != nil {
+		return err
+	}
+
+	if parent == nil {
+		uc.log.WarnContext(ctx,
+			"failed to get node when expected after access check",
+			"nodeID", dto.ParentID)
+		return apperror.ErrIlegalDBState(nil)
+	}
+
+	if parent.Type != domain.FolderNodeType {
+		detail := make(map[string]string)
+		detail["reason"] = "Parent Node is not a folder"
+		return apperror.ErrBadRequest(detail)
+	}
+
+	// seen := make(map[string]struct{})
+
 	return apperror.ErrNotImplemented(nil)
 }
