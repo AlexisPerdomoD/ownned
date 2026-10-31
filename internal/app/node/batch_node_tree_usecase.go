@@ -1,9 +1,14 @@
 package node
 
 import (
+	"cmp"
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
+	"path/filepath"
+	"strings"
+	"uuid"
 
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/group"
@@ -54,9 +59,9 @@ func NewBatchNodeTreeUseCase(
 }
 
 type BatchNodeTreeDocDTO struct {
-	RelativePath string `validate:"required"`
-	Mimetype     string `validate:"required,max=255"`
-	ExpectedSize uint64
+	RelativePath      string `validate:"required"`
+	Mimetype          string `validate:"required,max=255"`
+	ExpectedSizeBytes uint64
 }
 
 type BatchNodeTreeFileDTO struct {
@@ -118,7 +123,66 @@ func (uc *BatchNodeTreeUseCase) Execute(ctx context.Context, dto BatchNodeTreeDT
 		return apperror.ErrBadRequest(detail)
 	}
 
-	// seen := make(map[string]struct{})
+	manifestMap := make(map[string]*BatchNodeTreeDocDTO)
+	tree := make(map[int][]domain.Node)
+	docs := make([]domain.Doc, len(dto.Manifest))
+
+	for i := range dto.Manifest {
+		curr := dto.Manifest[i]
+
+		if _, duplicated := manifestMap[curr.RelativePath]; duplicated {
+			detail := make(map[string]string)
+			detail["reason"] = fmt.Sprintf(
+				"Element Path '%s' is found on manifest more than once. Every element must have unique relative path.",
+				curr.RelativePath,
+			)
+
+			return apperror.ErrBadRequest(detail)
+		}
+
+		manifestMap[curr.RelativePath] = &curr
+
+		rPaths := strings.Split(curr.RelativePath, "/")
+		currParentPath := parent.Path
+		for j := range rPaths {
+			isLast := j == len(rPaths)-1
+			nodeID := uuid.NewV7()
+			path := currParentPath.NewChildPath(nodeID)
+			name := rPaths[j]
+
+			n := domain.Node{
+				ID:   nodeID,
+				Name: name,
+				Path: path,
+				Type: domain.FolderNodeType,
+			}
+
+			if isLast {
+				n.Type = domain.FileNodeType
+				ext := filepath.Ext(name)
+				title := cmp.Or(name[:len(name)-len(ext)], name)
+
+				docs[i] = domain.Doc{
+					ID:          uuid.NewV7(),
+					NodeID:      nodeID,
+					Title:       title,
+					Filename:    name,
+					MimeType:    curr.Mimetype,
+					SizeInBytes: curr.ExpectedSizeBytes,
+				}
+
+			} else {
+				currParentPath = path
+			}
+
+			if tree[i] == nil {
+				tree[i] = make([]domain.Node, 0, 1)
+			}
+
+			tree[i] = append(tree[i], n)
+		}
+
+	}
 
 	return apperror.ErrNotImplemented(nil)
 }
