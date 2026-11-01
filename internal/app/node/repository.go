@@ -43,6 +43,9 @@ type NodeRepository interface {
 	// Create a new node in the system. Returns an error if nil data is provided.
 	Create(ctx context.Context, n *domain.Node) error
 
+	// CreateAll insert new nodes in the system. Returns an error if emphty list is provided or any invalid data related error else nil.
+	CreateAll(ctx context.Context, ns []domain.Node) error
+
 	// Update a node in the system. Returns an error if nil data is provided or if the node does not exist.
 	Update(ctx context.Context, n *domain.Node) error
 
@@ -93,6 +96,9 @@ type DocRepository interface {
 
 	// Create a new document in the system. Returns an error if nil data is provided.
 	Create(ctx context.Context, d *domain.Doc) error
+
+	// CreateAll insert new documents in the system. Returns an error if empty list is provided or any invalid data related error else nil.
+	CreateAll(ctx context.Context, ds []domain.Doc) error
 
 	// Update a document in the system. Returns an error if nil data is provided or if the document does not exist.
 	Update(ctx context.Context, d *domain.Doc) error
