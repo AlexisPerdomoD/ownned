@@ -13,6 +13,7 @@ type FKey = uuid.UUID
 var (
 	ErrFileNotFound = errors.New("file not found")
 	ErrFileTooLarge = errors.New("file too large")
+	ErrFileCorrupted = errors.New("file corrupted")
 )
 
 // UploadCmd is the struct for uploading files to the storage.
