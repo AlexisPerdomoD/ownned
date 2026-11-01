@@ -3,7 +3,6 @@ package node
 import (
 	"cmp"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -69,13 +68,14 @@ func NewBatchNodeTreeUseCase(
 }
 
 type BatchNodeTreeDocDTO struct {
-	RelativePath      string `validate:"required"`
-	Mimetype          string `validate:"required,max=255"`
-	ExpectedSizeBytes uint64
+	RelativePath      string `json:"relative_path" validate:"required"`
+	Mimetype          string `json:"mimetype" validate:"required,max=255"`
+	ExpectedSizeBytes uint64 `json:"expected_size_bytes"`
 }
 
 type BatchNodeTreeFileDTO struct {
 	RelativePath string        `validate:"required"`
+	Mimetype     string        `validate:"required,max=255"`
 	File         io.ReadCloser `validate:"required"`
 }
 
@@ -85,12 +85,10 @@ type BatchNodeTreeFileDTO struct {
 // contents to be buffered in memory or persisted to temporary files.
 //
 // The caller must consume each file before requesting the next one, because
-// advancing the iterator may invalidate the previous file reader.
+// advancing the iterator close the previous file reader.
 //
 // io.EOF indicates that no more files are available.
-type BatchNodeTreeFileIter interface {
-	Next() (BatchNodeTreeFileDTO, error)
-}
+type BatchNodeTreeFileIter = func() (BatchNodeTreeFileDTO, error)
 
 // BatchNodeTreeDTO describes a batch hierarchy upload.
 //
@@ -201,36 +199,67 @@ func (uc *BatchNodeTreeUseCase) processManifest(p *domain.Node, man []BatchNodeT
 
 func (uc *BatchNodeTreeUseCase) processUpload(
 	ctx context.Context,
+	f BatchNodeTreeFileDTO,
+	docMap map[string]*domain.Doc,
+	resolvedMap map[string]bool,
+) error {
+	doc := docMap[f.RelativePath]
+	if doc == nil {
+		detail := map[string]string{"reason": fmt.Sprintf("file with define path '%s' is not present on manifest.", f.RelativePath)}
+		err := apperror.ErrBadRequest(detail)
+		return err
+	}
+
+	if f.Mimetype != doc.MimeType {
+		detail := map[string]string{
+			"reason": fmt.Sprintf("File on path '%s' difers on expected mimetype.", f.RelativePath),
+		}
+
+		return apperror.ErrBadRequest(detail)
+	}
+
+	sizeInBytes, err := uc.storage.Put(ctx, storage.UploadCmd{
+		Key:          doc.NodeID,
+		MaxSizeBytes: doc.SizeInBytes,
+		File:         f.File,
+	})
+	if err != nil {
+		return err
+	}
+
+	if sizeInBytes != doc.SizeInBytes {
+		detail := map[string]string{
+			"reason": fmt.Sprintf("File on path '%s' difers on expected size.", f.RelativePath),
+		}
+
+		return apperror.ErrBadRequest(detail)
+	}
+
+	resolvedMap[f.RelativePath] = true
+
+	return nil
+}
+
+func (uc *BatchNodeTreeUseCase) processUploads(
+	ctx context.Context,
 	files BatchNodeTreeFileIter,
 	docMap map[string]*domain.Doc,
 	resolvedMap map[string]bool,
 ) error {
 	for {
-		f, err := files.Next()
+		f, err := files()
 		if err != nil {
-			if errors.Is(err, io.EOF) {
+			if err == io.EOF {
 				break
 			}
 
 			return err
 		}
 
-		doc := docMap[f.RelativePath]
-		if doc == nil {
-			detail := map[string]string{"reason": fmt.Sprintf("file with define path '%s' is not present on manifest.", f.RelativePath)}
-			err := apperror.ErrBadRequest(detail)
+		if err := uc.processUpload(ctx, f, docMap, resolvedMap); err != nil {
+			f.File.Close()
 			return err
 		}
-
-		if _, err = uc.storage.Put(ctx, storage.UploadCmd{
-			Key:          doc.NodeID,
-			MaxSizeBytes: doc.SizeInBytes,
-			File:         f.File,
-		}); err != nil {
-			return err
-		}
-
-		resolvedMap[f.RelativePath] = true
 	}
 
 	for k, done := range resolvedMap {
@@ -278,11 +307,9 @@ func (uc *BatchNodeTreeUseCase) Execute(ctx context.Context, dto BatchNodeTreeDT
 		return err
 	}
 
-	if err := uc.processUpload(ctx, dto.Files, docMap, resolvedMap); err != nil {
-
+	if err := uc.processUploads(ctx, dto.Files, docMap, resolvedMap); err != nil {
 		// preallocate more capacity here is better than reallocating slice from resize in this case
 		keys := make([]uuid.UUID, 0, len(docMap))
-
 		for path, doc := range docMap {
 			if resolvedMap[path] {
 				keys = append(keys, doc.NodeID)
@@ -309,7 +336,6 @@ func (uc *BatchNodeTreeUseCase) Execute(ctx context.Context, dto BatchNodeTreeDT
 
 		return nil
 	}); err != nil {
-
 		keys := make([]uuid.UUID, 0, len(docMap))
 		for _, doc := range docMap {
 			keys = append(keys, doc.NodeID)
