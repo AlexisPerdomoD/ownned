@@ -215,8 +215,8 @@ func (uc *BatchNodeTreeUseCase) processUpload(
 			return err
 		}
 
-		doc, ok := docMap[f.RelativePath]
-		if !ok {
+		doc := docMap[f.RelativePath]
+		if doc == nil {
 			detail := map[string]string{"reason": fmt.Sprintf("file with define path '%s' is not present on manifest.", f.RelativePath)}
 			err := apperror.ErrBadRequest(detail)
 			return err
