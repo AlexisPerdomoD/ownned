@@ -22,6 +22,7 @@ type NodeHandler struct {
 	downloadNodeFile  *node.DownloadNodeFileUseCase
 	createNodeFolder  *node.CreateNodeFolderUseCase
 	createNodeFile    *node.CreateNodeFileUseCase
+	batchNodeTree     *node.BatchNodeTreeUseCase
 	deleteNode        *node.DeleteNodeUseCase
 	deleteNodeFile    *node.DeleteNodeFileUseCase
 	getNodeComments   *node.GetNodeCommentsUseCase
@@ -37,6 +38,7 @@ func NewNodeHandler(
 	paginateNode *node.PaginateNodeUseCase,
 	paginateDoc *node.PaginateDocUseCase,
 	downloadNodeFile *node.DownloadNodeFileUseCase,
+	batchNodeTree *node.BatchNodeTreeUseCase,
 	createNodeFolder *node.CreateNodeFolderUseCase,
 	createNodeFile *node.CreateNodeFileUseCase,
 	deleteNode *node.DeleteNodeUseCase,
@@ -53,6 +55,7 @@ func NewNodeHandler(
 		paginateNode:      paginateNode,
 		paginateDoc:       paginateDoc,
 		downloadNodeFile:  downloadNodeFile,
+		batchNodeTree:     batchNodeTree,
 		createNodeFolder:  createNodeFolder,
 		createNodeFile:    createNodeFile,
 		deleteNode:        deleteNode,
@@ -166,9 +169,35 @@ func (h *NodeHandler) paginateDocHandler(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, resp.Map(docViewFromDomain))
 }
 
-func (c *NodeHandler) createFolderHandler(w http.ResponseWriter, r *http.Request) {
-	defer func() { _ = r.Body.Close() }()
+func (c *NodeHandler) batchNodeTreeHandler(w http.ResponseWriter, r *http.Request) {
+	nodeID, err := uuid.Parse(chi.URLParam(r, "nodeID"))
+	if err != nil {
+		detail := make(map[string]string)
+		detail["reason"] = "invalid uuid provided"
+		resp := errView(apperror.ErrBadRequest(detail))
+		writeJSON(w, resp.Code, resp)
+		return
+	}
 
+	body, err := parseBatchNodeTreeDTOMultipart(r)
+	if err != nil {
+		resp := errView(err)
+		writeJSON(w, resp.Code, resp)
+		return
+	}
+
+	body.ParentID = nodeID
+
+	if err := c.batchNodeTree.Execute(r.Context(), *body); err != nil {
+		resp := errView(err)
+		writeJSON(w, resp.Code, resp)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]string{"message": "batch properly done"})
+}
+
+func (c *NodeHandler) createFolderHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := parseJSON[node.CreateNodeFolderDTO](r.Body, validationStruct)
 	if err != nil {
 		resp := errView(err)
@@ -433,6 +462,8 @@ func (h *NodeHandler) MountV1(p chi.Router) {
 	r.Put("/{nodeID}", h.updateNodeHandler)
 
 	r.Delete("/{nodeID}", h.deleteNodeHandler)
+
+	r.Post("/{nodeID}/batch", h.batchNodeTreeHandler)
 
 	r.Get("/{nodeID}/download", h.downloadNodeFolderHandler)
 

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"uuid"
 
+	"ownned/internal/app/apperror"
 	"ownned/internal/app/node"
 	"ownned/internal/app/pagination"
 )
@@ -137,7 +138,6 @@ parsing:
 
 		switch part.FormName() {
 		case "file":
-
 			dto.File = part
 			dto.Filename = part.FileName()
 			dto.Mimetype = part.Header.Get("Content-Type")
@@ -176,6 +176,72 @@ parsing:
 		}
 
 		return nil, err
+	}
+
+	return dto, nil
+}
+
+func parseBatchNodeTreeDTOMultipart(r *http.Request) (*node.BatchNodeTreeDTO, error) {
+	form, err := r.MultipartReader()
+	if err != nil {
+		if err == io.EOF {
+			detail := map[string]string{"reason": "empty body"}
+			return nil, apperror.ErrBadRequest(detail)
+		}
+
+		return nil, err
+	}
+
+	part, err := form.NextPart()
+	if err != nil {
+		return nil, err
+	}
+
+	if part.FormName() != "manifest" {
+		detail := map[string]string{"reason": "manifest must be first"}
+		return nil, apperror.ErrBadRequest(detail)
+	}
+
+	raw_manifest, err := io.ReadAll(part)
+	part.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	dto := &node.BatchNodeTreeDTO{}
+	var manifest []node.BatchNodeTreeDocDTO
+	if err = json.Unmarshal(raw_manifest, &manifest); err != nil {
+		return nil, err
+	}
+
+	dto.Manifest = manifest
+	dto.Files = func() (file node.BatchNodeTreeFileDTO, err error) {
+		part, err := form.NextPart()
+		if err != nil {
+			return
+		}
+
+		defer func() {
+			if err != nil {
+				_ = part.Close()
+			}
+		}()
+
+		if part.FormName() != "files" {
+			detail := map[string]string{"reason": "expected only 'files' fields after manifest"}
+			return file, apperror.ErrBadRequest(detail)
+		}
+
+		file.File = part
+		file.RelativePath = part.FileName()
+		file.Mimetype = part.Header.Get("Content-Type")
+
+		err = validate.Struct(&file)
+		return
+	}
+
+	if err := validate.Struct(dto); err != nil {
+		return dto, err
 	}
 
 	return dto, nil
