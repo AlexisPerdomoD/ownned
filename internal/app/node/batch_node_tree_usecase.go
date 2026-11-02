@@ -308,7 +308,9 @@ func (uc *BatchNodeTreeUseCase) Execute(ctx context.Context, dto BatchNodeTreeDT
 	}
 
 	if err := uc.processUploads(ctx, dto.Files, docMap, resolvedMap); err != nil {
-		// preallocate more capacity here is better than reallocating slice from resize in this case
+		// NOTE: preallocate more capacity here is better than
+		// reallocating from capacity on 0 even thought must of the time
+		// len(keys) < len(docMap)
 		keys := make([]uuid.UUID, 0, len(docMap))
 		for path, doc := range docMap {
 			if resolvedMap[path] {
