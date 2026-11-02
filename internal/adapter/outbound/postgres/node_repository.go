@@ -48,7 +48,7 @@ INSERT INTO fs.nodes (
 	type,
 	created_at,
 	updated_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+)`
 
 const deleteNodeQuery string = `DELETE FROM fs.nodes WHERE path <@ (SELECT path FROM fs.nodes WHERE id = $1)`
 
@@ -296,7 +296,9 @@ func (r *nodeRepository) Create(ctx context.Context, n *domain.Node) error {
 
 	createdAt := time.Now().UTC()
 	updatedAt := createdAt
-	_, err := r.db.ExecContext(ctx, insertNodeQuery,
+	q := fmt.Sprintf("%s\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8)", insertNodeQuery)
+
+	_, err := r.db.ExecContext(ctx, q,
 		n.ID,
 		n.UsrID,
 		n.Name,
@@ -312,6 +314,50 @@ func (r *nodeRepository) Create(ctx context.Context, n *domain.Node) error {
 
 	n.CreatedAt = createdAt
 	n.UpdatedAt = updatedAt
+
+	return nil
+}
+
+func (r *nodeRepository) CreateAll(ctx context.Context, nodes []domain.Node) error {
+	if len(nodes) == 0 {
+		detail := map[string]string{"reason": "nodes argument was provided as empty"}
+		return apperror.ErrIlegalDBState(detail)
+	}
+
+	createdAt := time.Now().UTC()
+	updatedAt := createdAt
+
+	q := fmt.Sprintf(`%s\nVALUES (
+		:id, 
+		:usr_id, 
+		:name, 
+		:description, 
+		:path, 
+		:type, 
+		:createdAt, 
+		:updatedAt)`, insertNodeQuery)
+
+	rows := make([]nodeRow, len(nodes))
+
+	for i := range nodes {
+		rows[i].ID = nodes[i].ID
+		rows[i].UsrID = nodes[i].UsrID
+		rows[i].Name = nodes[i].Name
+		rows[i].Description = nodes[i].Description
+		rows[i].Path = nodes[i].Path.String()
+		rows[i].Type = nodes[i].Type.String()
+		rows[i].CreatedAt = createdAt
+		rows[i].UpdatedAt = updatedAt
+	}
+
+	if _, err := sqlx.NamedExecContext(ctx, r.db, q, rows); err != nil {
+		return err
+	}
+
+	for i := range nodes {
+		nodes[i].CreatedAt = createdAt
+		nodes[i].UpdatedAt = updatedAt
+	}
 
 	return nil
 }

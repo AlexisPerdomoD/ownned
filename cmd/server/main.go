@@ -63,6 +63,7 @@ func main() {
 		createGroupTx    = postgres.NewCreateGroupTxFactory(db, alog, time.Duration(30*time.Second))
 		createUsrTx      = postgres.NewCreateUsrTxFactory(db, alog, time.Duration(30*time.Second))
 		createNodeFileTx = postgres.NewCreateNodeFileTxFactory(db, alog, time.Duration(30*time.Second))
+		batchNodeTreeTx  = postgres.NewBatchNodeTreeTxFactory(db, alog, time.Duration(30*time.Second))
 	)
 
 	// AUTH USECASES
@@ -98,6 +99,7 @@ func main() {
 		getNode           = node.NewGetNodeByIDUseCase(ac, nodes, docs, alog)
 		paginateNode      = node.NewPaginateNodeUseCase(nodes, groups)
 		paginateDoc       = node.NewPaginateDocUseCase(docs, groups)
+		batchNodeTree     = node.NewBatchNodeTreeUseCase(ac, nodes, batchNodeTreeTx, fileStorage, alog, node.BatchNodeTreeCfg{BackgroundCleanup: true, BackgroundCleanupParallelCount: 10})
 		createNodeFolder  = node.NewCreateNodeFolderUseCase(ac, nodes)
 		createNodeFile    = node.NewCreateDocUseCase(docs, nodes, ac, createNodeFileTx, fileStorage, alog)
 		deleteNode        = node.NewDeleteNodeUseCase(ac, nodes, docs, fileStorage, alog)
@@ -140,7 +142,21 @@ func main() {
 		createUsr, getMe, getUsr, paginateUsr, am).
 		MountV1(r)
 	httpapi.NewNodeHandler(
-		getRoot, getNode, paginateNode, paginateDoc, downloadNodeFile, createNodeFolder, createNodeFile, deleteNode, deleteNodeFile, getNodeComments, createNodeComment, updateNodeComment, deleteNodeComment, am).
+		getRoot,
+		getNode,
+		paginateNode,
+		paginateDoc,
+		downloadNodeFile,
+		batchNodeTree,
+		createNodeFolder,
+		createNodeFile,
+		deleteNode,
+		deleteNodeFile,
+		getNodeComments,
+		createNodeComment,
+		updateNodeComment,
+		deleteNodeComment,
+		am).
 		MountV1(r)
 
 	if cfg.ServeWebApp {

@@ -24,7 +24,7 @@ func (p NodePath) NewChildPath(nodeID uuid.UUID) NodePath {
 	return NodePath(rawPath)
 }
 
-func (p NodePath) Raw() string {
+func (p NodePath) String() string {
 	return string(p)
 }
 
@@ -38,7 +38,7 @@ func (p NodePath) IsRoot() bool {
 }
 
 func (p NodePath) IsParentOf(child NodePath) bool {
-	return strings.HasPrefix(child.Raw(), p.Raw()+NodePathSeparator)
+	return strings.HasPrefix(child.String(), p.String()+NodePathSeparator)
 }
 
 func (p NodePath) IsChildOf(parent NodePath) bool {
@@ -60,6 +60,8 @@ func (t NodeType) IsValid() bool {
 		return false
 	}
 }
+
+func (t NodeType) String() string { return string(t) }
 
 type NodeID = uuid.UUID
 

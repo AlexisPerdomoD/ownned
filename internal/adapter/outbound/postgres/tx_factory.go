@@ -285,3 +285,19 @@ func NewCreateNodeFileTxFactory(db *sqlx.DB, log *slog.Logger, timeout time.Dura
 		adapter: adapter,
 	}
 }
+
+func NewBatchNodeTreeTxFactory(db *sqlx.DB, log *slog.Logger, timeout time.Duration) tx.TxFactory[node.BatchNodeTreeTx] {
+	adapter := func(ctx context.Context, txDB *txDB) node.BatchNodeTreeTx {
+		return &createNodeFolderTx{
+			ctx:  ctx,
+			txDB: txDB,
+		}
+	}
+
+	return &txFactory[node.BatchNodeTreeTx]{
+		db:      db,
+		log:     log,
+		timeout: timeout,
+		adapter: adapter,
+	}
+}

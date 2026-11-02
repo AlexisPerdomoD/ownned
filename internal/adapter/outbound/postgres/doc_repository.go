@@ -42,7 +42,7 @@ INSERT INTO fs.docs (
 	size_in_bytes,
 	created_at,
 	updated_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+)`
 
 type docRow struct {
 	ID          domain.DocID  `db:"id"`
@@ -51,7 +51,7 @@ type docRow struct {
 	Filename    string        `db:"filename"`
 	Description string        `db:"description"`
 	MimeType    string        `db:"mime_type"`
-	SizeInBytes int64         `db:"size_in_bytes"`
+	SizeInBytes uint64        `db:"size_in_bytes"`
 	CreatedAt   time.Time     `db:"created_at"`
 	UpdatedAt   time.Time     `db:"updated_at"`
 }
@@ -64,7 +64,7 @@ func (r *docRow) ToDomain() domain.Doc {
 		Filename:    r.Filename,
 		Description: r.Description,
 		MimeType:    r.MimeType,
-		SizeInBytes: uint64(r.SizeInBytes),
+		SizeInBytes: r.SizeInBytes,
 		CreatedAt:   r.CreatedAt,
 		UpdatedAt:   r.UpdatedAt,
 	}
@@ -223,7 +223,9 @@ func (r *docRepository) Create(ctx context.Context, d *domain.Doc) error {
 	}
 	createdAt := time.Now().UTC()
 	updatedAt := createdAt
-	if _, err := r.db.ExecContext(ctx, insertDocQuery,
+
+	q := fmt.Sprintf("%s\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", insertDocQuery)
+	if _, err := r.db.ExecContext(ctx, q,
 		d.ID,
 		d.NodeID,
 		d.Title,
@@ -239,6 +241,52 @@ func (r *docRepository) Create(ctx context.Context, d *domain.Doc) error {
 
 	d.CreatedAt = createdAt
 	d.UpdatedAt = updatedAt
+
+	return nil
+}
+
+func (r *docRepository) CreateAll(ctx context.Context, docs []domain.Doc) error {
+	if len(docs) == 0 {
+		detail := map[string]string{"reason": "docs argument was provided as empty"}
+		return apperror.ErrIlegalDBState(detail)
+	}
+
+	createdAt := time.Now().UTC()
+	updatedAt := createdAt
+
+	q := fmt.Sprintf(`%s\nVALUES (
+		:id, 
+		:node_id, 
+		:title, 
+		:filename, 
+		:description, 
+		:mimetype, 
+		:size_in_bytes, 
+		:createdAt, 
+		:updatedAt)`, insertDocQuery)
+
+	rows := make([]docRow, len(docs))
+
+	for i := range docs {
+		rows[i].ID = docs[i].ID
+		rows[i].NodeID = docs[i].NodeID
+		rows[i].Title = docs[i].Title
+		rows[i].Filename = docs[i].Filename
+		rows[i].Description = docs[i].Description
+		rows[i].MimeType = docs[i].MimeType
+		rows[i].SizeInBytes = docs[i].SizeInBytes
+		rows[i].CreatedAt = createdAt
+		rows[i].UpdatedAt = updatedAt
+	}
+
+	if _, err := sqlx.NamedExecContext(ctx, r.db, q, rows); err != nil {
+		return err
+	}
+
+	for i := range docs {
+		docs[i].CreatedAt = createdAt
+		docs[i].UpdatedAt = updatedAt
+	}
 
 	return nil
 }
