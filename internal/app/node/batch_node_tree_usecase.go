@@ -70,13 +70,13 @@ func NewBatchNodeTreeUseCase(
 
 type BatchNodeTreeDocDTO struct {
 	RelativePath      string `json:"relative_path" validate:"required"`
-	Mimetype          string `json:"mimetype" validate:"required,max=255"`
+	Mimetype          string `json:"mimetype" validate:"required,min=1,max=255"`
 	ExpectedSizeBytes uint64 `json:"expected_size_bytes"`
 }
 
 type BatchNodeTreeFileDTO struct {
 	RelativePath string        `validate:"required"`
-	Mimetype     string        `validate:"required,max=255"`
+	Mimetype     string        `validate:"required,min=1,max=255"`
 	File         io.ReadCloser `validate:"required"`
 }
 
@@ -98,7 +98,7 @@ type BatchNodeTreeFileIter = func() (BatchNodeTreeFileDTO, error)
 // in Manifest, identified by RelativePath.
 type BatchNodeTreeDTO struct {
 	ParentID domain.NodeID         `validate:"required"`
-	Manifest []BatchNodeTreeDocDTO `validate:"required"`
+	Manifest []BatchNodeTreeDocDTO `validate:"required,min=1"`
 	Files    BatchNodeTreeFileIter `validate:"required"`
 }
 
