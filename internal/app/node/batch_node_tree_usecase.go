@@ -137,9 +137,10 @@ func (uc *BatchNodeTreeUseCase) processCleanStorage(keys []uuid.UUID) {
 }
 
 func (uc *BatchNodeTreeUseCase) processManifest(p *domain.Node, man []BatchNodeTreeDocDTO) (map[string]*domain.Doc, map[string]bool, []domain.Node, error) {
-	docs := make(map[string]*domain.Doc)
+	resolvedDoc := make(map[string]bool, len(man))
+	resolvedFolder := make(map[string]domain.NodeID, len(man))
+	docs := make(map[string]*domain.Doc, len(man))
 	nodes := make([]domain.Node, 0, len(man))
-	resolved := make(map[string]bool)
 
 	for i := range man {
 		curr := man[i]
@@ -156,17 +157,28 @@ func (uc *BatchNodeTreeUseCase) processManifest(p *domain.Node, man []BatchNodeT
 
 		rPaths := strings.Split(curr.RelativePath, "/")
 		currParentPath := p.Path
+		var currDirRelative strings.Builder
+		currDirRelative.WriteByte('/')
 		for j := range rPaths {
 			isLast := j == len(rPaths)-1
+			name := rPaths[j]
+
+			currDirRelative.WriteByte('/')
+			currDirRelative.WriteString(name)
+
+			// NOTE: Dir already created. We can ensure this is not last element since doc has not been created
+			if nodeID, resolved := resolvedFolder[currDirRelative.String()]; resolved {
+				currParentPath = currParentPath.NewChildPath(nodeID)
+				continue
+			}
+
 			nodeID := uuid.NewV7()
 			path := currParentPath.NewChildPath(nodeID)
-			name := rPaths[j]
 
 			n := domain.Node{
 				ID:   nodeID,
 				Name: name,
 				Path: path,
-				Type: domain.FolderNodeType,
 			}
 
 			if isLast {
@@ -183,10 +195,13 @@ func (uc *BatchNodeTreeUseCase) processManifest(p *domain.Node, man []BatchNodeT
 					SizeInBytes: curr.ExpectedSizeBytes,
 				}
 
-				resolved[curr.RelativePath] = false
+				resolvedDoc[curr.RelativePath] = false
 
 			} else {
+				n.Type = domain.FolderNodeType
+
 				currParentPath = path
+				resolvedFolder[currDirRelative.String()] = n.ID
 			}
 
 			nodes = append(nodes, n)
@@ -194,7 +209,7 @@ func (uc *BatchNodeTreeUseCase) processManifest(p *domain.Node, man []BatchNodeT
 
 	}
 
-	return docs, resolved, nodes, nil
+	return docs, resolvedDoc, nodes, nil
 }
 
 func (uc *BatchNodeTreeUseCase) processUpload(
