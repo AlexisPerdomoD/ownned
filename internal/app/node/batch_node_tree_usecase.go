@@ -13,6 +13,7 @@ import (
 
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/group"
+	"ownned/internal/app/identity"
 	"ownned/internal/app/storage"
 	"ownned/internal/app/tx"
 	"ownned/internal/domain"
@@ -97,7 +98,7 @@ type BatchNodeTreeFileIter = func() (BatchNodeTreeFileDTO, error)
 // in Manifest, identified by RelativePath.
 type BatchNodeTreeDTO struct {
 	ParentID domain.NodeID         `validate:"required"`
-	Manifest []BatchNodeTreeDocDTO `validate:"required,noempty"`
+	Manifest []BatchNodeTreeDocDTO `validate:"required"`
 	Files    BatchNodeTreeFileIter `validate:"required"`
 }
 
@@ -136,11 +137,20 @@ func (uc *BatchNodeTreeUseCase) processCleanStorage(keys []uuid.UUID) {
 	go cb()
 }
 
-func (uc *BatchNodeTreeUseCase) processManifest(p *domain.Node, man []BatchNodeTreeDocDTO) (map[string]*domain.Doc, map[string]bool, []domain.Node, error) {
+func (uc *BatchNodeTreeUseCase) processManifest(
+	ctx context.Context,
+	p *domain.Node,
+	man []BatchNodeTreeDocDTO,
+) (map[string]*domain.Doc, map[string]bool, []domain.Node, error) {
 	resolvedDoc := make(map[string]bool, len(man))
 	resolvedFolder := make(map[string]domain.NodeID, len(man))
 	docs := make(map[string]*domain.Doc, len(man))
 	nodes := make([]domain.Node, 0, len(man))
+
+	u, err := identity.Get(ctx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	for i := range man {
 		curr := man[i]
@@ -173,12 +183,13 @@ func (uc *BatchNodeTreeUseCase) processManifest(p *domain.Node, man []BatchNodeT
 			}
 
 			nodeID := uuid.NewV7()
+			usrID := new(u.ID)
 			path := currParentPath.NewChildPath(nodeID)
-
 			n := domain.Node{
-				ID:   nodeID,
-				Name: name,
-				Path: path,
+				ID:    nodeID,
+				UsrID: usrID,
+				Name:  name,
+				Path:  path,
 			}
 
 			if isLast {
@@ -317,18 +328,18 @@ func (uc *BatchNodeTreeUseCase) Execute(ctx context.Context, dto BatchNodeTreeDT
 		return apperror.ErrBadRequest(detail)
 	}
 
-	docMap, resolvedMap, nodes, err := uc.processManifest(parent, dto.Manifest)
+	docMap, resolved, nodes, err := uc.processManifest(ctx, parent, dto.Manifest)
 	if err != nil {
 		return err
 	}
 
-	if err := uc.processUploads(ctx, dto.Files, docMap, resolvedMap); err != nil {
+	if err := uc.processUploads(ctx, dto.Files, docMap, resolved); err != nil {
 		// NOTE: preallocate more capacity here is better than
 		// reallocating from capacity on 0 even thought must of the time
 		// len(keys) < len(docMap)
 		keys := make([]uuid.UUID, 0, len(docMap))
 		for path, doc := range docMap {
-			if resolvedMap[path] {
+			if resolved[path] {
 				keys = append(keys, doc.NodeID)
 			}
 		}
