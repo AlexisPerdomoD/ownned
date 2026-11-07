@@ -98,7 +98,7 @@ type BatchNodeTreeFileIter = func() (BatchNodeTreeFileDTO, error)
 // in Manifest, identified by RelativePath.
 type BatchNodeTreeDTO struct {
 	ParentID domain.NodeID         `validate:"required"`
-	Manifest []BatchNodeTreeDocDTO `validate:"required,min=1"`
+	Manifest []BatchNodeTreeDocDTO `validate:"required,dive,min=1"`
 	Files    BatchNodeTreeFileIter `validate:"required"`
 }
 
