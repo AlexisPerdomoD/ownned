@@ -260,10 +260,10 @@ func (r *docRepository) CreateAll(ctx context.Context, docs []domain.Doc) error 
 		:title, 
 		:filename, 
 		:description, 
-		:mimetype, 
+		:mime_type, 
 		:size_in_bytes, 
-		:createdAt, 
-		:updatedAt)`, insertDocQuery)
+		:created_at, 
+		:updated_at)`, insertDocQuery)
 
 	rows := make([]docRow, len(docs))
 

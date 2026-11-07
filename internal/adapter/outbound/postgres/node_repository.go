@@ -334,8 +334,8 @@ func (r *nodeRepository) CreateAll(ctx context.Context, nodes []domain.Node) err
 		:description, 
 		:path, 
 		:type, 
-		:createdAt, 
-		:updatedAt)`, insertNodeQuery)
+		:created_at, 
+		:updated_at`, insertNodeQuery)
 
 	rows := make([]nodeRow, len(nodes))
 
