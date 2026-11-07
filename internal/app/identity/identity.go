@@ -3,11 +3,12 @@ package identity
 
 import (
 	"context"
+
 	"ownned/internal/app/apperror"
 	"ownned/internal/domain"
 )
 
-// usrIdentity is the user identity
+// Identity is the user identity
 type Identity struct {
 	ID   domain.UsrID   `json:"usr_id"`
 	Role domain.UsrRole `json:"role"`

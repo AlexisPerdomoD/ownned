@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -203,14 +204,15 @@ func parseBatchNodeTreeDTOMultipart(r *http.Request) (*node.BatchNodeTreeDTO, er
 	}
 
 	raw_manifest, err := io.ReadAll(part)
-	part.Close()
+	_ = part.Close()
+
 	if err != nil {
 		return nil, err
 	}
 
 	dto := &node.BatchNodeTreeDTO{}
 	var manifest []node.BatchNodeTreeDocDTO
-	if err = json.Unmarshal(raw_manifest, &manifest); err != nil {
+	if err := json.Unmarshal(raw_manifest, &manifest); err != nil {
 		return nil, err
 	}
 
@@ -232,8 +234,15 @@ func parseBatchNodeTreeDTOMultipart(r *http.Request) (*node.BatchNodeTreeDTO, er
 			return file, apperror.ErrBadRequest(detail)
 		}
 
+		// NOTE: we extract manually filename from this header instead of using part.Filename()
+		// since that method use filepath.base and remove full expected path provided from client
+		_, params, err := mime.ParseMediaType(part.Header.Get("Content-Disposition"))
+		if err != nil {
+			return
+		}
+
 		file.File = part
-		file.RelativePath = part.FileName()
+		file.RelativePath = params["filename"]
 		file.Mimetype = part.Header.Get("Content-Type")
 
 		err = validate.Struct(&file)
@@ -241,7 +250,7 @@ func parseBatchNodeTreeDTOMultipart(r *http.Request) (*node.BatchNodeTreeDTO, er
 	}
 
 	if err := validate.Struct(dto); err != nil {
-		return dto, err
+		return nil, err
 	}
 
 	return dto, nil
