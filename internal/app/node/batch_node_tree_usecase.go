@@ -253,6 +253,8 @@ func (uc *BatchNodeTreeUseCase) processUpload(
 		return err
 	}
 
+	resolvedMap[f.RelativePath] = true
+
 	if sizeInBytes != doc.SizeInBytes {
 		detail := map[string]string{
 			"reason": fmt.Sprintf("File on path '%s' difers on expected size.", f.RelativePath),
@@ -260,8 +262,6 @@ func (uc *BatchNodeTreeUseCase) processUpload(
 
 		return apperror.ErrBadRequest(detail)
 	}
-
-	resolvedMap[f.RelativePath] = true
 
 	return nil
 }
