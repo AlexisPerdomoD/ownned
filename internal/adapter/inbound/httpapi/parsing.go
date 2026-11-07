@@ -15,6 +15,8 @@ import (
 	"ownned/internal/app/apperror"
 	"ownned/internal/app/node"
 	"ownned/internal/app/pagination"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type validationKind string
@@ -120,12 +122,17 @@ func parsePaginationParam(q url.Values) pagination.PaginationParam {
 }
 
 func parseCreateNodeFileDTOMultipart(r *http.Request) (*node.CreateNodeFileDTO, error) {
+	parentID, err := uuid.Parse(chi.URLParam(r, "nodeID"))
+	if err != nil {
+		return nil, err
+	}
+
 	form, err := r.MultipartReader()
 	if err != nil {
 		return nil, err
 	}
 
-	dto := &node.CreateNodeFileDTO{}
+	dto := &node.CreateNodeFileDTO{ParentID: parentID}
 
 parsing:
 	for {
