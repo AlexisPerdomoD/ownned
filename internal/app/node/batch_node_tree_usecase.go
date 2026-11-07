@@ -349,7 +349,7 @@ func (uc *BatchNodeTreeUseCase) Execute(ctx context.Context, dto BatchNodeTreeDT
 	}
 
 	if err := uc.txFactory.Do(ctx, func(db BatchNodeTreeTx) error {
-		if err := db.NodeRepository().CreateAll(ctx, nodes); err != nil {
+		if err := db.NodeRepository().CreateAll(db.Ctx(), nodes); err != nil {
 			return err
 		}
 
@@ -358,7 +358,7 @@ func (uc *BatchNodeTreeUseCase) Execute(ctx context.Context, dto BatchNodeTreeDT
 			docs = append(docs, *doc)
 		}
 
-		if err := db.DocRepository().CreateAll(ctx, docs); err != nil {
+		if err := db.DocRepository().CreateAll(db.Ctx(), docs); err != nil {
 			return err
 		}
 
