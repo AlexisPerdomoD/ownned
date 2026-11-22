@@ -1,7 +1,7 @@
 /**
  * Pure frontend authorization helpers.
  *
- * Semantics (see `doc/frontend/canonical-flows.md` → "Modelo de autorización para la UI"):
+ * Semantics (see the technical design #5, part 2: https://github.com/AlexisPerdomoD/ownned/issues/5#issuecomment-7074482479 → "Modelo de autorización para la UI"):
  *  1. **Role** is the global capability ceiling of the account. It never grants access by itself.
  *  2. **Assignment** (`access_level`) is the highest applicable grant level for the resource.
  *  3. **Effective authorization** for a resource action =
