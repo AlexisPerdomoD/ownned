@@ -18,7 +18,7 @@ Ownned is a self-hosted file management application for personal use and small-g
 - The HTTP server can serve the built web client from `web/dist` when `SERVE_WEB_APP` is enabled (the default).
 
 Some API paths are registered as contract stubs and currently return `501 Not Implemented`; these are identified below.
-Backend route registration is not a claim of end-to-end client coverage. See the [frontend contract matrix](doc/frontend/contract-coverage.md) for current parity and the [frontend plan](doc/frontend/product-plan.md) for gaps and progress.
+Backend route registration is not a claim of end-to-end client coverage. See the [technical design](https://github.com/AlexisPerdomoD/ownned/issues/5) for the canonical contract, canonical flows, and current gaps.
 
 ## Tech stack
 
@@ -106,7 +106,7 @@ The following paths are registered as public contracts but currently return `501
 | `PUT`  | `/nodes/{nodeID}`          | Update a node      |
 | `GET`  | `/nodes/{nodeID}/download` | Download a folder  |
 
-Node and document pagination have HTTP handlers and are not stubs. Their filters are defined in the backend handlers; see `doc/frontend/contract-coverage.md` for the current client-to-contract matrix and uncovered client flows.
+Node and document pagination have HTTP handlers and are not stubs. Their filters are defined in the backend handlers; see the [technical design](https://github.com/AlexisPerdomoD/ownned/issues/5) for the canonical contract and uncovered client flows.
 
 ## Getting started
 
@@ -156,9 +156,9 @@ For the web client development server, run `pnpm install` and `pnpm dev` from `w
 
 Run modes: set `MODE=local` in `.env` for local HTTP (including the separate Vite dev server) — the server enables Vite CORS and non-secure local cookie settings only in this mode; use `MODE=dev` for a built client behind the server. The bundled `.env.example` is preconfigured with `MODE=local` for the local flow.
 
-## Frontend design and coverage
+## Technical design and frontend
 
-The frontend follows the backend's public HTTP contract. `doc/frontend/contract-coverage.md` records each endpoint, its backend state, current client integration, and gaps. `doc/frontend/product-plan.md` records the UX direction, product decisions (folder upload is implemented as client-side orchestration; folder download reports the backend `501`), and progress. Frontend coding instructions are in `web/app/AGENTS.md`.
+The frontend follows the backend's public HTTP contract. The [technical design](https://github.com/AlexisPerdomoD/ownned/issues/5) is the canonical reference for the contract, canonical flows, data model, integrations, roles, and decisions. Development and contribution conventions live in [CONTRIBUTING.md](CONTRIBUTING.md); frontend architecture, SolidJS conventions, styling, and test commands live in [web/app/README.md](web/app/README.md).
 
 ## Project structure
 
@@ -181,7 +181,7 @@ web/dist/                          Built web assets served by the Go server
 
 ## Contributing
 
-Contributions are welcome. Please open an issue or pull request on [GitHub](https://github.com/AlexisPerdomoD/owned).
+Contributions are welcome. Please open an issue or pull request on [GitHub](https://github.com/AlexisPerdomoD/ownned) and read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
 ## License
 
